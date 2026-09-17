@@ -44,15 +44,16 @@ Permission 후보:
 
 ## Token Direction
 
-미확정 상태
+Access Token + Refresh Token 방식
 
-후보:
+- Access Token: RS256 서명 JWT, 10~15분 만료
+- Refresh Token: 난수 원문 클라이언트 보관, 서버 SHA-256 hash 저장, 만료·폐기 관리
+- JWT claim: `sub`, `iss`, `aud`, `roles`, `tokenVersion`, `iat`, `exp`
+- 키 보관: 환경 변수 또는 secret manager, 소스·설정 파일 평문 보관 금지
+- 검증: Spring Security OAuth2 Resource Server와 `JwtDecoder`
+- 발급: Spring Security `JwtEncoder`, 단일 API 시작 후 인증 서비스 분리 가능 구조
 
-- Access Token + Refresh Token
-- Session Cookie
-- Mobile WebView bridge 기반 token 전달
-
-WebView 환경의 cookie, localStorage, native secure storage 중 안전성·운영성 최적 방식 검토
+WebView 환경의 refresh token 보관 방식: `HttpOnly`, `Secure` cookie 또는 Flutter native secure storage 중 프론트·앱 bridge 계약 확정 후 선택
 
 ## Open Questions
 
