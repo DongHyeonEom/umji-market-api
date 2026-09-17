@@ -1,0 +1,53 @@
+# Testcontainers 전용 프로파일
+#
+# 사용법:
+# @SpringBootTest
+# @ActiveProfiles("testcontainers")
+# @Import(TestcontainersConfig::class)
+# @Testcontainers
+# class MyIntegrationTest { ... }
+#
+# 주의: 이 프로파일은 @DynamicPropertySource와 함께 사용됩니다.
+# 데이터소스 URL, username, password는 테스트 클래스에서 동적으로 설정해야 합니다.
+
+server:
+  port: 0  # 랜덤 포트 사용
+
+spring:
+  # 데이터소스는 @DynamicPropertySource에서 설정됨
+  # 기본값은 placeholder로 설정 (테스트에서 override 필수)
+  datasource:
+    read:
+      url: jdbc:mysql://localhost:3306/test?serverTimezone=UTC
+      username: test
+      password: test
+      hikari:
+        maximum-pool-size: 2
+    write:
+      url: jdbc:mysql://localhost:3306/test?serverTimezone=UTC
+      username: test
+      password: test
+      hikari:
+        maximum-pool-size: 2
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+        highlight_sql: false
+        generate_statistics: false
+    # Testcontainers에서는 스키마 자동 생성 사용 가능
+    hibernate:
+      ddl-auto: create-drop
+
+  flyway:
+    enabled: false  # Testcontainers에서는 JPA ddl-auto 사용
+
+springdoc:
+  api-docs:
+    enabled: false
+
+umji:
+  client:
+    core:
+      url: http://localhost:8080

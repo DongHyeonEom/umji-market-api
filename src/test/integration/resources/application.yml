@@ -1,0 +1,101 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: umji-market-api
+
+  threads:
+    virtual:
+      enabled: true # 가상 스레드 활성화
+
+  profiles:
+    active: test
+
+  datasource:
+    read:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        poolName: umjiMarketReadPool
+        auto-commit: false
+        max-lifetime: 30000
+    write:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        poolName: umjiMarketWritePool
+        auto-commit: false
+        max-lifetime: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: false
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+
+springdoc:
+  show-actuator: true
+  enable-kotlin: true
+  writer-with-default-pretty-printer: true
+  writer-with-order-by-keys: true
+
+  api-docs:
+    enabled: false
+    resolve-schema-properties: true
+
+  swagger-ui:
+    path: /swagger-ui.html
+    groups-order: ASC
+    doc-expansion: none
+    tags-sorter: alpha
+    operationsSorter: method
+    disable-swagger-default-url: false
+    display-request-duration: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  config: classpath:logback-spring-${spring.profiles.active}.xml
+
+decorator:
+  datasource:
+    datasource-proxy:
+      query:
+        log-level: debug
+      slow-query:
+        log-level: warn
+      format-sql: true
+      count-query: true
+
+umji:
+  client:
+    properties:
+      http-client:
+        connection-timeout: 5000
+      web-client:
+        # 2*1024*1024
+        memory-size: 2097152
+      connection:
+        max-connections: 30
+        max-idle-time: 5
+        max-life-time: 5
+        pending-acquire-timeout: 5
+        pending-acquire-max-count: 60
+        evict-in-background: 5
+    destinations:
+      core:
+        url:

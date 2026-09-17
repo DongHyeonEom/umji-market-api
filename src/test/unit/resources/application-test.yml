@@ -1,0 +1,39 @@
+server:
+  port: 8888
+  ssl:
+    enabled: false
+
+spring:
+  datasource:
+    read:
+      url: ${DB_READ_URL}
+      username: ${DB_USER_NAME}
+      password: ${DB_USER_PASSWORD}
+      hikari:
+        maximum-pool-size: 1
+    write:
+      url: ${DB_WRITE_URL}
+      username: ${DB_USER_NAME}
+      password: ${DB_USER_PASSWORD}
+      hikari:
+        maximum-pool-size: 1
+
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+        highlight_sql: false
+        generate_statistics: false
+        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: 1000
+
+  flyway:
+    enabled: true
+
+springdoc:
+  api-docs:
+    enabled: true
+
+umji:
+  client:
+    core:
+      url: http://10.101.101.5:8080

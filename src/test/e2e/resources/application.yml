@@ -1,0 +1,101 @@
+# E2E 테스트 설정
+# dev 환경을 기준으로 실제 인프라에 연결하여 테스트합니다.
+#
+# 실행 전 요구사항:
+# - VPN 연결 또는 dev 네트워크 접근
+
+server:
+  port: 0 # 랜덤 포트 사용
+
+spring:
+  application:
+    name: umji-market-api-e2e
+
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    read:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: ${DB_READ_URL}
+      username: ${DB_USER_NAME}
+      password: ${DB_USER_PASSWORD}
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        poolName: umjiMarketReadPool
+        auto-commit: false
+        max-lifetime: 30000
+        maximum-pool-size: 5
+    write:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: ${DB_WRITE_URL}
+      username: ${DB_USER_NAME}
+      password: ${DB_USER_PASSWORD}
+      type: com.zaxxer.hikari.HikariDataSource
+      hikari:
+        poolName: umjiMarketWritePool
+        auto-commit: false
+        max-lifetime: 30000
+        maximum-pool-size: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: false
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+
+  flyway:
+    enabled: false
+
+springdoc:
+  api-docs:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.buyeong: DEBUG
+
+decorator:
+  datasource:
+    datasource-proxy:
+      query:
+        log-level: debug
+      slow-query:
+        log-level: warn
+      format-sql: true
+      count-query: true
+
+umji:
+  client:
+    properties:
+      http-client:
+        connection-timeout: 5000
+      web-client:
+        memory-size: 2097152
+      connection:
+        max-connections: 30
+        max-idle-time: 5
+        max-life-time: 5
+        pending-acquire-timeout: 5
+        pending-acquire-max-count: 60
+        evict-in-background: 5
+    destinations:
+      core:
+        url: http://10.101.101.5:8080

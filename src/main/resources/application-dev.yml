@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    read:
+      url: ${DB_READ_URL}
+      username: ${DB_USER_NAME}
+      password: ${DB_USER_PASSWORD}
+      hikari:
+        maximum-pool-size: 10
+    write:
+      url: ${DB_WRITE_URL}
+      username: ${DB_USER_NAME}
+      password: ${DB_USER_PASSWORD}
+      hikari:
+        maximum-pool-size: 2
+
+springdoc:
+  api-docs:
+    enabled: true
+
+umji:
+  client:
+    core:
+      url: http://10.101.101.5:8080

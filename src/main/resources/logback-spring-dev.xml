@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- https://github.com/spring-projects/spring-boot/blob/main/spring-boot-project/spring-boot/src/main/resources/org/springframework/boot/logging/logback/base.xml -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <property name="LOGS" value="./logs" />
+
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>DEBUG</level>
+		</filter>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<Pattern>%d %p %C{1} [%t] [%X{traceId}] %m%n</Pattern>
+		</encoder>
+		<file>${LOGS}/application.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${LOGS}/archived/application-%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxFileSize>100MB</maxFileSize>
+			<maxHistory>30</maxHistory>
+		</rollingPolicy>
+	</appender>
+
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http>
+            <url>http://10.101.11.201:3100/loki/api/v1/push</url>
+        </http>
+        <format>
+            <label>
+                <!-- Labels -->
+                <pattern>
+                    app = internal-core-api,
+                    host = ${HOSTNAME}
+                </pattern>
+                <!-- Structured metadata (since Loki v2.9.0) -->
+                <structuredMetadataPattern>
+                    level = %level,
+                    thread = %thread,
+                    class = %logger,
+                    traceId = %mdc{traceId:-none}
+                </structuredMetadataPattern>
+            </label>
+            <message>
+                <pattern>%-5level %logger{20} %msg %ex</pattern>
+            </message>
+        </format>
+    </appender>
+
+	<root level="WARN">
+		<appender-ref ref="FILE"/>
+		<appender-ref ref="LOKI"/>
+	</root>
+
+	<logger name="com.buyeong.umji.api" level="DEBUG">
+		<appender-ref ref="FILE"/>
+		<appender-ref ref="LOKI"/>
+	</logger>
+
+	<logger name="net.ttddyy.dsproxy.listener.logging.SLF4JQueryLoggingListener" level="DEBUG">
+		<appender-ref ref="FILE"/>
+		<appender-ref ref="LOKI"/>
+	</logger>
+</configuration>

@@ -1,0 +1,56 @@
+{
+  "connectionString": "",
+  "role": {
+    "name": "umji-market-api"
+  },
+  "heartbeat": {
+    "intervalSeconds": 60
+  },
+  "instrumentation": {
+    "logging": {
+      "level": "ALL"
+    },
+    "micrometer": {
+      "enabled": true
+    }
+  },
+  "preview": {
+    "captureHttpServer4xxAsError": false
+  },
+  "jmxMetrics": [
+    {
+      "name": "JVM uptime (millis)",
+      "objectName": "java.lang:type=Runtime",
+      "attribute": "Uptime"
+    },
+    {
+      "name": "MetaSpace Used",
+      "objectName": "java.lang:type=MemoryPool,name=Metaspace",
+      "attribute": "Usage.used"
+    },
+    {
+      "name": "G1 Collection Count Young",
+      "objectName": "java.lang:name=G1 Young Generation,type=GarbageCollector",
+      "attribute": "CollectionCount"
+    },
+    {
+      "name": "G1 Collection Count Old",
+      "objectName": "java.lang:name=G1 Old Generation,type=GarbageCollector",
+      "attribute": "CollectionCount"
+    },
+    {
+      "name": "Thread Count",
+      "objectName": "java.lang:type=Threading",
+      "attribute": "ThreadCount"
+    }
+  ],
+  "selfDiagnostics": {
+    "destination": "file+console",
+    "level": "DEBUG",
+    "file": {
+      "path": "/data/umji-market-api/logs/applicationinsights.log",
+      "maxSizeMb": 5,
+      "maxHistory": 1
+    }
+  }
+}
