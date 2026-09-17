@@ -83,22 +83,3 @@ decorator:
         log-level: warn
       format-sql: true
       count-query: true
-
-umji:
-  client:
-    properties:
-      http-client:
-        connection-timeout: 5000
-      web-client:
-        # 2*1024*1024
-        memory-size: 2097152
-      connection:
-        max-connections: 30
-        max-idle-time: 5
-        max-life-time: 5
-        pending-acquire-timeout: 5
-        pending-acquire-max-count: 60
-        evict-in-background: 5
-    destinations:
-      core:
-        url:

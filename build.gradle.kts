@@ -8,7 +8,6 @@ plugins {
     kotlin("plugin.jpa") version kotlinVersion
     kotlin("plugin.allopen") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
-    kotlin("kapt") version kotlinVersion
 
     idea
     war
@@ -42,13 +41,9 @@ ktlint {
 
 // Version constants
 val azureApplicationinsightsVersion = "3.7.6"
-val mapstructVersion = "1.6.3"
 val springCloudAzureVersion = "5.21.0"
-val springCloudVersion = "2024.0.2"
 
 dependencies {
-    kapt("org.mapstruct:mapstruct-processor:$mapstructVersion")
-
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
@@ -76,22 +71,16 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("org.json:json:20250517")
-    implementation("org.mapstruct:mapstruct:$mapstructVersion")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
 
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-aop")
-    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-
-    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     implementation("org.springframework.data:spring-data-envers")
 
     implementation(platform("com.azure.spring:spring-cloud-azure-dependencies:$springCloudAzureVersion"))
-    implementation(platform("org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"))
 
     runtimeOnly("com.mysql:mysql-connector-j")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
@@ -99,7 +88,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
     testImplementation("com.navercorp.fixturemonkey:fixture-monkey-starter-kotlin:1.1.15")
-    testImplementation("com.ninja-squad:springmockk:5.0.1")
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
     testImplementation("io.kotest.extensions:kotest-extensions-spring:1.3.0")
     testImplementation("io.mockk:mockk:1.14.7")

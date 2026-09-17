@@ -42,4 +42,4 @@
 
 ## Immediate Next Step
 
-`docs/skeleton-cleanup-audit.md` 기준 스켈레톤 예제 코드 제거 범위와 V1 예제 DDL 처리 기준 확정 후 cleanup PR 진행
+스켈레톤 예제 코드·테스트·V1 예제 DDL 제거 완료. Account, Role, Permission 및 인증 방식 확정 작업 진행

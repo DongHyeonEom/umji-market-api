@@ -35,16 +35,16 @@
 | 설정 이름 | `Default*Configuration.kt` | 멀티 모듈 또는 멀티 datasource 필요성 발생 전까지 유지, 도메인 명명 규칙 확정 후 정리 |
 | 클라이언트 설정 | `config/client`, `service/biz/client` | 외부 PG·파일·알림 연동 확정 전 사용 보류, 실제 외부 연동 계약으로 교체 |
 
-## 제거 대상
+## 제거 완료 대상
 
 | 영역 | 현재 위치 | 제거 조건 |
 | --- | --- | --- |
-| Staff API·서비스·DTO·모델·매퍼 | `controller/StaffRestController.kt`, `service/biz/StaffBizService.kt`, `service/mapping/StaffMappingService.kt`, `dto/StaffDto.kt`, `model/StaffModel.kt`, `mapper/StaffMapper.kt` | 대체 엄지마켓 API 없음 확인 후 일괄 제거 |
-| CDI 예제 영속성 | `persistence/**/cdi`, `persistence/jpa/entity/cdi` | 예제 테스트와 V1 테이블 제거를 같은 PR로 처리 |
-| Test·Example API/DTO/Mapper/Service | `dto/TestDto.kt`, `dto/example`, `enums/example`, `mapper/example`, `service/example`, `persistence/jpa/entity/cdi/TestJpaEntity.kt` | 대체 사용처 없음 확인 후 일괄 제거 |
-| Staff·Example·CDI 테스트 | `src/test/**/staff`, `src/test/**/example`, `src/test/**/cdi` | 대상 프로덕션 코드 제거와 함께 제거 |
-| 예제 Flyway DDL | `db/migration/V1__create_skeleton_example_tables.sql` | 운영 DB 반영 전인 현 시점에 제거 또는 엄지마켓 초기 스키마로 교체 |
-| 스켈레톤 전용 enum·JDBC 변환기 | `StaffStatusEnum.kt`, `SchoolTypeEnum.kt`, `persistence/jdbc/**/cdi` | Staff 예제 제거와 함께 제거 |
+| Staff API·서비스·DTO·모델·매퍼 | `controller/StaffRestController.kt`, `service/biz/StaffBizService.kt`, `service/mapping/StaffMappingService.kt`, `dto/StaffDto.kt`, `model/StaffModel.kt`, `mapper/StaffMapper.kt` | 제거 완료 |
+| CDI 예제 영속성 | `persistence/**/cdi`, `persistence/jpa/entity/cdi` | 제거 완료 |
+| Test·Example API/DTO/Mapper/Service | `dto/TestDto.kt`, `dto/example`, `enums/example`, `mapper/example`, `service/example`, `persistence/jpa/entity/cdi/TestJpaEntity.kt` | 제거 완료 |
+| Staff·Example·CDI 테스트 | `src/test/**/staff`, `src/test/**/example`, `src/test/**/cdi` | 제거 완료 |
+| 예제 Flyway DDL | `db/migration/V1__create_skeleton_example_tables.sql` | 제거 완료 |
+| 스켈레톤 전용 enum·JDBC 변환기 | `StaffStatusEnum.kt`, `SchoolTypeEnum.kt`, `persistence/jdbc/**/cdi` | 제거 완료 |
 
 ## 확정 패키지 구조
 
@@ -89,8 +89,7 @@ com.buyeong.umji.api
 
 ## 후속 PR 순서
 
-1. `feature/skeleton-example-removal`: 예제 코드·테스트·V1 DDL 처리, 공통 기반만 유지
-2. `feature/auth-foundation`: Account, Role, Permission 및 인증 방식 확정
-3. `feature/catalog-domain-foundation`: Category, Brand, Product, SKU 모델과 공개 상품 조회 API 구현
+1. `feature/auth-foundation`: Account, Role, Permission 및 인증 방식 확정
+2. `feature/catalog-domain-foundation`: Category, Brand, Product, SKU 모델과 공개 상품 조회 API 구현
 
-예제 제거 PR의 선행 확인: 공유 운영 DB에 V1 예제 테이블이 존재하는지 여부
+공유 운영 DB에 V1 예제 테이블이 존재하면 별도 운영 마이그레이션으로 삭제 여부 검토
