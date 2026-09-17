@@ -42,4 +42,4 @@
 
 ## Immediate Next Step
 
-`docs/architecture.md` 기준 실제 패키지 구조 확정 후 기존 스켈레톤 예제 코드 유지·삭제 목록 작성
+`docs/skeleton-cleanup-audit.md` 기준 스켈레톤 예제 코드 제거 범위와 V1 예제 DDL 처리 기준 확정 후 cleanup PR 진행
