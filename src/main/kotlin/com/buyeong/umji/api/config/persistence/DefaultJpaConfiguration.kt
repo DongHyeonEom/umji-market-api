@@ -15,7 +15,7 @@ import javax.sql.DataSource
 @Configuration
 @EnableJpaRepositories(
     basePackages = [
-        "com.buyeong.umji.api.persistence.jpa.repository.cdi",
+        "com.buyeong.umji.api",
     ],
     entityManagerFactoryRef = "defaultEntityManagerFactory",
     transactionManagerRef = "defaultTransactionManager",
@@ -30,8 +30,8 @@ class DefaultJpaConfiguration {
         builder
             .dataSource(defaultJPADataSource)
             .packages(
-                "com.buyeong.umji.api.persistence.jpa.entity.cdi",
-            ).persistenceUnit("cdi")
+                "com.buyeong.umji.api",
+            ).persistenceUnit("umjiMarket")
             .build()
 
     @Primary

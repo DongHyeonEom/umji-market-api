@@ -42,4 +42,4 @@
 
 ## Immediate Next Step
 
-`docs/architecture.md` 기준 실제 패키지 구조 확정 후 기존 스켈레톤 예제 코드 유지·삭제 목록 작성
+스켈레톤 예제 코드·테스트·V1 예제 DDL 제거 완료. Account, Role, Permission 및 인증 방식 확정 작업 진행

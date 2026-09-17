@@ -40,11 +40,11 @@ class SwaggerConfig {
             .build()
 
     @Bean
-    fun getStaffApi(): GroupedOpenApi =
+    fun api(): GroupedOpenApi =
         GroupedOpenApi
             .builder()
-            .group("1. Staff")
-            .pathsToMatch("/api/staffs/**")
+            .group("umji-market-api")
+            .pathsToMatch("/api/**")
             .build()
 
     // 도메인 추가 예시:

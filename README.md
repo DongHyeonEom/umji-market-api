@@ -33,3 +33,9 @@ TLS_KEY_STORE_PASSWORD
 ```text
 com.buyeong.umji.api
 ```
+
+## Current Baseline
+
+스켈레톤 유지·교체·제거 기준: [`docs/skeleton-cleanup-audit.md`](docs/skeleton-cleanup-audit.md)
+
+상태 확인 endpoint: `GET /actuator/health`
