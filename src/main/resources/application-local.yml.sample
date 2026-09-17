@@ -30,6 +30,10 @@ springdoc:
     enabled: true
 
 umji:
-  client:
-    core:
-      url: ${CORE_API_URL}
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER}
+      audience: ${JWT_AUDIENCE}
+      key-id: ${JWT_KEY_ID}
+      public-key: ${JWT_RSA_PUBLIC_KEY}
+      private-key: ${JWT_RSA_PRIVATE_KEY}

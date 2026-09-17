@@ -76,9 +76,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-aop")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.data:spring-data-envers")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.80")
 
     implementation(platform("com.azure.spring:spring-cloud-azure-dependencies:$springCloudAzureVersion"))
 
@@ -86,6 +89,7 @@ dependencies {
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
 
     testImplementation("com.navercorp.fixturemonkey:fixture-monkey-starter-kotlin:1.1.15")
     testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
