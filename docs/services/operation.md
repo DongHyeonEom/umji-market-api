@@ -14,6 +14,20 @@ POST  /api/operation/accounts/{accountId}/approve
 PATCH /api/operation/orders/{orderId}/status
 ```
 
+계정 운영 구현 범위:
+
+```text
+POST  /api/operation/accounts
+GET   /api/operation/accounts
+GET   /api/operation/accounts/{accountId}
+PATCH /api/operation/accounts/{accountId}/status
+PUT   /api/operation/accounts/{accountId}/business-profile
+POST  /api/operation/accounts/{accountId}/consents
+POST  /api/operation/accounts/{accountId}/approve
+```
+
+사전 등록 계정은 `PENDING_CONSENT`로 생성함. 개인정보 동의 기록 후 업체 프로필 유무에 따라 `PENDING_PROFILE` 또는 `PENDING_REVIEW`로 전환하며, 운영 승인 시 `ACTIVE`로 전환함
+
 카탈로그 운영 구현 범위:
 
 ```text
