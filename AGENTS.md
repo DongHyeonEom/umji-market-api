@@ -17,7 +17,9 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 
 - `README.md`: 실행 방법과 필수 환경 변수
 - `docs/architecture.md`: 도메인·API·인증 구조
+- `docs/services/`: Controller·Service 도메인별 API 책임과 권한 기준
 - `docs/database.md`: DB 모델과 Flyway 기준
+- `docs/database-erd.md`: ExERD 관계도와 현재·후속 테이블 범위
 - `docs/implementation-status.md`: 현재 기반 상태와 다음 구현 순서
 
 루트 `E:\buyeong_dev\umji-market\AGENTS.md`의 공통 기준도 함께 적용함

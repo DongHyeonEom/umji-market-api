@@ -69,9 +69,11 @@ WebView 흐름에서는 인증 만료, 앱 뒤로가기, 외부 PG 이동·복�
 
 초기 모델은 `Account`, `Role`, `Permission`, `AccountRole`, `RolePermission`임. Role 후보는 `CUSTOMER`, `ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SUPER_ADMIN`임
 
-토큰은 RS256 Access Token과 Refresh Token을 사용함. Access Token은 10~15분 만료, Refresh Token 원문은 클라이언트 보관·서버 SHA-256 hash 저장 방식임. JWT 개인키는 설정 파일이 아닌 PEM 파일 경로로 주입함
+토큰은 RS256 Access Token과 Refresh Token을 사용함. Access Token은 15분 만료, Refresh Token은 기기별 30일 유지·원문은 클라이언트 보관·서버 SHA-256 hash 저장 방식임. Refresh Token 갱신마다 계정 상태와 권한을 DB에서 재검증함. JWT 개인키는 설정 파일이 아닌 PEM 파일 경로로 주입함
 
 JWT claim 후보: `sub`, `iss`, `aud`, `roles`, `tokenVersion`, `iat`, `exp`
+
+휴대폰 OTP, 기존 회원 활성화, 개인정보 동의 흐름은 `services/authentication.md`와 루트 `SERVICE_FLOW.md`를 기준으로 함
 
 ## 데이터 접근과 향후 분리
 
