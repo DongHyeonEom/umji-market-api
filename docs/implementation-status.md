@@ -8,6 +8,7 @@
 - Actuator 상태 확인: `GET /actuator/health`
 - 공통 예외 처리, 추적 로그, OpenAPI, Testcontainers 기반 유지
 - JWT RSA PEM은 프로젝트 외부 `E:\buyeong_dev\umji-market\secrets\jwt`에서 경로로 주입
+- 인증 세부 정책 확정 전 로컬 환경은 `BYPASS` 모드 사용. 운영 환경은 `REQUIRED` 유지
 
 ## 마이그레이션 주의사항
 

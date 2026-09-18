@@ -4,6 +4,12 @@
 
 휴대폰 OTP, 개인정보 동의, 기존 회원 활성화, Access·Refresh Token 발급과 폐기 담당. 카카오 로그인과 비밀번호 로그인은 사용하지 않음
 
+## 현재 임시 정책
+
+인증 세부 플로우 확정 전까지 로컬 개발 환경은 `umji.security.authentication.mode=BYPASS`로 모든 요청을 통과시킴. 기본값과 운영 환경은 `REQUIRED`이며, `BYPASS`를 운영·스테이징 설정에 넣지 않음
+
+인증 재도입 시 휴대폰 OTP, 개인정보 동의·서면 동의 이력, 계정 활성화, Access·Refresh Token 흐름을 함께 구현함. 임시 BYPASS 모드에 계정 식별·권한 검사를 의존하지 않음
+
 ## Controller
 
 ```text
