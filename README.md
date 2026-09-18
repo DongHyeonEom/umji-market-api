@@ -1,14 +1,8 @@
 # Umji Market API
 
-엄지철물마켓 통합 Kotlin/Spring Boot API 프로젝트
+엄지철물마켓 Kotlin/Spring Boot 통합 API
 
-전체 프로젝트 방향성: `E:\buyeong_dev\umji-market\AGENTS.md`
-
-## Role
-
-Flutter WebView/React 프론트 호출용 통합 백엔드 API. 계정 role/permission 기반 사용자·관리자 UI 분기 및 관리자성 기능 서버 권한 검사
-
-## Local Commands
+## 실행
 
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=local'
@@ -16,26 +10,22 @@ Flutter WebView/React 프론트 호출용 통합 백엔드 API. 계정 role/perm
 ./gradlew check
 ```
 
-## Runtime Environment Variables
+## 로컬 설정
 
-Key Vault를 사용하지 않으므로 DB 자격 증명은 실행 환경 변수로 제공 필요
+`src/main/resources/application-local.yml.sample`을 참고해 Git 비추적 `application-local.yml`을 구성함
 
 ```text
 DB_READ_URL
 DB_WRITE_URL
 DB_USER_NAME
 DB_USER_PASSWORD
-TLS_KEY_STORE_PASSWORD
+JWT_ISSUER
+JWT_AUDIENCE
+JWT_KEY_ID
+JWT_RSA_PUBLIC_KEY_PATH
+JWT_RSA_PRIVATE_KEY_PATH
 ```
 
-## Package Root
-
-```text
-com.buyeong.umji.api
-```
-
-## Current Baseline
-
-스켈레톤 유지·교체·제거 기준: [`docs/skeleton-cleanup-audit.md`](docs/skeleton-cleanup-audit.md)
+JWT PEM 파일은 `E:\buyeong_dev\umji-market\secrets\jwt`에 두고 경로만 설정으로 전달함
 
 상태 확인 endpoint: `GET /actuator/health`

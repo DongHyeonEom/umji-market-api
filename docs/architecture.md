@@ -1,94 +1,85 @@
-# Architecture
+# API 구조
 
-## Overview
+## 서비스 경계
 
-엄지철물마켓 통합 백엔드 API. Flutter 앱의 WebView 셸 역할, React 프론트의 사용자·관리자 UI 제공, 단일 API 프로젝트의 계정 role/permission 기반 기능 접근 제어
-
-## Key Decision
-
-사용자 API·관리자 API의 별도 서비스 미분리
-
-이유:
-
-- WebView 기반 단일 서비스 도메인 UI 분기
-- 초기 MVP 서비스 분리의 운영 복잡도
-- 관리자 기능 서버 권한 검사 보호
-- 기능 확장 시 서비스 분리 전 패키지·모듈 경계 우선 검토
-
-## Runtime Shape
+엄지마켓은 Flutter 앱 셸, React WebView, Kotlin/Spring Boot API로 구성함. 초기에는 사용자·관리자 기능을 하나의 API 서비스에서 제공하고 계정의 role/permission으로 UI와 API 접근을 구분함
 
 ```text
-Flutter App
-  -> WebView
-    -> React Frontend
-      -> umji-market-api
-        -> Database / External APIs
+Flutter App -> WebView -> React Web -> umji-market-api -> MySQL / 외부 서비스
 ```
 
-## Database Access
+관리자 기능은 UI 은닉만으로 보호하지 않으며, 모든 관리자성 API에서 서버 권한 검사를 수행함
 
-공용 데이터베이스 연결 구성. `spring.datasource.read`와 `spring.datasource.write`만 유지하며, `@Transactional(readOnly = true)` 호출은 read 연결로 라우팅
+## 패키지와 계층
 
-접속 URL과 계정 정보는 애플리케이션 설정 파일에 저장하지 않고 실행 환경에서 `DB_READ_URL`, `DB_WRITE_URL`, `DB_USER_NAME`, `DB_USER_PASSWORD`로 주입
-
-## Package Direction
-
-패키지 루트: `com.buyeong.umji.api`
-
-권장 패키지 방향:
+패키지 루트는 `com.buyeong.umji.api`임
 
 ```text
-com.buyeong.umji.api.auth
-com.buyeong.umji.api.account
-com.buyeong.umji.api.catalog
-com.buyeong.umji.api.cart
-com.buyeong.umji.api.order
-com.buyeong.umji.api.payment
-com.buyeong.umji.api.inventory
-com.buyeong.umji.api.operation
-com.buyeong.umji.api.notification
-com.buyeong.umji.api.file
-com.buyeong.umji.api.common
+auth          인증·토큰·권한
+account       계정·주소
+catalog       상품·카테고리·브랜드
+cart          장바구니
+order         주문·취소·환불
+payment       결제
+inventory     재고·예약·변경 이력
+operation     관리자 운영·감사 로그
+notification  알림
+file          파일 메타데이터
+common        공통 설정·예외·웹·추적
 ```
 
-## Layer Direction
+각 도메인은 필요에 따라 `controller`, `model`, `dto`, `service`, `persistence`, `mapper`, `enums`, `exception`으로 분리함. Controller는 HTTP, Service는 비즈니스 규칙, Persistence는 DB 접근만 담당함. Entity는 persistence 계층 외부에 노출하지 않음
 
-도메인별 필요 계층
+## 도메인 모델
 
-```text
-controller
-model
-dto
-service
-persistence
-mapper
-enums
-exception
+| 도메인 | 핵심 개념 |
+| --- | --- |
+| auth | Account, Role, Permission, AccessToken, RefreshToken |
+| account | Member, AdminProfile, Address, Contact |
+| catalog | Product, ProductOption, Category, Brand, ProductImage |
+| cart | Cart, CartItem, SelectedOption |
+| order | Order, OrderItem, OrderStatus, ShippingRequest, CancelRequest, RefundRequest |
+| payment | Payment, PaymentMethod, PaymentStatus, ProviderTransaction |
+| inventory | Stock, StockChange, StockReservation |
+| operation | AdminActionLog, OperatorMemo, ProductChangeHistory, OrderHandlingHistory |
+
+상품의 판매·재고 단위는 SKU이며, 주문은 상품명·SKU명·가격을 스냅샷으로 보관함. 재고는 주문 생성 시 예약하고 결제 승인 시 확정 차감함
+
+## API 규칙
+
+- 기본 prefix: `/api`
+- 역할 구분은 URL prefix가 아니라 서버 role/permission 검사로 수행
+- 관리자성 후보 prefix: `/api/operation/**`
+- 목록 API는 `page`, `size`, `sort`를 기본 후보로 사용하고 무한 스크롤 화면은 cursor 방식을 별도 검토
+- OpenAPI tag는 도메인·역할이 드러나게 작성
+
+응답 형식은 구현 전에 공통화함
+
+```json
+{ "data": {}, "traceId": "..." }
 ```
 
-규칙:
+```json
+{ "code": "ERROR_CODE", "message": "...", "traceId": "...", "details": [] }
+```
 
-- Controller: HTTP 관심사
-- Model: API request/response
-- DTO: service 계층 전달 객체
-- Entity: persistence 계층 외부 노출 금지
-- Mapper: Entity, DTO, Model 변환
+WebView 흐름에서는 인증 만료, 앱 뒤로가기, 외부 PG 이동·복귀, 파일 업로드, 푸시 토큰 등록을 계약에 포함함
 
-## Role Based UI/API
+## 인증과 권한
 
-React의 role/permission 기반 사용자·관리자 화면 노출
+초기 모델은 `Account`, `Role`, `Permission`, `AccountRole`, `RolePermission`임. Role 후보는 `CUSTOMER`, `ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SUPER_ADMIN`임
 
-서버 보장 사항
+토큰은 RS256 Access Token과 Refresh Token을 사용함. Access Token은 10~15분 만료, Refresh Token 원문은 클라이언트 보관·서버 SHA-256 hash 저장 방식임. JWT 개인키는 설정 파일이 아닌 PEM 파일 경로로 주입함
 
-- 관리자 role/permission 부재 시 관리자 API 실패
-- UI 은닉 기능의 서버 권한 검사 생략 금지
-- 감사 필요 관리자 mutation의 audit log 고려
+JWT claim 후보: `sub`, `iss`, `aud`, `roles`, `tokenVersion`, `iat`, `exp`
 
-## Future Split Criteria
+## 데이터 접근과 향후 분리
 
-초기 단일 API. 아래 조건 누적 시 모듈 또는 서비스 분리 검토
+read/write datasource를 유지하고 `@Transactional(readOnly = true)`는 read 연결로 라우팅함. 접속 정보는 환경 변수로 주입함
 
-- 특정 도메인의 독립적 고속 배포 주기
-- Kafka consumer·batch의 API와 다른 확장 요구
-- 관리자 운영 기능과 사용자 트래픽의 상이한 보안·성능 요구
-- 공통 코드 대비 도메인 독립성 중요도 증가
+아래 조건이 누적되면 모듈 또는 서비스 분리를 검토함
+
+- 특정 도메인의 독립 배포·확장 요구
+- Kafka consumer·batch의 별도 확장 요구
+- 관리자 운영 기능과 사용자 트래픽의 보안·성능 요구 차이
+- 공통 코드보다 도메인 독립성이 중요해진 경우
