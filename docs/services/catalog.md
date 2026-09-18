@@ -14,6 +14,8 @@ POST /api/operation/products
 PATCH /api/operation/products/{productId}
 ```
 
+현재 공개 조회 구현 범위: `GET /api/categories`, `GET /api/products`, `GET /api/products/{productId}`. 운영 등록·수정 endpoint는 후속 구현 대상
+
 ## 핵심 규칙
 
 - 공개 조회는 판매·노출 상태가 유효한 상품만 반환

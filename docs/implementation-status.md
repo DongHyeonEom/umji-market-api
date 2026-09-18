@@ -9,6 +9,7 @@
 - 공통 예외 처리, 추적 로그, OpenAPI, Testcontainers 기반 유지
 - JWT RSA PEM은 프로젝트 외부 `E:\buyeong_dev\umji-market\secrets\jwt`에서 경로로 주입
 - 인증 세부 정책 확정 전 로컬 환경은 `BYPASS` 모드 사용. 운영 환경은 `REQUIRED` 유지
+- `V3__create_catalog_tables.sql`과 공개 카탈로그 조회 API 기반 추가
 
 ## 마이그레이션 주의사항
 
@@ -20,8 +21,8 @@
 
 ## 다음 구현 순서
 
-1. Account, Role, Permission과 로그인·토큰 발급 정책 확정
-2. 카탈로그의 Category, Brand, Product, SKU 및 공개 조회 API 구현
+1. 카탈로그 관리자 등록·수정, 상품 이미지·옵션 관리 구현
+2. 인증 정책 확정 후 Account, Role, Permission과 로그인·토큰 발급 구현
 3. 장바구니와 주문 생성, 재고 예약 구현
 4. 결제·주문 상태 전이와 운영 기능 확장
 
