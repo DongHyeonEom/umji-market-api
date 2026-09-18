@@ -20,4 +20,9 @@ interface ProductRepository : JpaRepository<ProductEntity, Long> {
         displayStatus: String,
         salesStatus: String,
     ): ProductEntity?
+
+    fun findByPublicIdAndDeletedAtIsNull(publicId: UUID): ProductEntity?
+
+    @EntityGraph(attributePaths = ["category", "brand"])
+    fun findAllByDeletedAtIsNull(pageable: Pageable): Page<ProductEntity>
 }
