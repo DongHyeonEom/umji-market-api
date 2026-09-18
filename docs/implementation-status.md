@@ -10,6 +10,7 @@
 - JWT RSA PEM은 프로젝트 외부 `E:\buyeong_dev\umji-market\secrets\jwt`에서 경로로 주입
 - 인증 세부 정책 확정 전 로컬 환경은 `BYPASS` 모드 사용. 운영 환경은 `REQUIRED` 유지
 - `V3__create_catalog_tables.sql`과 공개 카탈로그 조회 API 기반 추가
+- `V4__add_operation_account_profile_tables.sql`과 운영 계정·업체 프로필·동의 이력 기반 추가
 
 ## 마이그레이션 주의사항
 
