@@ -7,6 +7,6 @@ data class JwtProperties(
     val issuer: String,
     val audience: String,
     val keyId: String,
-    val publicKey: String,
-    val privateKey: String,
+    val publicKeyPath: String,
+    val privateKeyPath: String,
 )

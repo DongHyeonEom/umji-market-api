@@ -16,10 +16,10 @@ import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.web.SecurityFilterChain
-import java.io.ByteArrayInputStream
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
-import java.util.Base64
 import org.springframework.security.converter.RsaKeyConverters
 
 @Configuration
@@ -53,11 +53,12 @@ class SecurityConfig {
     }
 
     private fun JwtProperties.publicKey(): RSAPublicKey =
-        RsaKeyConverters.x509().convert(ByteArrayInputStream(pemBytes(publicKey))) as RSAPublicKey
+        Files.newInputStream(Path.of(publicKeyPath)).use { input ->
+            RsaKeyConverters.x509().convert(input) as RSAPublicKey
+        }
 
     private fun JwtProperties.privateKey(): RSAPrivateKey =
-        RsaKeyConverters.pkcs8().convert(ByteArrayInputStream(pemBytes(privateKey))) as RSAPrivateKey
-
-    private fun pemBytes(value: String): ByteArray =
-        Base64.getMimeDecoder().decode(value.replace("\\n", "\n").replace(Regex("-----[^-]+-----"), ""))
+        Files.newInputStream(Path.of(privateKeyPath)).use { input ->
+            RsaKeyConverters.pkcs8().convert(input) as RSAPrivateKey
+        }
 }
