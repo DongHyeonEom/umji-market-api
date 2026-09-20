@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-엄지마켓의 논리 데이터 모델. 현재 Flyway `V2`는 인증·계정 영역만 생성되어 있으며, 나머지는 후속 마이그레이션으로 추가할 목표 모델임. 상세 컬럼·제약·마이그레이션 순서는 `database.md`를 기준으로 함
+엄지마켓의 논리 데이터 모델. 현재 Flyway `V2`~`V5`로 인증·계정·운영 업체 프로필·카탈로그·상품 이미지·옵션 영역이 생성되어 있음. 상세 컬럼·제약·마이그레이션 순서는 `database.md`를 기준으로 함
 
 ## ExERD 작성 기준
 
@@ -94,7 +94,7 @@ erDiagram
     PRODUCT_IMAGE {
         BIGINT id PK
         BIGINT product_id FK
-        VARCHAR file_key
+        VARCHAR storage_key
     }
     PRODUCT_OPTION {
         BIGINT id PK
@@ -103,7 +103,7 @@ erDiagram
     }
     PRODUCT_OPTION_VALUE {
         BIGINT id PK
-        BIGINT option_id FK
+        BIGINT product_option_id FK
         VARCHAR value
     }
     PRODUCT_SKU {
@@ -113,9 +113,9 @@ erDiagram
         VARCHAR sku_code UK
         BIGINT sale_price
     }
-    SKU_OPTION_VALUE {
-        BIGINT sku_id FK
-        BIGINT option_value_id FK
+    PRODUCT_SKU_OPTION_VALUE {
+        BIGINT product_sku_id FK
+        BIGINT product_option_value_id FK
     }
     CART {
         BIGINT id PK
@@ -213,8 +213,8 @@ erDiagram
     PRODUCT ||--o{ PRODUCT_OPTION : has
     PRODUCT_OPTION ||--o{ PRODUCT_OPTION_VALUE : has
     PRODUCT ||--o{ PRODUCT_SKU : sells_as
-    PRODUCT_SKU ||--o{ SKU_OPTION_VALUE : selects
-    PRODUCT_OPTION_VALUE ||--o{ SKU_OPTION_VALUE : selected_by
+    PRODUCT_SKU ||--o{ PRODUCT_SKU_OPTION_VALUE : selects
+    PRODUCT_OPTION_VALUE ||--o{ PRODUCT_SKU_OPTION_VALUE : selected_by
     ACCOUNT ||--|| CART : owns
     CART ||--o{ CART_ITEM : contains
     PRODUCT_SKU ||--o{ CART_ITEM : selected
@@ -234,13 +234,163 @@ erDiagram
     ACCOUNT ||--o{ ADMIN_ACTION_LOG : acts
 ```
 
+## 현재 적용 테이블 컬럼 설명
+
+아래 명세는 현재 Flyway `V2`~`V5`에 실제 생성되는 테이블 기준입니다. `created_at`은 생성 시각, `updated_at`은 행의 마지막 수정 시각이며 모두 UTC `DATETIME(3)`입니다.
+
+### 인증·계정
+
+#### `account`
+
+| 컬럼 | 설명 | 비고 |
+| --- | --- | --- |
+| `id` | 계정 내부 식별자 | PK, 자동 증가 |
+| `public_id` | API에 노출하는 계정 식별자 | UUID를 `BINARY(16)`으로 보관, unique |
+| `login_id` | 자체 로그인 식별자 | 휴대폰 인증 전환을 위해 nullable |
+| `password_hash` | 비밀번호 해시 | 원문 저장 금지, 휴대폰 인증 전환을 위해 nullable |
+| `name` | 회원 또는 운영자 이름 | 필수 |
+| `phone` | 정규화한 휴대폰 번호 | 중복·변경은 운영 검토 정책 적용 예정 |
+| `email` | 이메일 주소 | 선택값 |
+| `status` | 계정 상태 | `ACTIVE`, `SUSPENDED` 등 서비스 흐름 코드 |
+| `token_version` | 발급 토큰 무효화 버전 | 권한·상태 변경 시 증가 예정 |
+| `last_login_at` | 마지막 로그인 시각 | 선택값 |
+| `created_at`, `updated_at` | 생성·수정 시각 | 감사용 기본 컬럼 |
+
+#### `role`, `permission`, `account_role`, `role_permission`
+
+| 테이블 | 컬럼 | 설명 | 비고 |
+| --- | --- | --- | --- |
+| `role` | `id` | 역할 내부 식별자 | PK, 자동 증가 |
+| `role` | `code` | 역할 코드 | 예: `CUSTOMER`, `PRODUCT_MANAGER`, unique |
+| `role` | `name` | 역할 표시 이름 | 관리자 UI 표시용 |
+| `role` | `is_system` | 시스템 기본 역할 여부 | 기본 역할의 임의 삭제·변경 방지 기준 |
+| `role` | `created_at`, `updated_at` | 생성·수정 시각 | 기본 감사 컬럼 |
+| `permission` | `id` | 권한 내부 식별자 | PK, 자동 증가 |
+| `permission` | `code` | 권한 코드 | 예: `PRODUCT_WRITE`, unique |
+| `permission` | `name` | 권한 표시 이름 | 운영 화면 표시용 |
+| `permission` | `created_at`, `updated_at` | 생성·수정 시각 | 기본 감사 컬럼 |
+| `account_role` | `account_id` | 역할을 받는 계정 | `account.id` FK, 복합 PK 구성 |
+| `account_role` | `role_id` | 계정에 부여한 역할 | `role.id` FK, 복합 PK 구성 |
+| `account_role` | `granted_at` | 역할 부여 시각 | 권한 감사 기준 |
+| `account_role` | `granted_by` | 역할을 부여한 계정 | 향후 `account.id` FK 추가 검토 대상 |
+| `role_permission` | `role_id` | 권한을 보유한 역할 | `role.id` FK, 복합 PK 구성 |
+| `role_permission` | `permission_id` | 역할에 연결한 권한 | `permission.id` FK, 복합 PK 구성 |
+
+#### `refresh_token`, `account_address`
+
+| 테이블 | 컬럼 | 설명 | 비고 |
+| --- | --- | --- | --- |
+| `refresh_token` | `id` | Refresh Token 내부 식별자 | PK, 자동 증가 |
+| `refresh_token` | `account_id` | 토큰 소유 계정 | `account.id` FK |
+| `refresh_token` | `token_hash` | Refresh Token의 SHA-256 해시 | 원문 저장 금지, unique |
+| `refresh_token` | `device_id` | 발급 기기 식별자 | 기기별 세션 관리용, 선택값 |
+| `refresh_token` | `expires_at` | 토큰 만료 시각 | 만료·폐기 토큰은 재발급 불가 |
+| `refresh_token` | `revoked_at` | 토큰 폐기 시각 | `NULL`이면 유효 후보 |
+| `refresh_token` | `created_at` | 발급 시각 | 수정 시각 없음 |
+| `account_address` | `id` | 배송지 내부 식별자 | PK, 자동 증가 |
+| `account_address` | `account_id` | 배송지 소유 계정 | `account.id` FK |
+| `account_address` | `recipient_name`, `recipient_phone` | 수령인 이름·연락처 | 주문 생성 시 주문 스냅샷으로 복사 예정 |
+| `account_address` | `postal_code`, `address1`, `address2` | 우편번호·기본·상세 주소 | `address2`는 선택값 |
+| `account_address` | `is_default` | 기본 배송지 여부 | 계정별 하나만 유지하도록 서비스에서 제어 |
+| `account_address` | `created_at`, `updated_at` | 생성·수정 시각 | 기본 감사 컬럼 |
+
+### 업체 프로필·개인정보 동의
+
+#### `business_profile`, `consent_history`
+
+| 테이블 | 컬럼 | 설명 | 비고 |
+| --- | --- | --- | --- |
+| `business_profile` | `id` | 업체 프로필 내부 식별자 | PK, 자동 증가 |
+| `business_profile` | `account_id` | 프로필 소유 계정 | `account.id` FK, 계정당 하나(unique) |
+| `business_profile` | `business_name` | 업체명 | 필수 |
+| `business_profile` | `business_registration_number` | 사업자등록번호 | 인덱스 있음, 중복·검증 정책은 별도 |
+| `business_profile` | `representative_name`, `business_phone` | 대표자명·업체 연락처 | 선택값 |
+| `business_profile` | `postal_code`, `address1`, `address2` | 업체 주소 | 모두 선택값, `address2`는 상세 주소 |
+| `business_profile` | `status` | 업체 검토·활성 상태 | 계정 상태와 분리하여 관리 |
+| `business_profile` | `created_at`, `updated_at` | 생성·수정 시각 | 기본 감사 컬럼 |
+| `consent_history` | `id` | 동의 이력 내부 식별자 | PK, 자동 증가 |
+| `consent_history` | `account_id` | 동의한 계정 | `account.id` FK |
+| `consent_history` | `consent_type` | 동의 종류 | 예: 개인정보 처리 동의 |
+| `consent_history` | `document_version` | 동의 문서 버전 | 당시 문서 기준을 보존 |
+| `consent_history` | `consent_method` | 동의 방식 | 온라인·서면 등 |
+| `consent_history` | `evidence_reference` | 증빙 참조값 | 서면 증빙의 저장소 key 등, 선택값 |
+| `consent_history` | `processed_by` | 동의를 기록한 운영자 | `account.id` FK, 온라인 동의는 `NULL` 가능 |
+| `consent_history` | `consented_at`, `created_at` | 실제 동의·이력 생성 시각 | 이력은 수정하지 않고 새 행 추가 |
+
+### 카탈로그
+
+#### `category`, `brand`, `product`
+
+| 테이블 | 컬럼 | 설명 | 비고 |
+| --- | --- | --- | --- |
+| `category` | `id`, `public_id` | 내부·외부 카테고리 식별자 | PK / UUID unique |
+| `category` | `parent_id` | 상위 카테고리 | 자기 참조 FK, 최상위는 `NULL` |
+| `category` | `name` | 카테고리명 | 필수 |
+| `category` | `path`, `depth` | 계층 경로·깊이 | 목록·트리 조회 최적화용 |
+| `category` | `display_order`, `display_status` | 노출 정렬·노출 상태 | 공개 목록은 노출 상태만 반환 |
+| `category` | `deleted_at`, `deleted_by` | 소프트 삭제 시각·처리자 | 삭제 행은 일반 조회에서 제외 |
+| `category` | `version`, `created_at`, `updated_at` | 낙관적 잠금·감사 시각 | 동시 수정 감지용 |
+| `brand` | `id`, `public_id` | 내부·외부 브랜드 식별자 | PK / UUID unique |
+| `brand` | `name` | 브랜드명 | unique |
+| `brand` | `display_status` | 브랜드 노출 상태 | 공개 카탈로그 필터 기준 |
+| `brand` | `deleted_at`, `deleted_by` | 소프트 삭제 시각·처리자 | 삭제 행은 재사용하지 않음 |
+| `brand` | `version`, `created_at`, `updated_at` | 낙관적 잠금·감사 시각 | 기본 관리 컬럼 |
+| `product` | `id`, `public_id` | 내부·외부 상품 식별자 | PK / UUID unique |
+| `product` | `category_id`, `brand_id` | 소속 카테고리·브랜드 | 카테고리는 필수, 브랜드는 선택값 |
+| `product` | `name`, `description` | 상품명·상세 설명 | 설명은 선택값 |
+| `product` | `display_status`, `sales_status` | 노출·판매 상태 | 둘 다 유효해야 공개 조회 가능 |
+| `product` | `display_order` | 상품 노출 정렬 순서 | 낮은 값 우선 |
+| `product` | `deleted_at`, `deleted_by` | 소프트 삭제 시각·처리자 | 주문 이력 보호를 위해 물리 삭제하지 않음 |
+| `product` | `version`, `created_at`, `updated_at` | 낙관적 잠금·감사 시각 | 기본 관리 컬럼 |
+
+#### `product_sku`, `product_image`, 옵션 테이블
+
+| 테이블 | 컬럼 | 설명 | 비고 |
+| --- | --- | --- | --- |
+| `product_sku` | `id`, `public_id` | 내부·외부 SKU 식별자 | PK / UUID unique |
+| `product_sku` | `product_id` | SKU가 속한 상품 | `product.id` FK |
+| `product_sku` | `sku_code` | 판매·재고 관리 코드 | 전 상품 범위에서 unique |
+| `product_sku` | `name` | SKU 표시명 | 옵션 조합명을 포함할 수 있음 |
+| `product_sku` | `sale_price`, `list_price` | 판매가·정가 | KRW 최소 단위 `BIGINT`, 정가는 선택값 |
+| `product_sku` | `sales_status` | SKU 판매 상태 | 상품이 판매 중이어도 SKU별 판매 중지 가능 |
+| `product_sku` | `version`, `created_at`, `updated_at` | 낙관적 잠금·감사 시각 | 재고 도메인이 SKU를 참조 |
+| `product_image` | `id`, `public_id` | 내부·외부 이미지 식별자 | PK / UUID unique |
+| `product_image` | `product_id` | 이미지가 속한 상품 | `product.id` FK |
+| `product_image` | `storage_key` | 객체 스토리지 파일 key | 파일 원본·공개 URL은 DB에 저장하지 않음, unique |
+| `product_image` | `alt_text` | 이미지 대체 텍스트 | 접근성·이미지 미표시 대응, 선택값 |
+| `product_image` | `display_order` | 이미지 노출 순서 | 같은 상품 안에서 낮은 값 우선 |
+| `product_image` | `created_at`, `updated_at` | 생성·수정 시각 | 기본 감사 컬럼 |
+| `product_option` | `id`, `public_id` | 내부·외부 옵션 축 식별자 | PK / UUID unique |
+| `product_option` | `product_id` | 옵션이 속한 상품 | `product.id` FK |
+| `product_option` | `name` | 옵션 축 이름 | 예: 색상, 규격; 상품별 unique |
+| `product_option` | `display_order` | 옵션 노출 순서 | 낮은 값 우선 |
+| `product_option` | `created_at`, `updated_at` | 생성·수정 시각 | 기본 감사 컬럼 |
+| `product_option_value` | `id`, `public_id` | 내부·외부 옵션값 식별자 | PK / UUID unique |
+| `product_option_value` | `product_option_id` | 소속 옵션 축 | `product_option.id` FK |
+| `product_option_value` | `value` | 선택 가능한 옵션값 | 예: 빨강, 10mm; 옵션별 unique |
+| `product_option_value` | `display_order` | 옵션값 노출 순서 | 낮은 값 우선 |
+| `product_option_value` | `created_at`, `updated_at` | 생성·수정 시각 | 기본 감사 컬럼 |
+| `product_sku_option_value` | `product_sku_id` | 옵션값을 선택한 SKU | `product_sku.id` FK, 복합 PK 구성 |
+| `product_sku_option_value` | `product_option_value_id` | SKU 조합에 포함되는 옵션값 | `product_option_value.id` FK, 복합 PK 구성 |
+
+## 설계 특이사항
+
+- **내부·외부 식별자 분리:** FK와 조인은 `id BIGINT`를 사용하고, API에는 추측하기 어려운 `public_id UUID`만 노출합니다. 조인 성능과 외부 식별자 비노출을 동시에 확보하기 위한 구조입니다.
+- **상품과 SKU의 책임 분리:** `product`는 상품의 공통 정보, `product_sku`는 실제 판매가·판매 상태와 이후 재고를 갖습니다. 옵션이 없는 상품도 주문·재고 처리를 위해 기본 SKU 하나가 필요합니다.
+- **SKU 옵션 조합:** `product_sku_option_value`는 SKU와 옵션값의 다대다 연결 테이블입니다. 서비스는 연결하려는 옵션값이 반드시 동일 상품의 옵션인지 검사합니다. 서로 다른 상품의 옵션값을 섞어 SKU를 만들 수 없습니다.
+- **이미지 저장 방식:** `product_image.storage_key`에는 object storage의 파일 key만 보관합니다. 이미지 원본, 다운로드 URL, 접근 서명은 DB에 저장하지 않고 파일 서비스에서 관리합니다.
+- **삭제·이력 보존:** 카테고리·브랜드·상품은 `deleted_at` 기반 소프트 삭제입니다. 주문·재고가 도입된 뒤에도 과거 주문의 상품 참조를 보존하기 위해 물리 삭제하지 않습니다. `consent_history`는 기존 행을 수정하지 않고 변경 사실을 새 행으로 추가합니다.
+- **계정 전환 기간:** 현재 `account.login_id`, `password_hash`는 nullable입니다. 서비스의 휴대폰 인증 로그인 전환 과정에서 기존 자체 로그인 데이터를 수용하기 위한 것이며, 최종 인증 정책 확정 후 제약을 다시 검토합니다.
+- **표기 범위:** 관계도에는 향후 도입할 주문·결제·재고·휴대폰 인증 테이블도 포함됩니다. 컬럼별 설명 표는 현재 실제 마이그레이션으로 생성된 V2~V5 테이블만 대상으로 합니다.
+
 ## 현재와 후속 범위
 
 | 범위 | 테이블 | 상태 |
 | --- | --- | --- |
 | 인증·계정 | `account`, `role`, `permission`, 연결 테이블, `refresh_token`, `account_address` | V2 생성 |
-| 회원 활성화 | `consent_history`, `phone_auth_challenge`, `business_profile` | 휴대폰 인증·신규 업체 정보 입력 구현 시 추가 |
-| 카탈로그 | `category`부터 `sku_option_value` | 후속 Flyway |
+| 회원 활성화 | `consent_history`, `business_profile` | V4 생성, 휴대폰 인증 challenge는 후속 |
+| 카탈로그 | `category`, `brand`, `product`, `product_sku` | V3 생성 |
+| 카탈로그 확장 | `product_image`, `product_option`, `product_option_value`, `product_sku_option_value` | V5 생성 |
 | 장바구니 | `cart`, `cart_item` | 후속 Flyway |
 | 주문·결제 | `purchase_order`부터 `refund` | 후속 Flyway |
 | 재고·운영 | `inventory_stock`부터 `admin_action_log` | 후속 Flyway |
