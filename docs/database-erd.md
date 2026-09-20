@@ -234,6 +234,204 @@ erDiagram
     ACCOUNT ||--o{ ADMIN_ACTION_LOG : acts
 ```
 
+## 현재 스키마 관계도 (컬럼 설명 포함)
+
+현재 Flyway `V2`~`V5`로 생성된 테이블만 표시한 관계도입니다. Mermaid의 큰따옴표 문자열은 각 컬럼의 설명 또는 특이사항입니다.
+
+```mermaid
+erDiagram
+    ACCOUNT {
+        BIGINT id PK "내부 계정 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        VARCHAR login_id "자체 로그인 ID, nullable"
+        VARCHAR password_hash "비밀번호 해시, nullable"
+        VARCHAR name "회원 또는 운영자명"
+        VARCHAR phone "정규화한 휴대폰 번호"
+        VARCHAR email "이메일, nullable"
+        VARCHAR status "계정 상태"
+        BIGINT token_version "토큰 무효화 버전"
+        DATETIME last_login_at "마지막 로그인 시각"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    ROLE {
+        BIGINT id PK "내부 역할 식별자"
+        VARCHAR code UK "역할 코드"
+        VARCHAR name "역할명"
+        BOOLEAN is_system "시스템 기본 역할 여부"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    PERMISSION {
+        BIGINT id PK "내부 권한 식별자"
+        VARCHAR code UK "권한 코드"
+        VARCHAR name "권한명"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    ACCOUNT_ROLE {
+        BIGINT account_id PK, FK "역할을 받는 계정"
+        BIGINT role_id PK, FK "부여된 역할"
+        DATETIME granted_at "부여 시각"
+        BIGINT granted_by "부여 처리자 ID"
+    }
+    ROLE_PERMISSION {
+        BIGINT role_id PK, FK "권한을 보유한 역할"
+        BIGINT permission_id PK, FK "역할에 연결한 권한"
+    }
+    REFRESH_TOKEN {
+        BIGINT id PK "내부 토큰 식별자"
+        BIGINT account_id FK "토큰 소유 계정"
+        BINARY token_hash UK "원문 없는 토큰 해시"
+        VARCHAR device_id "기기 식별자"
+        DATETIME expires_at "만료 시각"
+        DATETIME revoked_at "폐기 시각"
+        DATETIME created_at "발급 시각"
+    }
+    ACCOUNT_ADDRESS {
+        BIGINT id PK "내부 배송지 식별자"
+        BIGINT account_id FK "배송지 소유 계정"
+        VARCHAR recipient_name "수령인명"
+        VARCHAR recipient_phone "수령인 연락처"
+        VARCHAR postal_code "우편번호"
+        VARCHAR address1 "기본 주소"
+        VARCHAR address2 "상세 주소"
+        BOOLEAN is_default "기본 배송지 여부"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    BUSINESS_PROFILE {
+        BIGINT id PK "내부 업체 프로필 식별자"
+        BIGINT account_id FK "프로필 소유 계정, unique"
+        VARCHAR business_name "업체명"
+        VARCHAR business_registration_number "사업자등록번호"
+        VARCHAR representative_name "대표자명"
+        VARCHAR business_phone "업체 연락처"
+        VARCHAR postal_code "우편번호"
+        VARCHAR address1 "기본 주소"
+        VARCHAR address2 "상세 주소"
+        VARCHAR status "업체 검토·활성 상태"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    CONSENT_HISTORY {
+        BIGINT id PK "내부 동의 이력 식별자"
+        BIGINT account_id FK "동의한 계정"
+        VARCHAR consent_type "동의 종류"
+        VARCHAR document_version "동의 문서 버전"
+        VARCHAR consent_method "온라인·서면 등 동의 방식"
+        VARCHAR evidence_reference "증빙 참조값"
+        BIGINT processed_by FK "기록한 운영자"
+        DATETIME consented_at "실제 동의 시각"
+        DATETIME created_at "이력 생성 시각"
+    }
+    CATEGORY {
+        BIGINT id PK "내부 카테고리 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT parent_id FK "상위 카테고리"
+        VARCHAR name "카테고리명"
+        VARCHAR path "계층 탐색용 경로"
+        INT depth "계층 깊이"
+        INT display_order "노출 정렬 순서"
+        VARCHAR display_status "노출 상태"
+        DATETIME deleted_at "소프트 삭제 시각"
+        BIGINT deleted_by "삭제 처리자"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    BRAND {
+        BIGINT id PK "내부 브랜드 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        VARCHAR name UK "브랜드명"
+        VARCHAR display_status "노출 상태"
+        DATETIME deleted_at "소프트 삭제 시각"
+        BIGINT deleted_by "삭제 처리자"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    PRODUCT {
+        BIGINT id PK "내부 상품 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT category_id FK "소속 카테고리"
+        BIGINT brand_id FK "소속 브랜드, nullable"
+        VARCHAR name "상품명"
+        TEXT description "상품 상세 설명"
+        VARCHAR display_status "노출 상태"
+        VARCHAR sales_status "판매 상태"
+        INT display_order "노출 정렬 순서"
+        DATETIME deleted_at "소프트 삭제 시각"
+        BIGINT deleted_by "삭제 처리자"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    PRODUCT_IMAGE {
+        BIGINT id PK "내부 이미지 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT product_id FK "이미지가 속한 상품"
+        VARCHAR storage_key UK "object storage 파일 key"
+        VARCHAR alt_text "이미지 대체 텍스트"
+        INT display_order "이미지 노출 순서"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    PRODUCT_OPTION {
+        BIGINT id PK "내부 옵션 축 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT product_id FK "옵션이 속한 상품"
+        VARCHAR name "옵션 축 이름, 예: 색상"
+        INT display_order "옵션 노출 순서"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    PRODUCT_OPTION_VALUE {
+        BIGINT id PK "내부 옵션값 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT product_option_id FK "소속 옵션 축"
+        VARCHAR value "선택값, 예: 빨강"
+        INT display_order "옵션값 노출 순서"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    PRODUCT_SKU {
+        BIGINT id PK "내부 SKU 식별자"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT product_id FK "SKU가 속한 상품"
+        VARCHAR sku_code UK "판매·재고 관리 코드"
+        VARCHAR name "SKU 표시명"
+        BIGINT sale_price "실제 판매가"
+        BIGINT list_price "정가, nullable"
+        VARCHAR sales_status "SKU 판매 상태"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    PRODUCT_SKU_OPTION_VALUE {
+        BIGINT product_sku_id PK, FK "옵션값을 선택한 SKU"
+        BIGINT product_option_value_id PK, FK "SKU 조합에 포함된 옵션값"
+    }
+
+    ACCOUNT ||--o{ ACCOUNT_ROLE : receives
+    ROLE ||--o{ ACCOUNT_ROLE : assigned_to
+    ROLE ||--o{ ROLE_PERMISSION : has
+    PERMISSION ||--o{ ROLE_PERMISSION : granted_to
+    ACCOUNT ||--o{ REFRESH_TOKEN : owns
+    ACCOUNT ||--o{ ACCOUNT_ADDRESS : has
+    ACCOUNT ||--o| BUSINESS_PROFILE : operates
+    ACCOUNT ||--o{ CONSENT_HISTORY : agrees
+    CATEGORY o|--o{ CATEGORY : parent_of
+    CATEGORY ||--o{ PRODUCT : categorizes
+    BRAND o|--o{ PRODUCT : brands
+    PRODUCT ||--o{ PRODUCT_IMAGE : has
+    PRODUCT ||--o{ PRODUCT_OPTION : has
+    PRODUCT_OPTION ||--o{ PRODUCT_OPTION_VALUE : has
+    PRODUCT ||--o{ PRODUCT_SKU : sells_as
+    PRODUCT_SKU ||--o{ PRODUCT_SKU_OPTION_VALUE : selects
+    PRODUCT_OPTION_VALUE ||--o{ PRODUCT_SKU_OPTION_VALUE : selected_by
+```
+
 ## 현재 적용 테이블 컬럼 설명
 
 아래 명세는 현재 Flyway `V2`~`V5`에 실제 생성되는 테이블 기준입니다. `created_at`은 생성 시각, `updated_at`은 행의 마지막 수정 시각이며 모두 UTC `DATETIME(3)`입니다.
