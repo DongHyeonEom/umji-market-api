@@ -29,6 +29,27 @@ data class OperationProductSkuResponse(
     val salePrice: Long,
     val listPrice: Long?,
     val salesStatus: String,
+    val optionValueIds: Set<UUID> = emptySet(),
+)
+
+data class OperationProductImageResponse(
+    val id: UUID,
+    val storageKey: String,
+    val altText: String?,
+    val displayOrder: Int,
+)
+
+data class OperationProductOptionValueResponse(
+    val id: UUID,
+    val value: String,
+    val displayOrder: Int,
+)
+
+data class OperationProductOptionResponse(
+    val id: UUID,
+    val name: String,
+    val displayOrder: Int,
+    val values: List<OperationProductOptionValueResponse>,
 )
 
 data class OperationProductResponse(
@@ -40,6 +61,8 @@ data class OperationProductResponse(
     val displayStatus: String,
     val salesStatus: String,
     val displayOrder: Int,
+    val images: List<OperationProductImageResponse> = emptyList(),
+    val options: List<OperationProductOptionResponse> = emptyList(),
     val skus: List<OperationProductSkuResponse> = emptyList(),
 )
 

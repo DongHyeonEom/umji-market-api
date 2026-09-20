@@ -6,6 +6,8 @@ import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.ManyToMany
+import jakarta.persistence.JoinTable
 import jakarta.persistence.Table
 
 @Entity
@@ -29,4 +31,12 @@ class ProductSkuEntity : DomainPublicEntity() {
 
     @Column(name = "sales_status", nullable = false)
     lateinit var salesStatus: String
+
+    @ManyToMany
+    @JoinTable(
+        name = "product_sku_option_value",
+        joinColumns = [JoinColumn(name = "product_sku_id")],
+        inverseJoinColumns = [JoinColumn(name = "product_option_value_id")],
+    )
+    var optionValues: MutableSet<ProductOptionValueEntity> = linkedSetOf()
 }

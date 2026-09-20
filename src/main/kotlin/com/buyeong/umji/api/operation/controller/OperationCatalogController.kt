@@ -3,12 +3,16 @@ package com.buyeong.umji.api.operation.controller
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
 import com.buyeong.umji.api.operation.model.CreateCategoryRequest
 import com.buyeong.umji.api.operation.model.CreateProductRequest
+import com.buyeong.umji.api.operation.model.CreateProductImageRequest
+import com.buyeong.umji.api.operation.model.CreateProductOptionRequest
+import com.buyeong.umji.api.operation.model.CreateProductSkuRequest
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
 import com.buyeong.umji.api.operation.model.OperationBrandResponse
 import com.buyeong.umji.api.operation.model.OperationCategoryResponse
 import com.buyeong.umji.api.operation.model.OperationProductPageResponse
 import com.buyeong.umji.api.operation.model.OperationProductResponse
 import com.buyeong.umji.api.operation.model.UpdateProductStatusRequest
+import com.buyeong.umji.api.operation.model.UpdateProductRequest
 import com.buyeong.umji.api.operation.service.OperationCatalogService
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
@@ -64,6 +68,33 @@ class OperationCatalogController(
     @ResponseStatus(HttpStatus.CREATED)
     fun createProduct(@Valid @RequestBody request: CreateProductRequest): OperationCatalogResourceResponse =
         operationCatalogService.createProduct(request)
+
+    @PatchMapping("/products/{productId}")
+    fun updateProduct(
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: UpdateProductRequest,
+    ): OperationCatalogResourceResponse = operationCatalogService.updateProduct(productId, request)
+
+    @PostMapping("/products/{productId}/images")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun addProductImage(
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: CreateProductImageRequest,
+    ): OperationCatalogResourceResponse = operationCatalogService.addProductImage(productId, request)
+
+    @PostMapping("/products/{productId}/options")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun addProductOption(
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: CreateProductOptionRequest,
+    ): OperationCatalogResourceResponse = operationCatalogService.addProductOption(productId, request)
+
+    @PostMapping("/products/{productId}/skus")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun addProductSku(
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: CreateProductSkuRequest,
+    ): OperationCatalogResourceResponse = operationCatalogService.addProductSku(productId, request)
 
     @PatchMapping("/products/{productId}/status")
     fun updateProductStatus(
