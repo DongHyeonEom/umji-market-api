@@ -135,7 +135,7 @@ MVP 결제 수단: `BANK_TRANSFER`. `bank_transfer_payment`의 무통장·가상
 | --- | --- | --- | --- |
 | `inventory_stock` | `id`, `sku_id`, `on_hand_quantity`, `reserved_quantity`, `safety_stock_quantity`, `version` | `UQ sku_id`, `CK quantities >= 0` | 가용 재고 = 실재고 - 예약재고 |
 | `inventory_movement` | `id`, `sku_id`, `movement_type`, `quantity_delta`, `reference_type`, `reference_id`, `memo`, `occurred_at`, `created_by` | `IX sku_id, occurred_at DESC`, `IX reference_type, reference_id` | 변경 불가 원장 |
-| `stock_reservation` | `id`, `sku_id`, `order_item_id`, `quantity`, `status`, `expires_at`, `released_at` | `UQ order_item_id`, `IX status, expires_at` | 주문 항목별 예약 |
+| `stock_reservation` | `id`, `reservation_key`, `sku_id`, `quantity`, `status`, `expires_at`, `released_at` | `UQ reservation_key`, `IX status, expires_at` | 현재는 주문 연결 전 예약 키 기준, 주문 구현 시 주문 항목과 연결 |
 | `admin_action_log` | `id`, `actor_account_id`, `action_type`, `target_type`, `target_id`, `before_data`, `after_data`, `trace_id`, `occurred_at` | `IX target_type, target_id, occurred_at`, `IX actor_account_id, occurred_at` | 관리자 mutation 감사 |
 | `operator_memo` | `id`, `target_type`, `target_id`, `content`, `created_by`, `created_at`, `deleted_at` | `IX target_type, target_id, created_at` | 주문·상품 등 운영 메모 |
 
@@ -204,10 +204,11 @@ CREATE TABLE inventory_stock (
 
 1. `V2__create_auth_account_tables.sql`: account, role, permission, 연결 테이블, address, refresh token
 2. `V3__create_catalog_tables.sql`: category, brand, product, image, option, SKU
-3. `V4__create_cart_tables.sql`: cart, cart item
-4. `V5__create_order_payment_tables.sql`: purchase order, order item, payment, bank transfer payment, cancellation/refund
-5. `V6__create_inventory_operation_tables.sql`: stock, reservation, movement, operation log
-6. `R__seed_system_roles_and_permissions.sql`: 시스템 role/permission upsert seed
+3. `V4__add_operation_account_profile_tables.sql`: 운영 계정·업체 프로필·동의 이력
+4. `V5__add_product_images_and_options.sql`: 상품 이미지·옵션·SKU 확장
+5. `V6__add_phone_login_and_persistent_sessions.sql`: 휴대폰 정규화 로그인·영속 세션
+6. `V7__add_inventory_stock_and_movement_tables.sql`: stock, reservation, movement
+7. `R__seed_system_roles_and_permissions.sql`: 시스템 role/permission upsert seed
 
 운영 반영 마이그레이션 수정 금지. 컬럼 변경: 후속 버전 추가. 대량 데이터 backfill·NOT NULL/unique 제약: 최소 두 단계 배포
 
