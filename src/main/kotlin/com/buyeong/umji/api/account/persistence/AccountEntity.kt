@@ -25,6 +25,9 @@ class AccountEntity {
     @Column
     var phone: String? = null
 
+    @Column(name = "phone_normalized")
+    var phoneNormalized: String? = null
+
     @Column
     var email: String? = null
 
@@ -33,6 +36,9 @@ class AccountEntity {
 
     @Column(name = "token_version", nullable = false)
     var tokenVersion: Long = 0
+
+    @Column(name = "last_login_at")
+    var lastLoginAt: java.time.Instant? = null
 
     @PrePersist
     fun assignPublicId() {
