@@ -613,7 +613,7 @@ erDiagram
 | 카탈로그 확장 | `product_image`, `product_option`, `product_option_value`, `product_sku_option_value` | V5 생성 |
 | 장바구니 | `cart`, `cart_item` | 후속 Flyway |
 | 주문·결제 | `purchase_order`부터 `refund` | 후속 Flyway |
-| 재고·운영 | `inventory_stock`부터 `admin_action_log` | 후속 Flyway |
+| 재고·운영 | `inventory_stock`, `inventory_movement`, `stock_reservation` | V7, 운영 감사 테이블은 후속 Flyway |
 
 ## ExERD 사용 방법
 
