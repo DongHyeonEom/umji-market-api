@@ -39,7 +39,7 @@ flowchart TD
 
 인증 세부 플로우 확정 전까지 로컬 개발 환경은 `umji.security.authentication.mode=BYPASS`로 모든 요청을 통과시킴. 기본값과 운영 환경은 `REQUIRED`이며, `BYPASS`를 운영·스테이징 설정에 넣지 않음
 
-인증 재도입 시 휴대폰 OTP, 개인정보 동의·서면 동의 이력, 계정 활성화, Access·Refresh Token 흐름을 함께 구현함. 임시 BYPASS 모드에 계정 식별·권한 검사를 의존하지 않음
+현재 구현 범위는 `ACTIVE` 계정의 휴대폰 번호 로그인과 Access·Refresh Token 발급·갱신·폐기임. 휴대폰 OTP, 개인정보 입력·저장, 비활성 계정의 `ACTIVE` 전환은 후속 구현이며, 현재 비활성 또는 미등록 번호 로그인 요청에는 `PHONE_VERIFICATION_REQUIRED` 상태를 반환함. 임시 BYPASS 모드에 계정 식별·권한 검사를 의존하지 않음
 
 ## Controller
 
@@ -52,6 +52,8 @@ POST /api/auth/consents
 POST /api/auth/token/refresh
 POST /api/auth/tokens/revoke
 ```
+
+현재 구현된 endpoint는 `/login`, `/token/refresh`, `/tokens/revoke`임. `/phone/challenges` 이하와 활성화·동의 endpoint는 휴대폰 본인 인증 기능 구현 시 추가함
 
 ## 핵심 규칙
 

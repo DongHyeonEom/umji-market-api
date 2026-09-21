@@ -11,6 +11,18 @@ package com.buyeong.umji.api.util
  * - 031-1234-1234 (지역번호 11자리)
  */
 object PhoneNumberHelper {
+    fun normalizeMobilePhoneNumber(phoneNumber: String): String {
+        val digits = phoneNumber.filter(Char::isDigit).let {
+            when {
+                it.startsWith("082") -> "0${it.drop(3)}"
+                it.startsWith("82") -> "0${it.drop(2)}"
+                else -> it
+            }
+        }
+        require(digits.matches(Regex("010\\d{8}"))) { "유효한 휴대폰 번호가 아닙니다." }
+        return digits
+    }
+
     /**
      * 전화번호를 하이픈(-) 포함 형식으로 변환.
      *

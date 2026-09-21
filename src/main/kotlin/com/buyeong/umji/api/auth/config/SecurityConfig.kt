@@ -14,8 +14,11 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtEncoder
+import org.springframework.security.oauth2.jwt.JwtClaimValidator
+import org.springframework.security.oauth2.jwt.JwtValidators
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator
 import org.springframework.security.web.SecurityFilterChain
 import java.nio.file.Files
 import java.nio.file.Path
@@ -59,7 +62,15 @@ class SecurityConfig {
         havingValue = "REQUIRED",
         matchIfMissing = true,
     )
-    fun jwtDecoder(properties: JwtProperties): JwtDecoder = NimbusJwtDecoder.withPublicKey(properties.publicKey()).build()
+    fun jwtDecoder(properties: JwtProperties): JwtDecoder =
+        NimbusJwtDecoder.withPublicKey(properties.publicKey()).build().apply {
+            setJwtValidator(
+                DelegatingOAuth2TokenValidator(
+                    JwtValidators.createDefaultWithIssuer(properties.issuer),
+                    JwtClaimValidator<List<String>>("aud") { audiences -> audiences.contains(properties.audience) },
+                ),
+            )
+        }
 
     @Bean
     @ConditionalOnProperty(

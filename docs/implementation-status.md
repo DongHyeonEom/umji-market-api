@@ -12,6 +12,7 @@
 - `V3__create_catalog_tables.sql`과 공개 카탈로그 조회 API 기반 추가
 - `V4__add_operation_account_profile_tables.sql`과 운영 계정·업체 프로필·동의 이력 기반 추가
 - `V5__add_product_images_and_options.sql`과 운영자 상품 수정, 이미지·옵션·SKU 관리 API 추가
+- `V6__add_phone_login_and_persistent_sessions.sql`과 `ACTIVE` 계정의 휴대폰 번호 로그인, RS256 Access Token·영속 Refresh Token 갱신·폐기 API 추가
 
 ## 마이그레이션 주의사항
 
@@ -23,7 +24,7 @@
 
 ## 다음 구현 순서
 
-1. 인증 정책 확정 후 Account, Role, Permission과 로그인·토큰 발급 구현
+1. 휴대폰 본인 인증, 개인정보 입력·저장, 비활성 계정 활성화 흐름 구현
 2. 장바구니와 주문 생성, 재고 예약 구현
 3. 결제·주문 상태 전이와 운영 기능 확장
 
@@ -33,7 +34,7 @@
 - `ACTIVE` 계정은 휴대폰 번호만으로 로그인함
 - `ACTIVE`가 아닌 기존 계정과 신규 계정은 휴대폰 본인 인증 후 기존 정보 확인 또는 신규 정보 입력을 진행하고, 개인정보 최종 저장 시 `ACTIVE` 처리함
 - Access Token은 짧게 유지하고, Refresh Token은 명시적 삭제·무효화 또는 계정 상태 변경 전까지 기기별로 영속 유지함
-- 구현 시 신규 Flyway 마이그레이션으로 영속 Refresh Token 정책을 반영함
+- 영속 Refresh Token 정책은 V6에 반영함
 
 ## 보류된 정책
 

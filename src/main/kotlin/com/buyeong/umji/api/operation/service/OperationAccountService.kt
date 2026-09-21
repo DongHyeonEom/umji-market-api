@@ -3,6 +3,7 @@ package com.buyeong.umji.api.operation.service
 import com.buyeong.umji.api.account.persistence.*
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.model.*
+import com.buyeong.umji.api.util.PhoneNumberHelper
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -14,7 +15,8 @@ import java.util.UUID
 @Transactional
 class OperationAccountService(private val accounts: AccountRepository, private val profiles: BusinessProfileRepository, private val consents: ConsentHistoryRepository) {
     fun create(r: CreateOperationAccountRequest): OperationAccountResponse {
-        val a = accounts.save(AccountEntity().apply { name = r.name.trim(); phone = r.phone.trim(); email = r.email?.trim()?.ifBlank { null }; status = PENDING_CONSENT })
+        val normalizedPhone = PhoneNumberHelper.normalizeMobilePhoneNumber(r.phone)
+        val a = accounts.save(AccountEntity().apply { name = r.name.trim(); phone = r.phone.trim(); phoneNormalized = normalizedPhone; email = r.email?.trim()?.ifBlank { null }; status = PENDING_CONSENT })
         r.businessProfile?.let { profile(a, it) }
         return response(a)
     }

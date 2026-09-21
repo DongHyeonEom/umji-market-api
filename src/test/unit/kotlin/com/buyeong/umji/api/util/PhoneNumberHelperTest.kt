@@ -1,9 +1,24 @@
 package com.buyeong.umji.api.util
 
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 
 class PhoneNumberHelperTest : DescribeSpec({
+
+    describe("PhoneNumberHelper.normalizeMobilePhoneNumber") {
+        it("하이픈과 국가 코드를 제거한 휴대폰 번호를 반환한다") {
+            PhoneNumberHelper.normalizeMobilePhoneNumber("010-1234-5678") shouldBe "01012345678"
+            PhoneNumberHelper.normalizeMobilePhoneNumber("+82 10 1234 5678") shouldBe "01012345678"
+            PhoneNumberHelper.normalizeMobilePhoneNumber("0821012345678") shouldBe "01012345678"
+        }
+
+        it("휴대폰 번호가 아닌 값은 거부한다") {
+            shouldThrow<IllegalArgumentException> {
+                PhoneNumberHelper.normalizeMobilePhoneNumber("02-1234-5678")
+            }
+        }
+    }
 
     describe("PhoneNumberHelper.formatPhoneNumber") {
 

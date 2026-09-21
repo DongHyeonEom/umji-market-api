@@ -4,13 +4,13 @@
 
 ## 회원 인증 흐름
 
-비밀번호·카카오 로그인 없이 휴대폰 번호 OTP로 기존 회원을 식별하고, 개인정보 동의와 계정 상태에 따라 서비스 진입을 결정함
+비밀번호·카카오 로그인 없이 휴대폰 번호로 계정을 식별함. `ACTIVE` 계정은 휴대폰 번호만으로 로그인하고, 비활성 계정과 신규 번호의 휴대폰 본인 인증·개인정보 입력은 후속 구현함
 
 ```text
-휴대폰 인증 -> 기존 회원 조회 -> 동의 또는 업체 정보 입력 -> ACTIVE 확인 -> 토큰 발급
+휴대폰 번호 입력 -> ACTIVE 계정 확인 -> Access·Refresh Token 발급
 ```
 
-Access Token은 15분, 기기별 Refresh Token은 30일로 유지함. Refresh Token 갱신마다 계정 상태·권한을 DB에서 재검증하여 정지·탈퇴·권한 변경을 반영함
+Access Token은 15분, 기기별 Refresh Token은 명시적 폐기·계정 상태 변경 전까지 영속 유지함. Refresh Token 갱신마다 계정 상태와 `tokenVersion`을 DB에서 재검증함
 
 전체 회원 흐름: `E:\buyeong_dev\umji-market\SERVICE_FLOW.md`
 
