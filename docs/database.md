@@ -105,8 +105,8 @@ account(operator) --< admin_action_log
 
 | 테이블 | 핵심 컬럼 | 제약/인덱스 | 비고 |
 | --- | --- | --- | --- |
-| `cart` | `id`, `account_id`, `version` | `UQ account_id` | 회원당 활성 장바구니 하나 |
-| `cart_item` | `id`, `cart_id`, `sku_id`, `quantity`, `version` | `UQ cart_id, sku_id`, `IX sku_id` | 선택된 옵션은 SKU가 표현 |
+| `cart` | `id`, `public_id`, `account_id`, `version` | `UQ public_id`, `UQ account_id` | 회원당 활성 장바구니 하나 |
+| `cart_item` | `id`, `public_id`, `cart_id`, `sku_id`, `quantity`, `version` | `UQ public_id`, `UQ cart_id, sku_id`, `IX sku_id` | 선택된 옵션은 SKU가 표현 |
 
 장바구니 가격 미저장 및 현재 SKU 가격 표시. 주문 생성 시점의 주문 항목 가격·상품명 스냅샷
 
@@ -208,7 +208,8 @@ CREATE TABLE inventory_stock (
 4. `V5__add_product_images_and_options.sql`: 상품 이미지·옵션·SKU 확장
 5. `V6__add_phone_login_and_persistent_sessions.sql`: 휴대폰 정규화 로그인·영속 세션
 6. `V7__add_inventory_stock_and_movement_tables.sql`: stock, reservation, movement
-7. `R__seed_system_roles_and_permissions.sql`: 시스템 role/permission upsert seed
+7. `V8__add_cart_tables.sql`: cart, cart item
+8. `R__seed_system_roles_and_permissions.sql`: 시스템 role/permission upsert seed
 
 운영 반영 마이그레이션 수정 금지. 컬럼 변경: 후속 버전 추가. 대량 데이터 backfill·NOT NULL/unique 제약: 최소 두 단계 배포
 
