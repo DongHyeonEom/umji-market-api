@@ -73,7 +73,7 @@ WebView 흐름에서는 인증 만료, 앱 뒤로가기, 외부 PG 이동·복�
 
 JWT claim 후보: `sub`, `iss`, `aud`, `roles`, `tokenVersion`, `iat`, `exp`
 
-휴대폰 번호 로그인, 계정별 본인 인증 생략, 기존 회원 활성화, 개인정보 동의 흐름은 `services/authentication.md`와 루트 `SERVICE_FLOW.md`를 기준으로 함
+휴대폰 번호 로그인, 계정 상태 기반 본인 인증, 기존 회원 활성화, 개인정보 동의 흐름은 `services/authentication.md`와 루트 `SERVICE_FLOW.md`를 기준으로 함
 
 ## 데이터 접근과 향후 분리
 
