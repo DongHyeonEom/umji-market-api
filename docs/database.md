@@ -209,7 +209,8 @@ CREATE TABLE inventory_stock (
 5. `V6__add_phone_login_and_persistent_sessions.sql`: 휴대폰 정규화 로그인·영속 세션
 6. `V7__add_inventory_stock_and_movement_tables.sql`: stock, reservation, movement
 7. `V8__add_cart_tables.sql`: cart, cart item
-8. `R__seed_system_roles_and_permissions.sql`: 시스템 role/permission upsert seed
+8. `V9__add_order_tables.sql`: purchase order, order item, order status history
+9. `R__seed_system_roles_and_permissions.sql`: 시스템 role/permission upsert seed
 
 운영 반영 마이그레이션 수정 금지. 컬럼 변경: 후속 버전 추가. 대량 데이터 backfill·NOT NULL/unique 제약: 최소 두 단계 배포
 
