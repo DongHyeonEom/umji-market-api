@@ -15,6 +15,7 @@
 - `V6__add_phone_login_and_persistent_sessions.sql`과 `ACTIVE` 계정의 휴대폰 번호 로그인, RS256 Access Token·영속 Refresh Token 갱신·폐기 API 추가
 - `V7__add_inventory_stock_and_movement_tables.sql`과 SKU 재고 조회·조정, 재고 변동 이력, 주문용 예약·해제·확정 Service 기반 추가
 - `V8__add_cart_tables.sql`과 Access Token 기반 사용자별 장바구니 조회·추가·수정·삭제 API 추가
+- `V9__add_order_tables.sql`과 장바구니 기반 주문 생성, 주문 항목 가격 스냅샷, 재고 예약, 주문 목록·상세 조회 API 추가
 
 ## 마이그레이션 주의사항
 
@@ -26,9 +27,8 @@
 
 ## 다음 구현 순서
 
-1. 주문 생성과 재고 예약 연결 구현
-2. 결제·주문 상태 전이와 운영 기능 확장
-3. 휴대폰 본인 인증, 개인정보 입력·저장, 비활성 계정 활성화 흐름 구현
+1. 결제·주문 상태 전이와 운영 기능 확장
+2. 휴대폰 본인 인증, 개인정보 입력·저장, 비활성 계정 활성화 흐름 구현
 
 ## 확정된 후속 인증 정책
 
