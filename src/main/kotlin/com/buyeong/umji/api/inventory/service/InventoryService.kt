@@ -1,18 +1,16 @@
 package com.buyeong.umji.api.inventory.service
 
-import com.buyeong.umji.api.catalog.persistence.ProductSkuEntity
-import com.buyeong.umji.api.catalog.persistence.ProductSkuRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.inventory.model.AdjustInventoryRequest
 import com.buyeong.umji.api.inventory.model.InventoryMovementPageResponse
 import com.buyeong.umji.api.inventory.model.InventoryMovementResponse
 import com.buyeong.umji.api.inventory.model.InventoryStockResponse
-import com.buyeong.umji.api.inventory.persistence.InventoryMovementEntity
-import com.buyeong.umji.api.inventory.persistence.InventoryMovementRepository
-import com.buyeong.umji.api.inventory.persistence.InventoryStockEntity
-import com.buyeong.umji.api.inventory.persistence.InventoryStockRepository
-import com.buyeong.umji.api.inventory.persistence.StockReservationEntity
-import com.buyeong.umji.api.inventory.persistence.StockReservationRepository
+import com.buyeong.umji.api.persistence.jpa.inventory.InventoryMovementEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.InventoryJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.inventory.InventoryStockEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.StockReservationEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -22,21 +20,19 @@ import java.util.UUID
 
 @Service
 class InventoryService(
-    private val productSkus: ProductSkuRepository,
-    private val stocks: InventoryStockRepository,
-    private val movements: InventoryMovementRepository,
-    private val reservations: StockReservationRepository,
+    private val catalog: CatalogJpaEntityService,
+    private val inventory: InventoryJpaEntityService,
 ) {
     @Transactional(readOnly = true)
     fun stock(skuId: UUID): InventoryStockResponse {
         val sku = sku(skuId)
-        return stockResponse(sku, stocks.findBySkuId(requireNotNull(sku.id)))
+        return stockResponse(sku, inventory.stock(requireNotNull(sku.id)))
     }
 
     @Transactional(readOnly = true)
     fun movements(skuId: UUID, page: Int, size: Int): InventoryMovementPageResponse {
         val sku = sku(skuId)
-        val result = movements.findAllBySkuId(requireNotNull(sku.id), PageRequest.of(page, size, Sort.by("occurredAt").descending()))
+        val result = inventory.movements(requireNotNull(sku.id), PageRequest.of(page, size, Sort.by("occurredAt").descending()))
         return InventoryMovementPageResponse(result.content.map(::movementResponse), result.number, result.size, result.totalElements, result.totalPages)
     }
 
@@ -50,26 +46,26 @@ class InventoryService(
         require(nextOnHand >= stock.reservedQuantity) { "예약 재고보다 실재고를 낮출 수 없습니다." }
         stock.onHandQuantity = nextOnHand
         request.safetyStockQuantity?.let { stock.safetyStockQuantity = it }
-        movements.save(movement(sku, ADJUSTMENT, request.quantityDelta, request.reason.trim(), null, request.memo))
+        inventory.saveMovement(movement(sku, ADJUSTMENT, request.quantityDelta, request.reason.trim(), null, request.memo))
         return stockResponse(sku, stock)
     }
 
     @Transactional
     fun reserve(skuId: UUID, quantity: Int, reservationKey: UUID, expiresAt: Instant?): InventoryStockResponse {
         require(quantity > 0) { "예약 수량은 1 이상이어야 합니다." }
-        require(reservations.findByReservationKey(reservationKey) == null) { "이미 처리된 재고 예약입니다." }
+        require(inventory.reservation(reservationKey) == null) { "이미 처리된 재고 예약입니다." }
         val sku = sku(skuId)
         val stock = lockedStock(sku)
         require(stock.availableQuantity() >= quantity) { "가용 재고가 부족합니다." }
         stock.reservedQuantity += quantity
-        reservations.save(StockReservationEntity().apply {
+        inventory.saveReservation(StockReservationEntity().apply {
             this.reservationKey = reservationKey
             this.sku = sku
             this.quantity = quantity
             status = RESERVED
             this.expiresAt = expiresAt
         })
-        movements.save(movement(sku, RESERVATION, -quantity, "ORDER_RESERVATION", reservationKey, null))
+        inventory.saveMovement(movement(sku, RESERVATION, -quantity, "ORDER_RESERVATION", reservationKey, null))
         return stockResponse(sku, stock)
     }
 
@@ -81,7 +77,7 @@ class InventoryService(
         stock.reservedQuantity -= reservation.quantity
         reservation.status = RELEASED
         reservation.releasedAt = Instant.now()
-        movements.save(movement(reservation.sku, RELEASE, reservation.quantity, "ORDER_RESERVATION", reservationKey, null))
+        inventory.saveMovement(movement(reservation.sku, RELEASE, reservation.quantity, "ORDER_RESERVATION", reservationKey, null))
         return stockResponse(reservation.sku, stock)
     }
 
@@ -93,18 +89,18 @@ class InventoryService(
         stock.onHandQuantity -= reservation.quantity
         stock.reservedQuantity -= reservation.quantity
         reservation.status = CONFIRMED
-        movements.save(movement(reservation.sku, CONFIRMATION, -reservation.quantity, "ORDER_RESERVATION", reservationKey, null))
+        inventory.saveMovement(movement(reservation.sku, CONFIRMATION, -reservation.quantity, "ORDER_RESERVATION", reservationKey, null))
         return stockResponse(reservation.sku, stock)
     }
 
     private fun lockedStock(sku: ProductSkuEntity): InventoryStockEntity =
-        stocks.findLockedBySkuId(requireNotNull(sku.id)) ?: stocks.save(InventoryStockEntity().apply { this.sku = sku })
+        inventory.lockedStock(sku)
 
     private fun sku(skuId: UUID): ProductSkuEntity =
-        productSkus.findByPublicId(skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
+        catalog.sku(skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
 
     private fun reservation(reservationKey: UUID): StockReservationEntity =
-        reservations.findByReservationKey(reservationKey) ?: throw ItemNotFoundException("재고 예약을 찾을 수 없습니다.")
+        inventory.reservation(reservationKey) ?: throw ItemNotFoundException("재고 예약을 찾을 수 없습니다.")
 
     private fun movement(
         sku: ProductSkuEntity,

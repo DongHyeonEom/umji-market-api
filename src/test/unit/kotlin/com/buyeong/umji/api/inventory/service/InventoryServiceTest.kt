@@ -1,13 +1,11 @@
 package com.buyeong.umji.api.inventory.service
 
-import com.buyeong.umji.api.catalog.persistence.ProductSkuEntity
-import com.buyeong.umji.api.catalog.persistence.ProductSkuRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.inventory.model.AdjustInventoryRequest
-import com.buyeong.umji.api.inventory.persistence.InventoryMovementEntity
-import com.buyeong.umji.api.inventory.persistence.InventoryMovementRepository
-import com.buyeong.umji.api.inventory.persistence.InventoryStockEntity
-import com.buyeong.umji.api.inventory.persistence.InventoryStockRepository
-import com.buyeong.umji.api.inventory.persistence.StockReservationRepository
+import com.buyeong.umji.api.persistence.jpa.inventory.InventoryMovementEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.InventoryJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.inventory.InventoryStockEntity
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -17,11 +15,9 @@ import io.mockk.verify
 import java.util.UUID
 
 class InventoryServiceTest : DescribeSpec({
-    val productSkus = mockk<ProductSkuRepository>()
-    val stocks = mockk<InventoryStockRepository>()
-    val movements = mockk<InventoryMovementRepository>(relaxed = true)
-    val reservations = mockk<StockReservationRepository>()
-    val service = InventoryService(productSkus, stocks, movements, reservations)
+    val productSkus = mockk<CatalogJpaEntityService>()
+    val inventory = mockk<InventoryJpaEntityService>(relaxed = true)
+    val service = InventoryService(productSkus, inventory)
     val skuId = UUID.randomUUID()
     val sku = mockk<ProductSkuEntity>()
 
@@ -29,8 +25,8 @@ class InventoryServiceTest : DescribeSpec({
         every { sku.id } returns 1L
         every { sku.publicId } returns skuId
         every { sku.skuCode } returns "SKU-001"
-        every { productSkus.findByPublicId(skuId) } returns sku
-        every { movements.save(any<InventoryMovementEntity>()) } answers { firstArg() }
+        every { productSkus.sku(skuId) } returns sku
+        every { inventory.saveMovement(any<InventoryMovementEntity>()) } answers { firstArg() }
     }
 
     describe("운영 재고 조정") {
@@ -40,13 +36,13 @@ class InventoryServiceTest : DescribeSpec({
                 onHandQuantity = 10
                 reservedQuantity = 2
             }
-            every { stocks.findLockedBySkuId(1L) } returns stock
+            every { inventory.lockedStock(sku) } returns stock
 
             val response = service.adjust(skuId, AdjustInventoryRequest(5, "INITIAL_RECEIPT", "입고"))
 
             response.onHandQuantity shouldBe 15
             response.availableQuantity shouldBe 13
-            verify(exactly = 1) { movements.save(any()) }
+            verify(exactly = 1) { inventory.saveMovement(any()) }
         }
 
         it("예약 재고보다 낮게 실재고를 조정하지 못한다") {
@@ -55,7 +51,7 @@ class InventoryServiceTest : DescribeSpec({
                 onHandQuantity = 10
                 reservedQuantity = 8
             }
-            every { stocks.findLockedBySkuId(1L) } returns stock
+            every { inventory.lockedStock(sku) } returns stock
 
             shouldThrow<IllegalArgumentException> {
                 service.adjust(skuId, AdjustInventoryRequest(-3, "CORRECTION"))
@@ -70,8 +66,8 @@ class InventoryServiceTest : DescribeSpec({
                 onHandQuantity = 5
                 reservedQuantity = 2
             }
-            every { stocks.findLockedBySkuId(1L) } returns stock
-            every { reservations.findByReservationKey(any()) } returns null
+            every { inventory.lockedStock(sku) } returns stock
+            every { inventory.reservation(any()) } returns null
 
             shouldThrow<IllegalArgumentException> {
                 service.reserve(skuId, 4, UUID.randomUUID(), null)

@@ -1,12 +1,12 @@
 package com.buyeong.umji.api.auth.service
 
-import com.buyeong.umji.api.account.persistence.AccountEntity
-import com.buyeong.umji.api.account.persistence.AccountRepository
+import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.auth.config.JwtProperties
 import com.buyeong.umji.api.auth.model.LoginStatus
 import com.buyeong.umji.api.auth.model.PhoneLoginRequest
-import com.buyeong.umji.api.auth.persistence.RefreshTokenEntity
-import com.buyeong.umji.api.auth.persistence.RefreshTokenRepository
+import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenEntity
+import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenJpaEntityService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -19,8 +19,8 @@ import java.time.Instant
 import java.util.UUID
 
 class AuthenticationServiceTest : DescribeSpec({
-    val accounts = mockk<AccountRepository>()
-    val refreshTokens = mockk<RefreshTokenRepository>(relaxed = true)
+    val accounts = mockk<AccountJpaEntityService>()
+    val refreshTokens = mockk<RefreshTokenJpaEntityService>(relaxed = true)
     val jwtEncoder = mockk<JwtEncoder>()
     val jwtEncoderProvider = mockk<ObjectProvider<JwtEncoder>>()
     val properties = JwtProperties("issuer", "audience", "key", "public", "private")

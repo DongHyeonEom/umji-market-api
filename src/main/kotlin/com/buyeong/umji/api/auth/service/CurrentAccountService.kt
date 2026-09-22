@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.auth.service
 
-import com.buyeong.umji.api.account.persistence.AccountEntity
-import com.buyeong.umji.api.account.persistence.AccountRepository
+import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.springframework.security.core.context.SecurityContextHolder
@@ -11,7 +11,7 @@ import java.util.UUID
 
 @Component
 class CurrentAccountService(
-    private val accounts: AccountRepository,
+    private val accounts: AccountJpaEntityService,
 ) {
     fun activeAccount(): AccountEntity {
         val jwt = SecurityContextHolder.getContext().authentication?.principal as? Jwt
