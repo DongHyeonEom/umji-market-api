@@ -1,15 +1,15 @@
 package com.buyeong.umji.api.cart.service
 
-import com.buyeong.umji.api.account.persistence.AccountEntity
-import com.buyeong.umji.api.catalog.persistence.ProductSkuEntity
-import com.buyeong.umji.api.catalog.persistence.ProductSkuRepository
+import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.cart.model.AddCartItemRequest
 import com.buyeong.umji.api.cart.model.CartItemResponse
 import com.buyeong.umji.api.cart.model.CartResponse
 import com.buyeong.umji.api.cart.model.UpdateCartItemRequest
-import com.buyeong.umji.api.cart.persistence.CartEntity
-import com.buyeong.umji.api.cart.persistence.CartItemEntity
-import com.buyeong.umji.api.cart.persistence.CartRepository
+import com.buyeong.umji.api.persistence.jpa.cart.CartEntity
+import com.buyeong.umji.api.persistence.jpa.cart.CartItemEntity
+import com.buyeong.umji.api.persistence.jpa.cart.CartJpaEntityService
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,11 +17,11 @@ import java.util.UUID
 
 @Service
 class CartService(
-    private val carts: CartRepository,
-    private val skus: ProductSkuRepository,
+    private val carts: CartJpaEntityService,
+    private val catalog: CatalogJpaEntityService,
 ) {
     @Transactional(readOnly = true)
-    fun cart(account: AccountEntity): CartResponse = carts.findWithItemsByAccountId(requireNotNull(account.id))?.let(::response) ?: CartResponse(emptyList())
+    fun cart(account: AccountEntity): CartResponse = carts.findWithItems(requireNotNull(account.id))?.let(::response) ?: CartResponse(emptyList())
 
     @Transactional
     fun add(account: AccountEntity, request: AddCartItemRequest): CartResponse {
@@ -50,10 +50,10 @@ class CartService(
     }
 
     private fun lockedCart(account: AccountEntity): CartEntity =
-        carts.findLockedByAccountId(requireNotNull(account.id)) ?: carts.save(CartEntity().apply { this.account = account })
+        carts.findLocked(requireNotNull(account.id)) ?: carts.create(account)
 
     private fun sellableSku(skuId: UUID): ProductSkuEntity {
-        val sku = skus.findByPublicId(skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
+        val sku = catalog.sku(skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
         require(sku.salesStatus == ON_SALE) { "판매 중인 SKU만 장바구니에 담을 수 있습니다." }
         return sku
     }

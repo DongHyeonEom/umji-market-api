@@ -1,13 +1,13 @@
 package com.buyeong.umji.api.cart.service
 
-import com.buyeong.umji.api.account.persistence.AccountEntity
-import com.buyeong.umji.api.catalog.persistence.ProductEntity
-import com.buyeong.umji.api.catalog.persistence.ProductSkuEntity
-import com.buyeong.umji.api.catalog.persistence.ProductSkuRepository
+import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.cart.model.AddCartItemRequest
-import com.buyeong.umji.api.cart.persistence.CartEntity
-import com.buyeong.umji.api.cart.persistence.CartItemEntity
-import com.buyeong.umji.api.cart.persistence.CartRepository
+import com.buyeong.umji.api.persistence.jpa.cart.CartEntity
+import com.buyeong.umji.api.persistence.jpa.cart.CartItemEntity
+import com.buyeong.umji.api.persistence.jpa.cart.CartJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -16,8 +16,8 @@ import io.mockk.mockk
 import java.util.UUID
 
 class CartServiceTest : DescribeSpec({
-    val carts = mockk<CartRepository>()
-    val skus = mockk<ProductSkuRepository>()
+    val carts = mockk<CartJpaEntityService>()
+    val skus = mockk<CatalogJpaEntityService>()
     val service = CartService(carts, skus)
     val account = mockk<AccountEntity>()
     val sku = mockk<ProductSkuEntity>()
@@ -34,7 +34,7 @@ class CartServiceTest : DescribeSpec({
         every { sku.salesStatus } returns "ON_SALE"
         every { sku.product } returns product
         every { product.name } returns "테스트 상품"
-        every { skus.findByPublicId(skuId) } returns sku
+        every { skus.sku(skuId) } returns sku
     }
 
     describe("장바구니 SKU 추가") {
@@ -46,7 +46,7 @@ class CartServiceTest : DescribeSpec({
             }
             setPublicId(existing, UUID.randomUUID())
             cart.add(existing)
-            every { carts.findLockedByAccountId(1L) } returns cart
+            every { carts.findLocked(1L) } returns cart
             every { carts.saveAndFlush(cart) } answers { cart }
 
             val response = service.add(account, AddCartItemRequest(skuId, 3))

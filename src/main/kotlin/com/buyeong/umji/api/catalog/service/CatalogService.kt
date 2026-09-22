@@ -5,9 +5,7 @@ import com.buyeong.umji.api.catalog.model.ProductDetailResponse
 import com.buyeong.umji.api.catalog.model.ProductPageResponse
 import com.buyeong.umji.api.catalog.model.ProductSkuResponse
 import com.buyeong.umji.api.catalog.model.ProductSummaryResponse
-import com.buyeong.umji.api.catalog.persistence.CategoryRepository
-import com.buyeong.umji.api.catalog.persistence.ProductRepository
-import com.buyeong.umji.api.catalog.persistence.ProductSkuRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -17,14 +15,9 @@ import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
-class CatalogService(
-    private val categoryRepository: CategoryRepository,
-    private val productRepository: ProductRepository,
-    private val productSkuRepository: ProductSkuRepository,
-) {
+class CatalogService(private val catalog: CatalogJpaEntityService) {
     fun categories(): List<CategoryResponse> =
-        categoryRepository
-            .findAllByDisplayStatusAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(DISPLAYED)
+        catalog.displayedCategories(DISPLAYED)
             .map { category ->
                 CategoryResponse(
                     id = requireNotNull(category.publicId),
@@ -36,7 +29,7 @@ class CatalogService(
 
     fun products(page: Int, size: Int): ProductPageResponse {
         val pageable = PageRequest.of(page, size, Sort.by("displayOrder").ascending().and(Sort.by("id").descending()))
-        val products = productRepository.findAllByDisplayStatusAndSalesStatusAndDeletedAtIsNull(DISPLAYED, ON_SALE, pageable)
+        val products = catalog.publicProducts(DISPLAYED, ON_SALE, pageable)
         return ProductPageResponse(
             items = products.content.map { product -> ProductSummaryResponse(requireNotNull(product.publicId), product.name, product.brand?.name) },
             page = products.number,
@@ -48,10 +41,10 @@ class CatalogService(
 
     fun product(productId: UUID): ProductDetailResponse {
         val product =
-            productRepository.findByPublicIdAndDisplayStatusAndSalesStatusAndDeletedAtIsNull(productId, DISPLAYED, ON_SALE)
+            catalog.publicProduct(productId, DISPLAYED, ON_SALE)
                 ?: throw ItemNotFoundException("상품을 찾을 수 없습니다.")
         val skus =
-            productSkuRepository.findAllByProductIdAndSalesStatusOrderBySalePriceAsc(requireNotNull(product.id), ON_SALE).map { sku ->
+            catalog.skus(requireNotNull(product.id), ON_SALE).map { sku ->
                 ProductSkuResponse(requireNotNull(sku.publicId), sku.skuCode, sku.name, sku.salePrice, sku.listPrice)
             }
         return ProductDetailResponse(

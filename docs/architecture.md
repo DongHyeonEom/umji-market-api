@@ -28,7 +28,13 @@ file          파일 메타데이터
 common        공통 설정·예외·웹·추적
 ```
 
-각 도메인은 필요에 따라 `controller`, `model`, `dto`, `service`, `persistence`, `mapper`, `enums`, `exception`으로 분리함. Controller는 HTTP, Service는 비즈니스 규칙, Persistence는 DB 접근만 담당함. Entity는 persistence 계층 외부에 노출하지 않음
+각 도메인은 필요에 따라 `controller`, `model`, `dto`, `service`, `mapper`, `enums`, `exception`으로 분리함. Controller는 HTTP 입출력, Service는 비즈니스 규칙과 유스케이스 트랜잭션을 담당함. 외부 request/response에는 Entity를 노출하지 않음
+
+## Persistence 경계
+
+JPA 구현은 도메인 패키지에 두지 않고 `persistence/jpa/{aggregate}`에 테이블 집합별로 배치함. 현재 aggregate는 `account`, `auth`, `catalog`, `cart`, `inventory`, `order`임. 각 aggregate 폴더에는 Entity와 Repository를 평면으로 두고, Repository 호출을 감싸는 `{Aggregate}JpaEntityService`를 함께 둠. Entity와 Repository만을 위한 하위 폴더는 아직 만들지 않음
+
+도메인 Service와 운영 Service는 Repository를 직접 주입하지 않고 JPA Entity Service만 사용함. 여러 aggregate를 함께 변경하는 유스케이스의 `@Transactional`은 도메인 Service가 소유하고, JPA Entity Service의 쓰기 메서드는 해당 트랜잭션에 참여함. 따라서 예를 들어 주문 생성에서 주문·장바구니·재고를 함께 변경해도 하나의 트랜잭션으로 처리됨
 
 ## 도메인 모델
 

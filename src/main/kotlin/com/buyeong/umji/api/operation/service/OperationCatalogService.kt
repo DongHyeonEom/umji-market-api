@@ -1,19 +1,13 @@
 package com.buyeong.umji.api.operation.service
 
-import com.buyeong.umji.api.catalog.persistence.BrandEntity
-import com.buyeong.umji.api.catalog.persistence.BrandRepository
-import com.buyeong.umji.api.catalog.persistence.CategoryEntity
-import com.buyeong.umji.api.catalog.persistence.CategoryRepository
-import com.buyeong.umji.api.catalog.persistence.ProductEntity
-import com.buyeong.umji.api.catalog.persistence.ProductImageEntity
-import com.buyeong.umji.api.catalog.persistence.ProductImageRepository
-import com.buyeong.umji.api.catalog.persistence.ProductOptionEntity
-import com.buyeong.umji.api.catalog.persistence.ProductOptionRepository
-import com.buyeong.umji.api.catalog.persistence.ProductOptionValueEntity
-import com.buyeong.umji.api.catalog.persistence.ProductOptionValueRepository
-import com.buyeong.umji.api.catalog.persistence.ProductRepository
-import com.buyeong.umji.api.catalog.persistence.ProductSkuEntity
-import com.buyeong.umji.api.catalog.persistence.ProductSkuRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.BrandEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.CategoryEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductImageEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductOptionEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductOptionValueEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
 import com.buyeong.umji.api.operation.model.CreateCategoryRequest
@@ -41,17 +35,11 @@ import java.util.UUID
 @Service
 @Transactional
 class OperationCatalogService(
-    private val categoryRepository: CategoryRepository,
-    private val brandRepository: BrandRepository,
-    private val productRepository: ProductRepository,
-    private val productSkuRepository: ProductSkuRepository,
-    private val productImageRepository: ProductImageRepository,
-    private val productOptionRepository: ProductOptionRepository,
-    private val productOptionValueRepository: ProductOptionValueRepository,
+    private val catalog: CatalogJpaEntityService,
 ) {
     @Transactional(readOnly = true)
     fun categories(): List<OperationCategoryResponse> =
-        categoryRepository.findAllByDeletedAtIsNullOrderByDisplayOrderAscNameAsc().map { category ->
+        catalog.categories().map { category ->
             OperationCategoryResponse(
                 id = requireNotNull(category.publicId),
                 parentId = category.parent?.publicId,
@@ -65,13 +53,13 @@ class OperationCatalogService(
 
     @Transactional(readOnly = true)
     fun brands(page: Int, size: Int): List<OperationBrandResponse> =
-        brandRepository.findAllByDeletedAtIsNull(PageRequest.of(page, size, Sort.by("name"))).content.map { brand ->
+        catalog.brands(PageRequest.of(page, size, Sort.by("name"))).content.map { brand ->
             OperationBrandResponse(requireNotNull(brand.publicId), brand.name, brand.displayStatus)
         }
 
     @Transactional(readOnly = true)
     fun products(page: Int, size: Int): OperationProductPageResponse {
-        val products = productRepository.findAllByDeletedAtIsNull(PageRequest.of(page, size, Sort.by("id").descending()))
+        val products = catalog.products(PageRequest.of(page, size, Sort.by("id").descending()))
         return OperationProductPageResponse(
             items = products.content.map(::productResponse),
             page = products.number,
@@ -96,15 +84,15 @@ class OperationCatalogService(
                 displayOrder = request.displayOrder
                 displayStatus = request.displayStatus
             }
-        return OperationCatalogResourceResponse(requireNotNull(categoryRepository.save(category).publicId))
+        return OperationCatalogResourceResponse(requireNotNull(catalog.save(category).publicId))
     }
 
     fun createBrand(request: CreateBrandRequest): OperationCatalogResourceResponse {
         validateDisplayStatus(request.displayStatus)
         val name = request.name.trim()
-        require(!brandRepository.existsByName(name)) { "이미 존재하는 브랜드입니다." }
+        require(!catalog.existsBrandName(name)) { "이미 존재하는 브랜드입니다." }
         val brand = BrandEntity().apply { this.name = name; displayStatus = request.displayStatus }
-        return OperationCatalogResourceResponse(requireNotNull(brandRepository.save(brand).publicId))
+        return OperationCatalogResourceResponse(requireNotNull(catalog.save(brand).publicId))
     }
 
     fun createProduct(request: CreateProductRequest): OperationCatalogResourceResponse {
@@ -120,10 +108,10 @@ class OperationCatalogService(
                 salesStatus = request.salesStatus
                 displayOrder = request.displayOrder
             }
-        val savedProduct = productRepository.save(product)
-        request.images.forEach { image -> productImageRepository.save(imageEntity(savedProduct, image)) }
+        val savedProduct = catalog.save(product)
+        request.images.forEach { image -> catalog.save(imageEntity(savedProduct, image)) }
         request.options.forEach { option -> saveOption(savedProduct, option) }
-        request.skus.forEach { sku -> productSkuRepository.save(skuEntity(savedProduct, sku)) }
+        request.skus.forEach { sku -> catalog.save(skuEntity(savedProduct, sku)) }
         return OperationCatalogResourceResponse(requireNotNull(savedProduct.publicId))
     }
 
@@ -142,7 +130,7 @@ class OperationCatalogService(
     }
 
     fun addProductImage(productId: UUID, request: CreateProductImageRequest): OperationCatalogResourceResponse {
-        val image = productImageRepository.save(imageEntity(product(productId), request))
+        val image = catalog.save(imageEntity(product(productId), request))
         return OperationCatalogResourceResponse(requireNotNull(image.publicId))
     }
 
@@ -152,7 +140,7 @@ class OperationCatalogService(
     }
 
     fun addProductSku(productId: UUID, request: CreateProductSkuRequest): OperationCatalogResourceResponse {
-        val sku = productSkuRepository.save(skuEntity(product(productId), request))
+        val sku = catalog.save(skuEntity(product(productId), request))
         return OperationCatalogResourceResponse(requireNotNull(sku.publicId))
     }
 
@@ -167,7 +155,7 @@ class OperationCatalogService(
 
     private fun skuEntity(product: ProductEntity, request: CreateProductSkuRequest): ProductSkuEntity {
         validateSalesStatus(request.salesStatus)
-        require(!productSkuRepository.existsBySkuCode(request.skuCode)) { "이미 존재하는 SKU 코드입니다." }
+        require(!catalog.existsSkuCode(request.skuCode)) { "이미 존재하는 SKU 코드입니다." }
         return ProductSkuEntity().apply {
             this.product = product
             skuCode = request.skuCode.trim()
@@ -188,13 +176,13 @@ class OperationCatalogService(
         }
 
     private fun saveOption(product: ProductEntity, request: CreateProductOptionRequest): ProductOptionEntity {
-        val option = productOptionRepository.save(ProductOptionEntity().apply {
+        val option = catalog.save(ProductOptionEntity().apply {
             this.product = product
             name = request.name.trim()
             displayOrder = request.displayOrder
         })
         request.values.forEach { value ->
-            productOptionValueRepository.save(ProductOptionValueEntity().apply {
+            catalog.save(ProductOptionValueEntity().apply {
                 this.option = option
                 this.value = value.value.trim()
                 displayOrder = value.displayOrder
@@ -205,7 +193,7 @@ class OperationCatalogService(
 
     private fun optionValues(product: ProductEntity, optionValueIds: Set<UUID>): MutableSet<ProductOptionValueEntity> {
         if (optionValueIds.isEmpty()) return linkedSetOf()
-        val values = productOptionValueRepository.findAllByPublicIdIn(optionValueIds)
+        val values = catalog.optionValues(optionValueIds)
         require(values.size == optionValueIds.size && values.all { it.option.product.id == product.id }) {
             "상품에 속하지 않는 옵션값이 포함되어 있습니다."
         }
@@ -213,13 +201,13 @@ class OperationCatalogService(
     }
 
     private fun category(categoryId: UUID): CategoryEntity =
-        categoryRepository.findByPublicIdAndDeletedAtIsNull(categoryId) ?: throw ItemNotFoundException("카테고리를 찾을 수 없습니다.")
+        catalog.category(categoryId) ?: throw ItemNotFoundException("카테고리를 찾을 수 없습니다.")
 
     private fun brand(brandId: UUID): BrandEntity =
-        brandRepository.findByPublicIdAndDeletedAtIsNull(brandId) ?: throw ItemNotFoundException("브랜드를 찾을 수 없습니다.")
+        catalog.brand(brandId) ?: throw ItemNotFoundException("브랜드를 찾을 수 없습니다.")
 
     private fun product(productId: UUID): ProductEntity =
-        productRepository.findByPublicIdAndDeletedAtIsNull(productId) ?: throw ItemNotFoundException("상품을 찾을 수 없습니다.")
+        catalog.product(productId) ?: throw ItemNotFoundException("상품을 찾을 수 없습니다.")
 
     private fun productResponse(product: ProductEntity, includeSkus: Boolean = false): OperationProductResponse =
         OperationProductResponse(
@@ -233,7 +221,7 @@ class OperationCatalogService(
             displayOrder = product.displayOrder,
             skus =
                 if (includeSkus) {
-                    productSkuRepository.findAllByProductIdOrderBySalePriceAsc(requireNotNull(product.id)).map { sku ->
+                    catalog.skus(requireNotNull(product.id)).map { sku ->
                         OperationProductSkuResponse(
                             requireNotNull(sku.publicId), sku.skuCode, sku.name, sku.salePrice, sku.listPrice, sku.salesStatus,
                             sku.optionValues.mapTo(linkedSetOf()) { requireNotNull(it.publicId) },
@@ -242,13 +230,13 @@ class OperationCatalogService(
                 } else {
                     emptyList()
                 },
-            images = if (includeSkus) productImageRepository.findAllByProductIdOrderByDisplayOrderAscIdAsc(requireNotNull(product.id)).map {
+            images = if (includeSkus) catalog.images(requireNotNull(product.id)).map {
                 OperationProductImageResponse(requireNotNull(it.publicId), it.storageKey, it.altText, it.displayOrder)
             } else emptyList(),
-            options = if (includeSkus) productOptionRepository.findAllByProductIdOrderByDisplayOrderAscIdAsc(requireNotNull(product.id)).map { option ->
+            options = if (includeSkus) catalog.options(requireNotNull(product.id)).map { option ->
                 OperationProductOptionResponse(
                     requireNotNull(option.publicId), option.name, option.displayOrder,
-                    productOptionValueRepository.findAllByOptionIdOrderByDisplayOrderAscIdAsc(requireNotNull(option.id)).map {
+                    catalog.optionValues(requireNotNull(option.id)).map {
                         OperationProductOptionValueResponse(requireNotNull(it.publicId), it.value, it.displayOrder)
                     },
                 )

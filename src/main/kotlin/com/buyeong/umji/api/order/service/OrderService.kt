@@ -1,19 +1,17 @@
 package com.buyeong.umji.api.order.service
 
-import com.buyeong.umji.api.account.persistence.AccountEntity
-import com.buyeong.umji.api.cart.persistence.CartRepository
+import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.cart.CartJpaEntityService
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.inventory.service.InventoryService
 import com.buyeong.umji.api.order.model.OrderItemResponse
 import com.buyeong.umji.api.order.model.OrderPageResponse
 import com.buyeong.umji.api.order.model.OrderResponse
-import com.buyeong.umji.api.order.persistence.OrderItemEntity
-import com.buyeong.umji.api.order.persistence.OrderNumberSequenceEntity
-import com.buyeong.umji.api.order.persistence.OrderNumberSequenceRepository
-import com.buyeong.umji.api.order.persistence.OrderStatusHistoryEntity
-import com.buyeong.umji.api.order.persistence.OrderStatusHistoryRepository
-import com.buyeong.umji.api.order.persistence.PurchaseOrderEntity
-import com.buyeong.umji.api.order.persistence.PurchaseOrderRepository
+import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
+import com.buyeong.umji.api.persistence.jpa.order.OrderNumberSequenceEntity
+import com.buyeong.umji.api.persistence.jpa.order.OrderStatusHistoryEntity
+import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
+import com.buyeong.umji.api.persistence.jpa.order.OrderJpaEntityService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -25,15 +23,13 @@ import java.util.UUID
 
 @Service
 class OrderService(
-    private val carts: CartRepository,
-    private val orders: PurchaseOrderRepository,
-    private val statusHistories: OrderStatusHistoryRepository,
-    private val orderNumberSequences: OrderNumberSequenceRepository,
+    private val carts: CartJpaEntityService,
+    private val orders: OrderJpaEntityService,
     private val inventory: InventoryService,
 ) {
     @Transactional
     fun create(account: AccountEntity): OrderResponse {
-        val cart = carts.findLockedByAccountId(requireNotNull(account.id)) ?: throw ItemNotFoundException("장바구니가 비어 있습니다.")
+        val cart = carts.findLocked(requireNotNull(account.id)) ?: throw ItemNotFoundException("장바구니가 비어 있습니다.")
         require(cart.items.isNotEmpty()) { "장바구니가 비어 있습니다." }
         val order = PurchaseOrderEntity().apply {
             this.account = account
@@ -61,20 +57,20 @@ class OrderService(
         order.totalAmount = order.subtotalAmount
         val saved = orders.saveAndFlush(order)
         saved.items.forEach { item -> inventory.reserve(requireNotNull(item.sku.publicId), item.quantity, item.reservationKey, null) }
-        statusHistories.save(OrderStatusHistoryEntity().apply { this.order = saved; toStatus = PENDING_PAYMENT })
+        orders.saveHistory(OrderStatusHistoryEntity().apply { this.order = saved; toStatus = PENDING_PAYMENT })
         cart.items.clear()
         return response(saved)
     }
 
     @Transactional(readOnly = true)
     fun list(account: AccountEntity, page: Int, size: Int): OrderPageResponse {
-        val result = orders.findAllByAccountId(requireNotNull(account.id), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
+        val result = orders.findAll(requireNotNull(account.id), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
         return OrderPageResponse(result.content.map(::response), result.number, result.size, result.totalElements, result.totalPages)
     }
 
     @Transactional(readOnly = true)
     fun detail(account: AccountEntity, orderId: UUID): OrderResponse =
-        response(orders.findWithItemsByPublicIdAndAccountId(orderId, requireNotNull(account.id)) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다."))
+        response(orders.findWithItems(orderId, requireNotNull(account.id)) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다."))
 
     private fun response(order: PurchaseOrderEntity) = OrderResponse(
         requireNotNull(order.publicId), order.orderNumber, order.status, order.subtotalAmount, order.totalAmount, order.orderedAt,
@@ -86,7 +82,7 @@ class OrderService(
 
     private fun orderNumber(orderedAt: Instant): String {
         val date = orderedAt.atZone(ZoneOffset.UTC).toLocalDate()
-        val sequence = orderNumberSequences.findLockedByOrderDate(date) ?: orderNumberSequences.saveAndFlush(
+        val sequence = orders.lockedSequence(date) ?: orders.saveAndFlushSequence(
             OrderNumberSequenceEntity().apply { orderDate = date },
         )
         sequence.lastValue += 1

@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.auth.service
 
-import com.buyeong.umji.api.account.persistence.AccountEntity
-import com.buyeong.umji.api.account.persistence.AccountRepository
+import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.auth.config.JwtProperties
 import com.buyeong.umji.api.auth.model.AuthenticatedAccountResponse
 import com.buyeong.umji.api.auth.model.LoginStatus
@@ -10,8 +10,8 @@ import com.buyeong.umji.api.auth.model.PhoneLoginResponse
 import com.buyeong.umji.api.auth.model.RefreshTokenRequest
 import com.buyeong.umji.api.auth.model.RevokeRefreshTokenRequest
 import com.buyeong.umji.api.auth.model.TokenPairResponse
-import com.buyeong.umji.api.auth.persistence.RefreshTokenEntity
-import com.buyeong.umji.api.auth.persistence.RefreshTokenRepository
+import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenEntity
+import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.util.PhoneNumberHelper
 import org.springframework.beans.factory.ObjectProvider
@@ -28,8 +28,8 @@ import java.util.Base64
 
 @Service
 class AuthenticationService(
-    private val accounts: AccountRepository,
-    private val refreshTokens: RefreshTokenRepository,
+    private val accounts: AccountJpaEntityService,
+    private val refreshTokens: RefreshTokenJpaEntityService,
     private val jwtProperties: JwtProperties,
     private val jwtEncoderProvider: ObjectProvider<JwtEncoder>,
 ) {
