@@ -1,6 +1,57 @@
 # 관리자 운영
 
-관리자 endpoint는 `/api/operation/**` 아래에 있음. `REQUIRED` 모드는 인증된 요청을 요구하고, 로컬 전용 `BYPASS`는 인증 검사를 모두 생략함. 관리자 role/permission의 endpoint별 인가 및 변경 감사 로그는 아직 구현되지 않았으므로 권한 검사가 완료된 것으로 간주하지 않음.
+관리자 endpoint는 `/api/operation/**` 아래에 있음. `REQUIRED` 모드에서는 Access Token의 permission claim으로 endpoint별 인가를 적용함. 인증 정보가 없거나 유효하지 않은 요청은 `401`, 인증됐지만 권한이 없는 요청은 `403`으로 거절함. 로컬 전용 `BYPASS`는 권한 검사를 포함한 보안 검사를 생략함. 운영 환경에서 `BYPASS` 사용 금지.
+
+## 권한 매트릭스
+
+| Role | Permission |
+| --- | --- |
+| `ADMIN`, `SUPER_ADMIN` | 전체 permission |
+| `PRODUCT_MANAGER` | `PRODUCT_READ`, `PRODUCT_WRITE` |
+| `ORDER_MANAGER` | `ORDER_READ`, `ORDER_WRITE` |
+| `INVENTORY_MANAGER` | `INVENTORY_READ`, `INVENTORY_WRITE` |
+
+| Endpoint | Required permission |
+| --- | --- |
+| `/api/operation/accounts/**` | `ADMIN_ACCOUNT_MANAGE` |
+| 카탈로그 조회 endpoint | `PRODUCT_READ` |
+| 카탈로그 생성·수정 endpoint | `PRODUCT_WRITE` |
+| 재고 조회·변동 조회 endpoint | `INVENTORY_READ` |
+| 재고 조정 endpoint | `INVENTORY_WRITE` |
+
+Role-permission 기본 매핑은 Flyway V10에서 적용함. 계정 role 부여·회수 API는 미구현 상태이며 `account_role` 관리 정책은 별도 작업 필요. Access Token에 발급 당시 permission을 담으므로 role 변경은 기존 Access Token 만료 또는 갱신 후 반영됨. 현재 Access Token 유효기간은 15분.
+
+### 초기 관리자 role bootstrap
+
+초기 최고 관리자 계정 지정은 운영 DB 접근 권한을 가진 담당자가 수행. `phone_normalized`는 평문 전화번호 대신 정규화된 번호를 사용하며, 계정 상태가 `ACTIVE`인지 먼저 확인.
+
+```sql
+SET @admin_account_id = (
+    SELECT id
+    FROM account
+    WHERE phone_normalized = '<정규화된 관리자 전화번호>'
+      AND status = 'ACTIVE'
+);
+
+START TRANSACTION;
+
+INSERT INTO account_role (account_id, role_id, granted_by)
+SELECT @admin_account_id, id, NULL
+FROM role
+WHERE code = 'SUPER_ADMIN'
+  AND @admin_account_id IS NOT NULL
+ON DUPLICATE KEY UPDATE granted_at = CURRENT_TIMESTAMP(3);
+
+SELECT a.id, a.name, a.status, r.code
+FROM account_role ar
+JOIN account a ON a.id = ar.account_id
+JOIN role r ON r.id = ar.role_id
+WHERE a.id = @admin_account_id;
+
+COMMIT;
+```
+
+결과에 대상 계정과 `SUPER_ADMIN`이 한 건씩 표시되는지 확인. 결과가 비어 있거나 예상과 다르면 `COMMIT` 전 `ROLLBACK` 수행. 일반 운영 role의 부여·회수는 별도 운영 절차 또는 관리자 role 관리 API 도입 전까지 승인된 DB 작업으로 처리.
 
 ## 계정
 
@@ -20,4 +71,4 @@
 
 ## 구조
 
-계정과 카탈로그는 각각 `operation/account`, `operation/catalog`에 배치. HTTP 모델은 web adapter에서 application 명령·응답 모델로 바꾸고, persistence adapter에서만 JPA Entity를 사용함.
+계정과 카탈로그는 각각 `operation/account`, `operation/catalog`에 배치. HTTP 모델은 web adapter에서 application 명령·응답 모델로 바꾸고, persistence adapter에서만 JPA Entity를 사용함. Role 관리와 운영 변경 감사 로그는 미구현.

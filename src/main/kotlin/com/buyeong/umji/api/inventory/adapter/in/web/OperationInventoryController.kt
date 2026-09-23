@@ -12,6 +12,7 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.validation.annotation.Validated
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -28,15 +29,18 @@ class OperationInventoryController(
     private val inventoryService: InventoryUseCase,
 ) {
     @GetMapping("/skus/{skuId}")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'INVENTORY_READ')")
     fun stock(@PathVariable skuId: UUID): InventoryStockResponse = inventoryService.stock(skuId).toResponse()
 
     @PatchMapping("/skus/{skuId}")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'INVENTORY_WRITE')")
     fun adjust(
         @PathVariable skuId: UUID,
         @Valid @RequestBody request: AdjustInventoryRequest,
     ): InventoryStockResponse = inventoryService.adjust(skuId, request.quantityDelta, request.reason, request.memo, request.safetyStockQuantity).toResponse()
 
     @GetMapping("/skus/{skuId}/movements")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'INVENTORY_READ')")
     fun movements(
         @PathVariable skuId: UUID,
         @RequestParam(defaultValue = "0") @Min(0) page: Int,

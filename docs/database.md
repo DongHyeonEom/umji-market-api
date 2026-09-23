@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V9로 관리함. 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임. 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V10으로 관리함. 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임. 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.
 
 ## 공통 규칙
 
@@ -26,6 +26,7 @@
 | V7 | `inventory_stock`, `inventory_movement`, `stock_reservation` |
 | V8 | `cart`, `cart_item` |
 | V9 | `purchase_order`, `order_number_sequence`, `order_item`, `order_status_history` |
+| V10 | 시스템 role-permission 기본 매핑 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.
 
