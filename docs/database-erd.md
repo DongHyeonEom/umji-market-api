@@ -1,12 +1,12 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V9가 만드는 테이블과 컬럼을 설명합니다. 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고하세요. 미구현 테이블은 포함하지 않습니다.
+이 문서는 현재 Flyway V2–V9가 만드는 테이블과 컬럼을 설명함. 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고. 미구현 테이블은 포함하지 않음.
 
 ## 표기
 
-- `PK`: 기본 키, `FK`: 외래 키, `UK`: unique 제약이 있는 컬럼입니다. `BINARY` 공개 ID는 UUID를 16바이트로 저장합니다.
-- 관계도 각 필드 뒤의 따옴표 안 문구가 해당 필드의 설명입니다. 타입은 읽기 편하게 기본 타입명으로 표시하며, 길이·default·check 제약은 migration 파일을 기준으로 확인합니다.
-- Nullable 필드는 설명에 표시했습니다. `created_at`은 생성 시각, `updated_at`은 마지막 수정 시각이며 UTC `DATETIME(3)`입니다.
+- `PK`: 기본 키, `FK`: 외래 키, `UK`: unique 제약이 있는 컬럼임. `BINARY` 공개 ID는 UUID를 16바이트로 저장함.
+- 관계도 각 필드 뒤의 따옴표 안 문구가 해당 필드의 설명임. 타입은 읽기 편하게 기본 타입명으로 표시하며, 길이·default·check 제약은 migration 파일을 기준으로 확인함.
+- Nullable 필드는 설명에 표시했음. `created_at`은 생성 시각, `updated_at`은 마지막 수정 시각이며 UTC `DATETIME(3)`임.
 
 ## 현재 관계 및 컬럼 설명
 
@@ -309,12 +309,12 @@ erDiagram
 
 ## 관계 및 유의사항
 
-- `account_role`과 `role_permission`은 각각 계정-역할, 역할-권한 다대다 연결입니다. `account_role.granted_by`는 migration에서 FK 제약이 없습니다.
-- `refresh_token.expires_at`은 V6 이후 nullable입니다. `account.phone_normalized`는 V6에서 추가된 unique 정규화 번호입니다.
-- 카테고리는 자기 참조 트리입니다. 상품은 카테고리를 반드시 가지며 브랜드는 선택입니다. 상품의 이미지·옵션·SKU는 상품에 속합니다.
-- 장바구니는 계정당 하나이며 한 장바구니 안에서 같은 SKU 항목은 하나입니다. 주문 항목은 주문 당시 상품명·SKU명·코드·단가를 보존합니다.
-- `order_item.reservation_key`와 `stock_reservation.reservation_key`는 같은 예약 UUID로 주문 항목과 재고 예약을 대응시킵니다. 둘 사이에는 DB FK가 없습니다.
-- `order_number_sequence`는 주문번호 순번 관리용 독립 테이블입니다.
+- `account_role`과 `role_permission`은 각각 계정-역할, 역할-권한 다대다 연결임. `account_role.granted_by`는 migration에서 FK 제약이 없음.
+- `refresh_token.expires_at`은 V6 이후 nullable임. `account.phone_normalized`는 V6에서 추가된 unique 정규화 번호임.
+- 카테고리는 자기 참조 트리임. 상품은 카테고리를 반드시 가지며 브랜드는 선택임. 상품의 이미지·옵션·SKU는 상품에 속함.
+- 장바구니는 계정당 하나이며 한 장바구니 안에서 같은 SKU 항목은 하나임. 주문 항목은 주문 당시 상품명·SKU명·코드·단가를 보존함.
+- `order_item.reservation_key`와 `stock_reservation.reservation_key`는 같은 예약 UUID로 주문 항목과 재고 예약을 대응. 둘 사이에는 DB FK가 없음.
+- `order_number_sequence`는 주문번호 순번 관리용 독립 테이블임.
 
 ## 마이그레이션별 테이블
 
@@ -329,4 +329,4 @@ erDiagram
 | V8 | `cart`, `cart_item` |
 | V9 | `purchase_order`, `order_number_sequence`, `order_item`, `order_status_history` |
 
-새 스키마 변경은 다음 Flyway 버전으로 추가합니다. 적용된 version migration은 수정하지 않습니다. 결제·취소/환불·OTP·파일·알림·운영 감사 테이블은 아직 없으므로 이 ERD에 포함하지 않았습니다.
+새 스키마 변경은 다음 Flyway 버전으로 추가함. 적용된 version migration은 수정하지 않음. 결제·취소/환불·OTP·파일·알림·운영 감사 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.
