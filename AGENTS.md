@@ -35,10 +35,17 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 ## 문서
 
 - `README.md`: 실행 방법과 필수 환경 변수
-- `docs/architecture.md`: 도메인·API·인증 구조
-- `docs/services/`: Controller·Service 도메인별 API 책임과 권한 기준
-- `docs/database.md`: DB 모델과 Flyway 기준
-- `docs/database-erd.md`: ExERD 관계도와 현재·후속 테이블 범위
-- `docs/implementation-status.md`: 현재 기반 상태와 다음 구현 순서
+- `docs/architecture.md`: 현재 아키텍처, 의존성 규칙, 패키지 구조
+- `docs/services/`: 구현된 API 동작과 도메인별 미구현 범위
+- `docs/database.md`: 현재 DB 규칙과 적용된 migration 목록
+- `docs/database-erd.md`: 현재 migration에 존재하는 테이블 관계
+- `docs/implementation-status.md`: 현재 구현 상태 요약
+
+## 문서 작성 규칙
+
+- 문서의 현재 동작은 코드·설정·Flyway migration과 일치시킴. 불일치하면 실제 구현을 확인하고 수정함.
+- 구현된 기능과 미구현 계획을 명확히 구분하고, 계획 endpoint나 테이블을 현재 제공되는 것처럼 적지 않음.
+- 완료된 작업의 시간순 진행 내역, 이미 정리된 구조의 설명, 중복된 규칙은 문서에 남기지 않음. 현재 동작·유지해야 할 정책·명시적인 미구현 범위만 기록함.
+- 자세한 내용은 한 문서를 단일 기준으로 유지하고, 다른 문서에서는 링크로 연결해 복사된 설명이 어긋나지 않게 함.
 
 루트 `E:\buyeong_dev\umji-market\AGENTS.md`의 공통 기준도 함께 적용함

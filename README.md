@@ -1,43 +1,31 @@
-# Umji Market API
+# 엄지마켓 API
 
-엄지철물마켓 Kotlin/Spring Boot 통합 API
+Flutter 앱의 React WebView가 사용하는 Kotlin/Spring Boot API입니다.
 
-## 회원 인증 흐름
+## 아키텍처
 
-비밀번호·카카오 로그인 없이 휴대폰 번호로 계정을 식별함. `ACTIVE` 계정은 휴대폰 번호만으로 로그인하고, 비활성 계정과 신규 번호의 휴대폰 본인 인증·개인정보 입력은 후속 구현함
+도메인별 헥사고날 아키텍처와 클린 아키텍처를 적용합니다. Controller는 입력 adapter, application UseCase는 업무 흐름, JPA 구현은 출력 adapter입니다. 상세 규칙과 Mermaid 흐름도는 [docs/architecture.md](docs/architecture.md)를 참고하세요.
 
-```text
-휴대폰 번호 입력 -> ACTIVE 계정 확인 -> Access·Refresh Token 발급
-```
+## 로컬 실행
 
-Access Token은 15분, 기기별 Refresh Token은 명시적 폐기·계정 상태 변경 전까지 영속 유지함. Refresh Token 갱신마다 계정 상태와 `tokenVersion`을 DB에서 재검증함
-
-전체 회원 흐름: `E:\buyeong_dev\umji-market\SERVICE_FLOW.md`
-
-## 실행
+1. `src/main/resources/application-local.yml.sample`을 복사해 `application-local.yml`을 만듭니다.
+2. MySQL 접속 및 JWT 환경 변수를 설정합니다.
+3. JWT PEM 파일 경로를 설정합니다.
+4. 실행합니다.
 
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=local'
+```
+
+필수 변수: `DB_READ_URL`, `DB_WRITE_URL`, `DB_USER_NAME`, `DB_USER_PASSWORD`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY_ID`, `JWT_RSA_PUBLIC_KEY_PATH`, `JWT_RSA_PRIVATE_KEY_PATH`.
+
+로컬 프로필은 인증을 우회하는 `BYPASS` 설정을 사용합니다. 운영 환경에는 적용하지 마세요. 기본/운영 인증 모드는 `REQUIRED`입니다.
+
+## 유용한 명령
+
+```bash
 ./gradlew test
 ./gradlew check
 ```
 
-## 로컬 설정
-
-`src/main/resources/application-local.yml.sample`을 참고해 Git 비추적 `application-local.yml`을 구성함
-
-```text
-DB_READ_URL
-DB_WRITE_URL
-DB_USER_NAME
-DB_USER_PASSWORD
-JWT_ISSUER
-JWT_AUDIENCE
-JWT_KEY_ID
-JWT_RSA_PUBLIC_KEY_PATH
-JWT_RSA_PRIVATE_KEY_PATH
-```
-
-JWT PEM 파일은 `E:\buyeong_dev\umji-market\secrets\jwt`에 두고 경로만 설정으로 전달함
-
-상태 확인 endpoint: `GET /actuator/health`
+상태 확인: `GET /actuator/health`. 로컬 설정과 키는 저장소에 커밋하지 않습니다.

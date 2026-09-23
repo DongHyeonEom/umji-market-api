@@ -1,16 +1,16 @@
-# API 서비스 문서
+# 도메인 문서
 
-Controller와 Service는 아래 도메인 경계로 분리함. 각 문서는 API 책임, 주요 endpoint, 권한·상태 규칙을 기록함
+각 문서는 구현된 endpoint와 동작을 우선 기록합니다. 미구현 도메인은 계획된 endpoint를 구현 계약처럼 기재하지 않고 상태만 표시합니다.
 
-| 서비스 | 문서 | 책임 |
+| 도메인 | 문서 | 구현 상태 |
 | --- | --- | --- |
-| 인증 | [authentication.md](authentication.md) | 휴대폰 인증, 동의·활성화, 세션·토큰 |
-| 계정 | [account.md](account.md) | 회원·업체 프로필, 주소, 계정 상태 조회 |
-| 카탈로그 | [catalog.md](catalog.md) | 카테고리, 브랜드, 상품, SKU 조회·관리 |
-| 장바구니 | [cart.md](cart.md) | 장바구니와 항목 |
-| 주문 | [order.md](order.md) | 주문 생성, 상태, 취소·환불 요청 |
-| 결제 | [payment.md](payment.md) | 결제 요청·승인·콜백 |
-| 재고 | [inventory.md](inventory.md) | 재고, 예약, 재고 이력 |
-| 운영 | [operation.md](operation.md) | 관리자 업무, 승인, 감사 |
-| 알림 | [notification.md](notification.md) | 알림 요청·발송 상태 |
-| 파일 | [file.md](file.md) | 업로드 정책·파일 메타데이터 |
+| 인증 | [authentication.md](authentication.md) | 휴대폰 로그인·토큰 |
+| 계정 | [account.md](account.md) | 사용자 API 미구현 |
+| 카탈로그 | [catalog.md](catalog.md) | 공개 조회·관리자 관리 |
+| 장바구니 | [cart.md](cart.md) | 구현 |
+| 주문 | [order.md](order.md) | 생성·조회 구현 |
+| 재고 | [inventory.md](inventory.md) | 조정·예약 구현 |
+| 운영 | [operation.md](operation.md) | 계정·카탈로그 운영 구현 |
+| 결제 | [payment.md](payment.md) | 미구현 |
+| 파일 | [file.md](file.md) | 미구현 |
+| 알림 | [notification.md](notification.md) | 미구현 |

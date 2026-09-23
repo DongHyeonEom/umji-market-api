@@ -1,47 +1,37 @@
-# 구현 상태와 다음 순서
+# 구현 현황
 
-## 현재 기반
+이 문서는 현재 저장소의 구현 상태만 요약합니다. 변경 이력이나 과거 작업 순서는 기록하지 않습니다. endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규칙은 [architecture.md](architecture.md)를 기준으로 합니다.
 
-- Java 21, Kotlin, Spring Boot, Gradle Kotlin DSL 기반
-- MySQL 8.0+, read/write datasource, Flyway 사용
-- `com.buyeong.umji.api` 패키지 기준으로 스켈레톤 예제 코드·테스트 제거 완료
-- Actuator 상태 확인: `GET /actuator/health`
-- 공통 예외 처리, 추적 로그, OpenAPI, Testcontainers 기반 유지
-- JWT RSA PEM은 프로젝트 외부 `E:\buyeong_dev\umji-market\secrets\jwt`에서 경로로 주입
-- 인증 세부 정책 확정 전 로컬 환경은 `BYPASS` 모드 사용. 운영 환경은 `REQUIRED` 유지
-- `V3__create_catalog_tables.sql`과 공개 카탈로그 조회 API 기반 추가
-- `V4__add_operation_account_profile_tables.sql`과 운영 계정·업체 프로필·동의 이력 기반 추가
-- `V5__add_product_images_and_options.sql`과 운영자 상품 수정, 이미지·옵션·SKU 관리 API 추가
-- `V6__add_phone_login_and_persistent_sessions.sql`과 `ACTIVE` 계정의 휴대폰 번호 로그인, RS256 Access Token·영속 Refresh Token 갱신·폐기 API 추가
-- `V7__add_inventory_stock_and_movement_tables.sql`과 SKU 재고 조회·조정, 재고 변동 이력, 주문용 예약·해제·확정 Service 기반 추가
-- `V8__add_cart_tables.sql`과 Access Token 기반 사용자별 장바구니 조회·추가·수정·삭제 API 추가
-- `V9__add_order_tables.sql`과 장바구니 기반 주문 생성, 주문 항목 가격 스냅샷, 재고 예약, 주문 목록·상세 조회 API 추가
+## 기반
 
-## 마이그레이션 주의사항
+- Kotlin, Java 21, Spring Boot, Gradle
+- MySQL read/write datasource, Flyway, Spring Data JPA
+- 헥사고날/클린 아키텍처의 application Port와 inbound/outbound adapter
+- JWT RS256 인증, Access Token 및 영속 Refresh Token
+- 공통 예외 응답, 요청 추적, Actuator, OpenAPI 설정
 
-스켈레톤 예제용 `V1__create_skeleton_example_tables.sql`은 저장소에서 제거됨. 과거에 V1을 적용한 로컬 DB는 `flyway_schema_history`에 이력이 남아 현재 파일과 불일치할 수 있음
+## 구현된 기능
 
-개발 DB는 예제 테이블과 Flyway 이력을 정리하거나 재생성 후 사용함. 운영 DB의 Flyway 이력은 임의로 삭제하지 않고 실제 스키마를 확인한 뒤 별도 마이그레이션으로 처리함
+| 도메인 | 현황 |
+| --- | --- |
+| 인증 | 휴대폰 로그인, token refresh/revoke. OTP와 계정 활성화 API는 미구현 |
+| 공개 카탈로그 | 카테고리·상품 목록·상품 상세 조회 |
+| 관리자 계정 | 계정 생성/조회, 프로필·동의 관리, 승인·상태 변경 |
+| 관리자 카탈로그 | 카테고리·브랜드·상품 생성/수정, 이미지·옵션·SKU 관리 |
+| 장바구니 | 조회, SKU 추가·수량 변경·삭제 |
+| 주문 | 생성, 목록·상세 조회. 생성 시 가격 스냅샷·재고 예약·장바구니 비우기 |
+| 재고 | 운영 조회·조정·변동 조회, 주문 재고 예약·해제·확정 |
 
-도메인 마이그레이션은 `V2` 인증·계정, `V3` 카탈로그, `V4` 운영 계정·업체 프로필, `V5` 상품 이미지·옵션 순서로 확장함. 장바구니·주문·결제·재고 도메인은 다음 신규 버전으로 추가함. 배포된 버전 파일은 수정하지 않음
+## 아직 구현되지 않은 범위
 
-## 다음 구현 순서
+- 사용자 계정 프로필·주소 API
+- 휴대폰 OTP, 비활성/신규 계정의 본인 인증 및 활성화 흐름
+- 결제, 취소·환불, 배송
+- 파일 업로드 API, 알림 발송
+- 관리자별 permission 검사, 운영 변경 감사 로그
 
-1. 결제·주문 상태 전이와 운영 기능 확장
-2. 휴대폰 본인 인증, 개인정보 입력·저장, 비활성 계정 활성화 흐름 구현
+미구현 endpoint나 흐름은 실제 구현처럼 문서화하지 않습니다. 정책 결정이 필요한 항목은 해당 기능을 시작할 때 별도 설계합니다.
 
-## 확정된 후속 인증 정책
+## Flyway
 
-- 로그인 식별자는 정규화한 휴대폰 번호이며, 비밀번호는 사용하지 않음
-- `ACTIVE` 계정은 휴대폰 번호만으로 로그인함
-- `ACTIVE`가 아닌 기존 계정과 신규 계정은 휴대폰 본인 인증 후 기존 정보 확인 또는 신규 정보 입력을 진행하고, 개인정보 최종 저장 시 `ACTIVE` 처리함
-- Access Token은 짧게 유지하고, Refresh Token은 명시적 삭제·무효화 또는 계정 상태 변경 전까지 기기별로 영속 유지함
-- 영속 Refresh Token 정책은 V6에 반영함
-
-## 보류된 정책
-
-- 인증번호 발송 제공자와 실패 시 대체 채널
-- PG사와 부분 취소·환불 범위
-- 배송·매장 픽업·배송비 정책
-- 상품 옵션 조합 최대 수와 SKU 코드 발급 규칙
-- 개인정보·주문·결제 보존 및 익명화 기준
+현재 버전 마이그레이션은 V2부터 V9까지이며, 재실행 seed는 R 스크립트입니다. 버전 파일은 적용 후 수정하지 않고 새 변경은 다음 버전 migration으로 추가합니다. 정확한 버전별 테이블 목록은 [database.md](database.md)를 참고하세요.

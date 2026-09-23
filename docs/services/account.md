@@ -1,23 +1,7 @@
-# 계정 서비스
+# 계정
 
-## 책임
+## 구현 상태
 
-회원과 업체 프로필, 배송지, 계정 상태 조회·수정 담당. 인증·토큰 발급은 인증 서비스가 담당함
+사용자 프로필·주소 조회/수정 API는 아직 구현되지 않았습니다. 현재 계정 관련 endpoint는 관리자 운영 범위이며 [operation.md](operation.md)에 정리했습니다.
 
-## Controller
-
-```text
-GET   /api/account/me
-PATCH /api/account/me
-GET   /api/account/addresses
-POST  /api/account/addresses
-PATCH /api/account/addresses/{addressId}
-DELETE /api/account/addresses/{addressId}
-```
-
-## 핵심 규칙
-
-- 본인 계정만 조회·수정 가능, 운영자 변경은 운영 서비스로 분리
-- 사업자번호·주소·연락처는 역할 기반 접근 제어와 변경 감사 적용
-- 신규 업체 프로필 입력 완료 시 `PENDING_REVIEW` 또는 정책상 `ACTIVE` 전환
-- 주소 수정이 기존 주문의 배송지 스냅샷을 바꾸지 않음
+향후 사용자 계정 기능을 추가할 때 본인 계정 확인은 인증 subject를 기준으로 하고, 주소를 수정해도 기존 주문의 배송 스냅샷은 바뀌지 않도록 합니다.
