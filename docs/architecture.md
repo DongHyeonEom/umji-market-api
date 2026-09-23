@@ -14,15 +14,30 @@ Flutter App -> WebView -> React Web -> umji-market-api -> MySQL / 외부 서비�
 
 기반 아키텍처는 **헥사고날 아키텍처(Ports and Adapters)와 클린 아키텍처**임. 의존성은 바깥 계층에서 안쪽 계층을 향해야 하며, 도메인·애플리케이션 코드는 Spring, JPA, HTTP, DB 구현을 알지 않아야 함.
 
-```text
-HTTP Controller (inbound adapter)
-          ↓
-Application Use Case / Input Port
-          ↓
-Domain Model ← Output Ports (repository / gateway interfaces)
-          ↑                       ↑
-HTTP, JPA, DB, 외부 API adapters ─┘
+```mermaid
+flowchart LR
+    Client["앱 / React WebView"] --> Controller["HTTP Controller<br/>입력 Adapter"]
+    Controller --> InputPort["입력 Port<br/>UseCase 인터페이스"]
+    InputPort --> Application["Application Service<br/>유스케이스 조정·규칙"]
+    Application --> Domain["Domain Model<br/>핵심 업무 규칙"]
+
+    Application -->|Port 호출| OutputPort["출력 Port<br/>Repository / Gateway 인터페이스"]
+    OutputPort -->|런타임 위임| JpaAdapter["JPA Persistence Adapter"]
+    JpaAdapter --> SpringData["Spring Data Repository"]
+    SpringData --> Database[("MySQL")]
+    OutputPort -->|런타임 위임| ExternalAdapter["외부 서비스 Adapter"]
+    ExternalAdapter --> ExternalService["외부 API"]
+
+    JpaAdapter -. "구현·의존" .-> OutputPort
+    ExternalAdapter -. "구현·의존" .-> OutputPort
+
+    classDef inner fill:#e8f3ff,stroke:#3273dc,color:#172b4d
+    classDef outer fill:#fff4e5,stroke:#d9822b,color:#5c3b00
+    class InputPort,Application,Domain,OutputPort inner
+    class Client,Controller,JpaAdapter,SpringData,Database,ExternalAdapter,ExternalService outer
 ```
+
+실선은 요청/호출 흐름을, 점선은 adapter가 안쪽 Port를 구현하며 의존하는 방향을 나타냄. 런타임에는 application이 출력 Port를 호출하고, 그 Port의 구현체인 바깥 adapter가 저장소나 외부 서비스를 연결함.
 
 Controller는 입력 adapter, 애플리케이션 Service는 유스케이스 조정자, JPA와 Spring Data 구현은 persistence outbound adapter임. 저장소 인터페이스(출력 Port)는 안쪽 계층에 두고 JPA adapter가 이를 구현함. 트랜잭션 경계는 애플리케이션 유스케이스에 두며 adapter는 해당 작업에 필요한 저장·조회만 제공함.
 
