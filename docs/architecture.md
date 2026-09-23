@@ -58,7 +58,7 @@ flowchart LR
 | operation | 관리자 계정·상품 운영 |
 | payment, file, notification | 구현 전 |
 
-관리자 URL prefix는 `/api/operation/**`임. 인증 `REQUIRED` 모드에서는 인증된 요청만 허용하며, 로컬 `BYPASS`는 보안 검사를 생략. 관리자별 permission 검사는 endpoint 권한 매핑이 구현되기 전까지 완료된 것으로 간주하지 않음.
+관리자 URL prefix는 `/api/operation/**`임. 인증 `REQUIRED` 모드에서는 인증된 요청에 endpoint별 permission을 검사함. 로컬 `BYPASS`는 보안 검사를 생략하며 운영 환경에서 사용 금지. 권한 매트릭스는 [operation.md](services/operation.md)를 기준으로 함.
 
 ## DB와 서비스 분리
 

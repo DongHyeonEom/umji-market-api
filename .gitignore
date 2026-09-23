@@ -46,7 +46,7 @@ spring-*/src/main/java/META-INF/MANIFEST.MF
 *.ipr
 *.iws
 .idea
-out
+/out/
 test-output
 atlassian-ide-plugin.xml
 
@@ -72,7 +72,7 @@ node_modules
 /ideaSDK
 /clionSDK
 /android-studio/sdk
-out/
+/out/
 /tmp
 /intellij
 workspace.xml

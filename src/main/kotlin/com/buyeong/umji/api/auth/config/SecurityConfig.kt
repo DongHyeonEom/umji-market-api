@@ -20,6 +20,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
+import org.springframework.http.HttpMethod
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.interfaces.RSAPrivateKey
@@ -45,13 +47,35 @@ class SecurityConfig {
             http
                 .authorizeHttpRequests {
                     it.requestMatchers("/actuator/health", "/actuator/info", "/swagger-ui/**", "/v3/api-docs/**", "/api/auth/**").permitAll()
+                        .requestMatchers("/api/operation/accounts/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
+                        .requestMatchers(HttpMethod.GET, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")
+                        .requestMatchers(HttpMethod.HEAD, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")
+                        .requestMatchers(HttpMethod.POST, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_WRITE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/operation/products/**").hasAuthority("PRODUCT_WRITE")
+                        .requestMatchers(HttpMethod.GET, "/api/operation/inventory/**").hasAuthority("INVENTORY_READ")
+                        .requestMatchers(HttpMethod.HEAD, "/api/operation/inventory/**").hasAuthority("INVENTORY_READ")
+                        .requestMatchers(HttpMethod.PATCH, "/api/operation/inventory/**").hasAuthority("INVENTORY_WRITE")
+                        .requestMatchers("/api/operation/**").denyAll()
                         .anyRequest().authenticated()
                 }
-                .oauth2ResourceServer { it.jwt { } }
+                .oauth2ResourceServer {
+                    it.jwt { jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()) }
+                }
         }
 
         return http.build()
     }
+
+    @Bean
+    fun jwtAuthenticationConverter(): JwtAuthenticationConverter =
+        JwtAuthenticationConverter().apply {
+            setJwtGrantedAuthoritiesConverter { jwt ->
+                (jwt.claims["permissions"] as? Collection<*>)
+                    .orEmpty()
+                    .filterIsInstance<String>()
+                    .map { org.springframework.security.core.authority.SimpleGrantedAuthority(it) }
+            }
+        }
 
     @Bean
     fun passwordEncoder(): PasswordEncoder = Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8()
