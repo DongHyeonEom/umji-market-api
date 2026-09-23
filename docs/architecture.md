@@ -10,6 +10,22 @@ Flutter App -> WebView -> React Web -> umji-market-api -> MySQL / 외부 서비�
 
 관리자 기능은 UI 은닉만으로 보호하지 않으며, 모든 관리자성 API에서 서버 권한 검사를 수행함
 
+## 아키텍처 원칙
+
+기반 아키텍처는 **헥사고날 아키텍처(Ports and Adapters)와 클린 아키텍처**임. 의존성은 바깥 계층에서 안쪽 계층을 향해야 하며, 도메인·애플리케이션 코드는 Spring, JPA, HTTP, DB 구현을 알지 않아야 함.
+
+```text
+HTTP Controller (inbound adapter)
+          ↓
+Application Use Case / Input Port
+          ↓
+Domain Model ← Output Ports (repository / gateway interfaces)
+          ↑                       ↑
+HTTP, JPA, DB, 외부 API adapters ─┘
+```
+
+Controller는 입력 adapter, 애플리케이션 Service는 유스케이스 조정자, JPA와 Spring Data 구현은 persistence outbound adapter임. 저장소 인터페이스(출력 Port)는 안쪽 계층에 두고 JPA adapter가 이를 구현함. 트랜잭션 경계는 애플리케이션 유스케이스에 두며 adapter는 해당 작업에 필요한 저장·조회만 제공함.
+
 ## 패키지와 계층
 
 패키지 루트는 `com.buyeong.umji.api`임
@@ -28,13 +44,29 @@ file          파일 메타데이터
 common        공통 설정·예외·웹·추적
 ```
 
-각 도메인은 필요에 따라 `controller`, `model`, `dto`, `service`, `mapper`, `enums`, `exception`으로 분리함. Controller는 HTTP 입출력, Service는 비즈니스 규칙과 유스케이스 트랜잭션을 담당함. 외부 request/response에는 Entity를 노출하지 않음
+목표 구조는 도메인별로 `domain`, `application`, `adapter/in`, `adapter/out` 경계를 드러내는 것임. 프로젝트 규모에 맞춰 패키지 깊이는 조정할 수 있지만, 이름보다 의존성 규칙을 우선함. Controller는 HTTP 입출력만 담당하고, application use case는 도메인 규칙을 호출하고 유스케이스를 조정함. 외부 request/response에는 도메인 모델이나 JPA Entity를 직접 노출하지 않음.
 
 ## Persistence 경계
 
-JPA 구현은 도메인 패키지에 두지 않고 `persistence/jpa/{aggregate}`에 테이블 집합별로 배치함. 현재 aggregate는 `account`, `auth`, `catalog`, `cart`, `inventory`, `order`임. 각 aggregate 폴더에는 Entity와 Repository를 평면으로 두고, Repository 호출을 감싸는 `{Aggregate}JpaEntityService`를 함께 둠. Entity와 Repository만을 위한 하위 폴더는 아직 만들지 않음
+JPA 구현은 도메인·애플리케이션 안쪽 계층과 분리해 `persistence/jpa/{aggregate}`에 둠. 현재 aggregate는 `account`, `auth`, `catalog`, `cart`, `inventory`, `order`임. 각 aggregate 아래 `entity`, `repository`, `service` 폴더를 사용하며, 이는 파일을 나누는 물리 구조일 뿐 아키텍처 경계를 보장하지는 않음.
 
-도메인 Service와 운영 Service는 Repository를 직접 주입하지 않고 JPA Entity Service만 사용함. 여러 aggregate를 함께 변경하는 유스케이스의 `@Transactional`은 도메인 Service가 소유하고, JPA Entity Service의 쓰기 메서드는 해당 트랜잭션에 참여함. 따라서 예를 들어 주문 생성에서 주문·장바구니·재고를 함께 변경해도 하나의 트랜잭션으로 처리됨
+## 현재 구조 평가 및 개선 사항
+
+기존 코드는 Controller → 도메인 `*Service` → `*JpaEntityService` → Spring Data Repository → JPA Entity 형태를 주로 사용해 왔음. 주문 흐름은 이번 리팩터링에서 `OrderUseCase` 입력 Port, 순수 Kotlin `OrderService`, `CheckoutCartPort`·`InventoryReservationPort`·`OrderStorePort` 출력 Port와 persistence adapter로 전환함. Controller는 계정의 공개 ID를 전달하고 application 모델을 HTTP 응답으로 변환하며, JPA 매핑과 트랜잭션 경계는 바깥 adapter에 둠.
+
+주문, 장바구니, 재고, 공개 카탈로그, 인증, 관리자 계정·카탈로그 흐름은 application 모델·입출력 Port·adapter 구조로 전환함. 관리자 HTTP DTO는 web adapter에서 application 명령/응답으로 변환하고, JPA Entity 매핑은 persistence adapter에서 처리함. `*JpaEntityService`는 기존 도메인 adapter의 DB 호출 보조자로 남아 있으며 application 계층에서 직접 참조하지 않음.
+
+`persistence/jpa` 내부의 `entity`, `repository`, `service`는 저장 기술 구현을 분류하는 물리 디렉터리임. 일부 Kotlin package 선언이 aggregate 루트에 유지된 것은 의도된 단계이며, 애플리케이션과 adapter 간 의존 경계는 도메인별 `{domain}/application` 및 `{domain}/adapter` 패키지에서 표현함. 패키지 이름만 바꾸는 것보다 안쪽 계층이 JPA를 참조하지 않는지 확인하는 것을 우선함.
+
+남은 정리 사항은 공통 예외 모델의 계층 귀속, 도메인별 adapter 트랜잭션 설정 일관화, 테스트 범위 보강임. 계정·카탈로그의 규칙은 application use case에 두고, JPA adapter는 영속성과 Entity 매핑을 맡음.
+
+1. 각 유스케이스가 필요로 하는 저장·조회 계약을 application 안쪽에 인터페이스(출력 Port)로 선언하고 persistence adapter가 구현함
+2. JPA Entity와 도메인 모델을 분리하고, persistence adapter에서 매핑함. 유스케이스 입력·출력 모델도 HTTP DTO와 분리함
+3. 도메인 간 유스케이스 호출은 다른 도메인의 JPA Entity 전달 대신 식별자와 명시적 Port/도메인 계약을 사용함
+4. 여러 aggregate를 변경하는 트랜잭션 경계는 application use case에 두고, 저장소 adapter는 트랜잭션을 가로질러 비즈니스 흐름을 소유하지 않도록 함
+5. 테스트는 도메인 규칙과 유스케이스를 Spring/JPA 없이 검증할 수 있게 구성하고, 별도로 adapter 통합을 검증함
+
+따라서 `entity`, `repository`, `service` 폴더화는 persistence 구현 내부의 파일 분류로 사용하고, 각 기능의 `application`과 `adapter` 패키지 경계를 아키텍처 경계로 사용함. 패키지 이름 자체보다 dependency direction을 유지하는지 확인함.
 
 ## 도메인 모델
 

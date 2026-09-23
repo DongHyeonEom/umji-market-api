@@ -13,6 +13,7 @@ class AccountJpaEntityService(
     private val profiles: BusinessProfileRepository,
     private val consents: ConsentHistoryRepository,
 ) {
+    fun findById(id: Long): AccountEntity? = accounts.findById(id).orElse(null)
     fun findByPublicId(id: UUID): AccountEntity? = accounts.findByPublicId(id)
     fun findByPhoneNormalized(phone: String): AccountEntity? = accounts.findByPhoneNormalized(phone)
     fun findAllByStatus(status: String, pageable: Pageable): Page<AccountEntity> = accounts.findAllByStatus(status, pageable)

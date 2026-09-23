@@ -22,6 +22,7 @@ class InventoryJpaEntityService(
     fun lockedStock(sku: ProductSkuEntity): InventoryStockEntity =
         stocks.findLockedBySkuId(requireNotNull(sku.id)) ?: stocks.save(InventoryStockEntity().apply { this.sku = sku })
 
+    @Transactional fun saveStock(stock: InventoryStockEntity): InventoryStockEntity = stocks.save(stock)
     @Transactional fun saveMovement(movement: InventoryMovementEntity): InventoryMovementEntity = movements.save(movement)
     @Transactional fun saveReservation(reservation: StockReservationEntity): StockReservationEntity = reservations.save(reservation)
 }
