@@ -20,4 +20,5 @@ data class RefreshSessionRecord(
     val deviceId: String?,
     val revokedAt: Instant?,
     val lastUsedAt: Instant?,
+    val expiresAt: Instant?,
 )

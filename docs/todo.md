@@ -26,6 +26,12 @@
 
 ## 우선순위 2 — 휴대폰 인증과 계정 활성화
 
+- [ ] 앱 장기 로그인 세션 정책
+  - [x] Access Token 1시간, Refresh Token 1년 rolling 만료 적용
+  - [x] Refresh Token 갱신 시 회전 및 새 만료 시각 저장
+  - [x] 계정 정지·token version 변경 시 Access Token 즉시 거부
+  - [ ] 인증·세션 만료 자동화 테스트 추가 및 실행
+
 - [ ] OTP 발급·검증·재발급 흐름
   - [ ] 만료·재시도 제한·남용 방지 정책 정의
   - [ ] OTP 공급자 연동 경계를 outbound port로 구성

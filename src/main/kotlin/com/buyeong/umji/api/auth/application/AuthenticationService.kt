@@ -38,13 +38,13 @@ class AuthenticationService(
     override fun refresh(command: RefreshTokenCommand): IssuedTokens {
         val session = refreshSessions.findLockedByHash(hash(command.refreshToken))
             ?: throw ClientBadRequestException("유효하지 않은 Refresh Token입니다.")
-        if (session.revokedAt != null || session.account.status != ACTIVE) {
+        val now = Instant.now()
+        if (session.revokedAt != null || session.account.status != ACTIVE || session.expiresAt?.let { !it.isAfter(now) } == true) {
             throw ClientBadRequestException("세션이 만료되었거나 사용할 수 없습니다.")
         }
         if (command.deviceId != null && session.deviceId != null && command.deviceId != session.deviceId) {
             throw ClientBadRequestException("Refresh Token 기기 정보가 일치하지 않습니다.")
         }
-        val now = Instant.now()
         refreshSessions.save(session.copy(revokedAt = now, lastUsedAt = now))
         return createTokenPair(session.account, command.deviceId ?: session.deviceId)
     }
@@ -57,13 +57,14 @@ class AuthenticationService(
 
     private fun createTokenPair(account: AccountRecord, deviceId: String?): IssuedTokens {
         val now = Instant.now()
-        val expiresAt = now.plus(ACCESS_TOKEN_TTL)
-        val accessToken = accessTokens.issue(account, now, expiresAt)
+        val accessExpiresAt = now.plus(ACCESS_TOKEN_TTL)
+        val accessToken = accessTokens.issue(account, now, accessExpiresAt)
         val refreshToken = newOpaqueToken()
+        val refreshExpiresAt = now.plus(REFRESH_TOKEN_TTL)
         refreshSessions.save(
-            RefreshSessionRecord(hash(refreshToken), account, deviceId?.trim()?.ifBlank { null }, null, null),
+            RefreshSessionRecord(hash(refreshToken), account, deviceId?.trim()?.ifBlank { null }, null, null, refreshExpiresAt),
         )
-        return IssuedTokens(accessToken, expiresAt, refreshToken)
+        return IssuedTokens(accessToken, accessExpiresAt, refreshToken)
     }
 
     private fun accountResponse(account: AccountRecord) = AuthenticatedAccount(account.id, account.name, account.status)
@@ -73,7 +74,8 @@ class AuthenticationService(
     private companion object {
         const val ACTIVE = "ACTIVE"
         const val REFRESH_TOKEN_BYTES = 32
-        val ACCESS_TOKEN_TTL: Duration = Duration.ofMinutes(15)
+        val ACCESS_TOKEN_TTL: Duration = Duration.ofHours(1)
+        val REFRESH_TOKEN_TTL: Duration = Duration.ofDays(365)
         val random = SecureRandom()
         val base64UrlEncoder = Base64.getUrlEncoder().withoutPadding()
     }

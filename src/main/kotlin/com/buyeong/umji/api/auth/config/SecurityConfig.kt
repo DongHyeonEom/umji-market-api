@@ -1,5 +1,7 @@
 package com.buyeong.umji.api.auth.config
 
+import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
+
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
@@ -16,6 +18,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder
 import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.JwtClaimValidator
 import org.springframework.security.oauth2.jwt.JwtValidators
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.security.oauth2.core.OAuth2Error
+import org.springframework.security.oauth2.core.OAuth2TokenValidator
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator
@@ -86,12 +92,21 @@ class SecurityConfig {
         havingValue = "REQUIRED",
         matchIfMissing = true,
     )
-    fun jwtDecoder(properties: JwtProperties): JwtDecoder =
+    fun jwtDecoder(properties: JwtProperties, accounts: AccountAuthenticationPort): JwtDecoder =
         NimbusJwtDecoder.withPublicKey(properties.publicKey()).build().apply {
             setJwtValidator(
                 DelegatingOAuth2TokenValidator(
                     JwtValidators.createDefaultWithIssuer(properties.issuer),
                     JwtClaimValidator<List<String>>("aud") { audiences -> audiences.contains(properties.audience) },
+                    OAuth2TokenValidator<Jwt> { jwt ->
+                        val accountId = runCatching { java.util.UUID.fromString(jwt.subject) }.getOrNull()
+                        val tokenVersion = (jwt.claims["tokenVersion"] as? Number)?.toLong()
+                        if (accountId != null && tokenVersion != null && accounts.isTokenCurrent(accountId, tokenVersion)) {
+                            OAuth2TokenValidatorResult.success()
+                        } else {
+                            OAuth2TokenValidatorResult.failure(OAuth2Error("invalid_token", "Account is inactive or token has been revoked", null))
+                        }
+                    },
                 ),
             )
         }

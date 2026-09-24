@@ -14,7 +14,9 @@
 
 ## 토큰 정책
 
-Access Token은 짧게 만료됨. Refresh Token은 기기별로 저장하고 회전·폐기하며, DB에는 hash를 저장함. 갱신 시 계정 상태와 token version을 확인함. 만료·폐기 기준의 상세 구현은 설정 및 토큰 모델을 기준으로 함.
+Access Token 유효기간은 1시간. Refresh Token은 기기별로 발급하며 DB에는 hash와 만료 시각을 저장함. Refresh Token은 발급·갱신 시점부터 1년간 사용되지 않으면 만료됨. 갱신할 때 기존 토큰을 폐기하고 새 토큰을 발급해 만료 시각을 1년 뒤로 연장함. 최대 세션 수명 제한은 없으므로 유효한 세션을 계속 사용하는 동안 앱 로그인 상태가 유지됨. 로그아웃은 해당 Refresh Token을 폐기함. 정지 계정은 새 로그인과 Refresh Token 갱신이 거부됨.
+
+Access Token 검증 시 계정 상태와 token version을 DB의 현재 값과 대조함. 계정 정지 또는 token version 변경 시 기존 Access Token은 즉시 인증 실패 처리되며, 정지 계정의 Refresh Token 갱신도 거부됨. 인증할 수 없는 토큰은 `401`, 인증은 유효하나 endpoint 권한이 부족한 요청은 `403`을 반환함.
 
 ## 보안 모드
 
