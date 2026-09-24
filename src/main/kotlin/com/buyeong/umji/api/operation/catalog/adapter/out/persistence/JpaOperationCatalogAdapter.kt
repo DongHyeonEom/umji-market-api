@@ -13,7 +13,9 @@ import com.buyeong.umji.api.operation.catalog.application.model.OptionValueView
 import com.buyeong.umji.api.operation.catalog.application.model.OptionView
 import com.buyeong.umji.api.operation.catalog.application.model.ProductCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductPageView
+import com.buyeong.umji.api.operation.catalog.application.model.ProductStatusCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductView
+import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SkuView
 import com.buyeong.umji.api.operation.catalog.application.port.out.OperationCatalogPort
 import com.buyeong.umji.api.persistence.jpa.catalog.BrandEntity

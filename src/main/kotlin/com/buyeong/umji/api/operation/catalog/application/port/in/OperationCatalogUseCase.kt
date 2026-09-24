@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.operation.catalog.application.port.`in`
 
+import com.buyeong.umji.api.operation.catalog.application.model.BrandCommand
 import com.buyeong.umji.api.operation.catalog.application.model.BrandView
 import com.buyeong.umji.api.operation.catalog.application.model.CatalogResource
 import com.buyeong.umji.api.operation.catalog.application.model.CategoryCommand

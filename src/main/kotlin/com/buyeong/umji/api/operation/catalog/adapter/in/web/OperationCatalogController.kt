@@ -1,12 +1,14 @@
 package com.buyeong.umji.api.operation.catalog.adapter.`in`.web
 
 import com.buyeong.umji.api.operation.catalog.application.model.BrandCommand
+import com.buyeong.umji.api.operation.catalog.application.model.CatalogResource
 import com.buyeong.umji.api.operation.catalog.application.model.CategoryCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ImageCommand
 import com.buyeong.umji.api.operation.catalog.application.model.OptionCommand
 import com.buyeong.umji.api.operation.catalog.application.model.OptionValueCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductStatusCommand
+import com.buyeong.umji.api.operation.catalog.application.model.ProductView
 import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
@@ -18,7 +20,12 @@ import com.buyeong.umji.api.operation.model.CreateProductSkuRequest
 import com.buyeong.umji.api.operation.model.OperationBrandResponse
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
 import com.buyeong.umji.api.operation.model.OperationCategoryResponse
+import com.buyeong.umji.api.operation.model.OperationProductImageResponse
+import com.buyeong.umji.api.operation.model.OperationProductOptionResponse
+import com.buyeong.umji.api.operation.model.OperationProductOptionValueResponse
 import com.buyeong.umji.api.operation.model.OperationProductPageResponse
+import com.buyeong.umji.api.operation.model.OperationProductResponse
+import com.buyeong.umji.api.operation.model.OperationProductSkuResponse
 import com.buyeong.umji.api.operation.model.UpdateProductRequest
 import com.buyeong.umji.api.operation.model.UpdateProductStatusRequest
 import jakarta.validation.Valid
@@ -34,6 +41,8 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
