@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.util
 
-import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 
 class PhoneNumberHelperTest : DescribeSpec({

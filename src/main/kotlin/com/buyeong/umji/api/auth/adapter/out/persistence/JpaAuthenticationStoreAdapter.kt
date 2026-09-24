@@ -9,11 +9,11 @@ import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenEntity
 import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenJpaEntityService
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.jdbc.core.JdbcTemplate
-import java.time.Instant
 import java.nio.ByteBuffer
+import java.time.Instant
 import java.util.UUID
 
 @Component
@@ -67,13 +67,19 @@ class JpaAuthenticationStoreAdapter(
                 FROM account_role ar
                 JOIN role_permission rp ON rp.role_id = ar.role_id
                 JOIN permission p ON p.id = rp.permission_id
-                WHERE ar.account_id = ?""".trimIndent(),
+                WHERE ar.account_id = ?
+            """.trimIndent(),
             String::class.java,
             requireNotNull(id),
         ).toSet()
         return AccountRecord(accountPublicId, name, status, tokenVersion, permissions)
     }
     private fun RefreshTokenEntity.toRecord() = RefreshSessionRecord(
-        tokenHash, account.toRecord(), deviceId, revokedAt, lastUsedAt, expiresAt,
+        tokenHash,
+        account.toRecord(),
+        deviceId,
+        revokedAt,
+        lastUsedAt,
+        expiresAt,
     )
 }

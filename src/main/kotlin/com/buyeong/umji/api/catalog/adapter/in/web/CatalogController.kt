@@ -1,10 +1,7 @@
 package com.buyeong.umji.api.catalog.adapter.`in`.web
 
-import com.buyeong.umji.api.catalog.application.model.CategoryView
 import com.buyeong.umji.api.catalog.application.model.ProductDetailView
 import com.buyeong.umji.api.catalog.application.model.ProductPageView
-import com.buyeong.umji.api.catalog.application.model.ProductSkuView
-import com.buyeong.umji.api.catalog.application.model.ProductSummaryView
 import com.buyeong.umji.api.catalog.application.port.`in`.CatalogUseCase
 import com.buyeong.umji.api.catalog.model.CategoryResponse
 import com.buyeong.umji.api.catalog.model.ProductDetailResponse
@@ -42,11 +39,19 @@ class CatalogController(
     fun product(@PathVariable productId: UUID): ProductDetailResponse = catalogService.product(productId).toResponse()
 
     private fun ProductPageView.toResponse() = ProductPageResponse(
-        items.map { ProductSummaryResponse(it.id, it.name, it.brandName) }, page, size, totalElements, totalPages,
+        items.map { ProductSummaryResponse(it.id, it.name, it.brandName) },
+        page,
+        size,
+        totalElements,
+        totalPages,
     )
 
     private fun ProductDetailView.toResponse() = ProductDetailResponse(
-        id, name, description, categoryName, brandName,
+        id,
+        name,
+        description,
+        categoryName,
+        brandName,
         skus.map { ProductSkuResponse(it.id, it.code, it.name, it.salePrice, it.listPrice) },
     )
 }

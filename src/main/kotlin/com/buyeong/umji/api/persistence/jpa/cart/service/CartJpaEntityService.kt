@@ -10,7 +10,10 @@ class CartJpaEntityService(
     private val carts: CartRepository,
 ) {
     fun findWithItems(accountId: Long): CartEntity? = carts.findWithItemsByAccountId(accountId)
+
     @Transactional fun findLocked(accountId: Long): CartEntity? = carts.findLockedByAccountId(accountId)
+
     @Transactional fun saveAndFlush(cart: CartEntity): CartEntity = carts.saveAndFlush(cart)
+
     @Transactional fun create(account: AccountEntity): CartEntity = carts.save(CartEntity().apply { this.account = account })
 }

@@ -5,9 +5,9 @@ import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
+import com.buyeong.umji.api.order.model.OrderItemResponse
 import com.buyeong.umji.api.order.model.OrderPageResponse
 import com.buyeong.umji.api.order.model.OrderResponse
-import com.buyeong.umji.api.order.model.OrderItemResponse
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.http.HttpStatus
@@ -44,7 +44,13 @@ class OrderController(
     private fun OrderPage.toResponse() = OrderPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
 
     private fun OrderView.toResponse() = OrderResponse(
-        id, orderNumber, status, subtotalAmount, totalAmount, orderedAt, items.map { it.toResponse() },
+        id,
+        orderNumber,
+        status,
+        subtotalAmount,
+        totalAmount,
+        orderedAt,
+        items.map { it.toResponse() },
     )
 
     private fun OrderItemView.toResponse() = OrderItemResponse(

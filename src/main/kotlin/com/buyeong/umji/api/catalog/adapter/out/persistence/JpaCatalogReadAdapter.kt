@@ -23,7 +23,8 @@ class JpaCatalogReadAdapter(private val catalog: CatalogJpaEntityService) : Cata
     @Transactional(readOnly = true)
     override fun products(page: Int, size: Int): ProductPageView {
         val result = catalog.publicProducts(
-            DISPLAYED, ON_SALE,
+            DISPLAYED,
+            ON_SALE,
             PageRequest.of(page, size, Sort.by("displayOrder").ascending().and(Sort.by("id").descending())),
         )
         return ProductPageView(

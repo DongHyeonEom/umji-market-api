@@ -11,7 +11,6 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.time.Instant
 import java.util.UUID
 
 class OrderServiceTest : DescribeSpec({
@@ -27,8 +26,17 @@ class OrderServiceTest : DescribeSpec({
             every { carts.linesForCheckout(accountId) } returns listOf(CheckoutLine(skuId, "SKU-001", "테스트 상품", "규격 A", 12000, 3, "ON_SALE"))
             every { orders.save(any()) } answers {
                 val draft = firstArg<com.buyeong.umji.api.order.application.model.OrderDraft>()
-                OrderView(UUID.randomUUID(), "UMJ-20260923-000001", draft.status, draft.subtotalAmount, draft.totalAmount, draft.orderedAt,
-                    draft.items.map { OrderItemView(UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode, it.unitPrice, it.quantity, it.lineAmount, it.status) })
+                OrderView(
+                    UUID.randomUUID(),
+                    "UMJ-20260923-000001",
+                    draft.status,
+                    draft.subtotalAmount,
+                    draft.totalAmount,
+                    draft.orderedAt,
+                    draft.items.map {
+                        OrderItemView(UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode, it.unitPrice, it.quantity, it.lineAmount, it.status)
+                    },
+                )
             }
             every { carts.clear(accountId) } returns Unit
 

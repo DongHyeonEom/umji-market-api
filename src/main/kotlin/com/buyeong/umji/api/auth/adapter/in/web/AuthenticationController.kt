@@ -1,19 +1,19 @@
 package com.buyeong.umji.api.auth.adapter.`in`.web
 
+import com.buyeong.umji.api.auth.application.model.AuthenticationStatus
+import com.buyeong.umji.api.auth.application.model.IssuedTokens
+import com.buyeong.umji.api.auth.application.model.LoginResult
 import com.buyeong.umji.api.auth.application.model.PhoneLoginCommand
 import com.buyeong.umji.api.auth.application.model.RefreshTokenCommand
 import com.buyeong.umji.api.auth.application.model.RevokeRefreshTokenCommand
 import com.buyeong.umji.api.auth.application.port.`in`.AuthenticationUseCase
-import com.buyeong.umji.api.auth.application.model.IssuedTokens
-import com.buyeong.umji.api.auth.application.model.LoginResult
-import com.buyeong.umji.api.auth.application.model.AuthenticationStatus
 import com.buyeong.umji.api.auth.model.AuthenticatedAccountResponse
 import com.buyeong.umji.api.auth.model.LoginStatus
-import com.buyeong.umji.api.auth.model.PhoneLoginResponse
-import com.buyeong.umji.api.auth.model.TokenPairResponse
 import com.buyeong.umji.api.auth.model.PhoneLoginRequest
+import com.buyeong.umji.api.auth.model.PhoneLoginResponse
 import com.buyeong.umji.api.auth.model.RefreshTokenRequest
 import com.buyeong.umji.api.auth.model.RevokeRefreshTokenRequest
+import com.buyeong.umji.api.auth.model.TokenPairResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.PostMapping

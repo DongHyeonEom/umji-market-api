@@ -23,6 +23,8 @@ class AccountJpaEntityService(
     fun hasConsent(accountId: Long, consentType: String): Boolean = consents.existsByAccountIdAndConsentType(accountId, consentType)
 
     @Transactional fun save(account: AccountEntity): AccountEntity = accounts.save(account)
+
     @Transactional fun saveProfile(profile: BusinessProfileEntity): BusinessProfileEntity = profiles.save(profile)
+
     @Transactional fun saveConsent(consent: ConsentHistoryEntity): ConsentHistoryEntity = consents.save(consent)
 }

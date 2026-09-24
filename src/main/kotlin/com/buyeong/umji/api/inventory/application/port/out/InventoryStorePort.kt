@@ -1,7 +1,6 @@
 package com.buyeong.umji.api.inventory.application.port.out
 
 import com.buyeong.umji.api.inventory.application.model.MovementPageState
-import com.buyeong.umji.api.inventory.application.model.MovementState
 import com.buyeong.umji.api.inventory.application.model.ReservationState
 import com.buyeong.umji.api.inventory.application.model.SkuReference
 import com.buyeong.umji.api.inventory.application.model.StockState

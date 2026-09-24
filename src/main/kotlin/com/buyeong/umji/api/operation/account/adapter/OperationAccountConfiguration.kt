@@ -15,6 +15,9 @@ class OperationAccountConfiguration {
 
 @Transactional
 class TransactionalOperationAccountUseCase(private val delegate: OperationAccountUseCase) : OperationAccountUseCase by delegate {
-    @Transactional(readOnly = true) override fun list(status: String?, page: Int, size: Int) = delegate.list(status, page, size)
-    @Transactional(readOnly = true) override fun detail(id: UUID) = delegate.detail(id)
+    @Transactional(readOnly = true)
+    override fun list(status: String?, page: Int, size: Int) = delegate.list(status, page, size)
+
+    @Transactional(readOnly = true)
+    override fun detail(id: UUID) = delegate.detail(id)
 }

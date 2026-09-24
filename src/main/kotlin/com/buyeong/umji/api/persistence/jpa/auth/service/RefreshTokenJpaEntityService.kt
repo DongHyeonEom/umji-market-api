@@ -9,5 +9,6 @@ class RefreshTokenJpaEntityService(
     private val refreshTokens: RefreshTokenRepository,
 ) {
     @Transactional fun save(token: RefreshTokenEntity): RefreshTokenEntity = refreshTokens.save(token)
+
     @Transactional fun findLockedByTokenHash(tokenHash: ByteArray): RefreshTokenEntity? = refreshTokens.findLockedByTokenHash(tokenHash)
 }

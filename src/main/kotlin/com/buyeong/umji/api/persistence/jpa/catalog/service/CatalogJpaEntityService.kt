@@ -23,8 +23,16 @@ class CatalogJpaEntityService(
     fun brands(pageable: Pageable): Page<BrandEntity> = brands.findAllByDeletedAtIsNull(pageable)
     fun brand(id: UUID): BrandEntity? = brands.findByPublicIdAndDeletedAtIsNull(id)
     fun existsBrandName(name: String): Boolean = brands.existsByName(name)
-    fun publicProducts(displayStatus: String, salesStatus: String, pageable: Pageable): Page<ProductEntity> = products.findAllByDisplayStatusAndSalesStatusAndDeletedAtIsNull(displayStatus, salesStatus, pageable)
-    fun publicProduct(id: UUID, displayStatus: String, salesStatus: String): ProductEntity? = products.findByPublicIdAndDisplayStatusAndSalesStatusAndDeletedAtIsNull(id, displayStatus, salesStatus)
+    fun publicProducts(
+        displayStatus: String,
+        salesStatus: String,
+        pageable: Pageable,
+    ): Page<ProductEntity> = products.findAllByDisplayStatusAndSalesStatusAndDeletedAtIsNull(displayStatus, salesStatus, pageable)
+    fun publicProduct(
+        id: UUID,
+        displayStatus: String,
+        salesStatus: String,
+    ): ProductEntity? = products.findByPublicIdAndDisplayStatusAndSalesStatusAndDeletedAtIsNull(id, displayStatus, salesStatus)
     fun products(pageable: Pageable): Page<ProductEntity> = products.findAllByDeletedAtIsNull(pageable)
     fun product(id: UUID): ProductEntity? = products.findByPublicIdAndDeletedAtIsNull(id)
     fun sku(id: UUID): ProductSkuEntity? = skus.findByPublicId(id)
@@ -35,11 +43,18 @@ class CatalogJpaEntityService(
     fun options(productId: Long): List<ProductOptionEntity> = options.findAllByProductIdOrderByDisplayOrderAscIdAsc(productId)
     fun optionValues(optionId: Long): List<ProductOptionValueEntity> = optionValues.findAllByOptionIdOrderByDisplayOrderAscIdAsc(optionId)
     fun optionValues(ids: Collection<UUID>): List<ProductOptionValueEntity> = optionValues.findAllByPublicIdIn(ids)
+
     @Transactional fun save(category: CategoryEntity): CategoryEntity = categories.save(category)
+
     @Transactional fun save(brand: BrandEntity): BrandEntity = brands.save(brand)
+
     @Transactional fun save(product: ProductEntity): ProductEntity = products.save(product)
+
     @Transactional fun save(sku: ProductSkuEntity): ProductSkuEntity = skus.save(sku)
+
     @Transactional fun save(image: ProductImageEntity): ProductImageEntity = images.save(image)
+
     @Transactional fun save(option: ProductOptionEntity): ProductOptionEntity = options.save(option)
+
     @Transactional fun save(value: ProductOptionValueEntity): ProductOptionValueEntity = optionValues.save(value)
 }
