@@ -5,7 +5,6 @@ import com.buyeong.umji.api.order.application.model.OrderDraft
 import com.buyeong.umji.api.order.application.model.OrderItemDraft
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
-import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
 import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
 import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
@@ -16,8 +15,8 @@ class OrderService(
     private val checkoutCart: CheckoutCartPort,
     private val inventory: InventoryReservationPort,
     private val orders: OrderStorePort,
-) : OrderUseCase {
-    override fun create(accountPublicId: UUID): OrderView {
+) {
+    fun create(accountPublicId: UUID): OrderView {
         val lines = checkoutCart.linesForCheckout(accountPublicId)
         require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
         require(lines.all { it.salesStatus == ON_SALE }) { "판매 중지된 SKU가 포함되어 있습니다." }
@@ -44,9 +43,9 @@ class OrderService(
         return saved
     }
 
-    override fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage = orders.findAll(accountPublicId, page, size)
+    fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage = orders.findAll(accountPublicId, page, size)
 
-    override fun detail(accountPublicId: UUID, orderId: UUID): OrderView =
+    fun detail(accountPublicId: UUID, orderId: UUID): OrderView =
         orders.find(accountPublicId, orderId) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다.")
 
     private companion object {

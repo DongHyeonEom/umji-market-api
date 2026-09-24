@@ -5,23 +5,22 @@ import com.buyeong.umji.api.inventory.application.model.MovementPageState
 import com.buyeong.umji.api.inventory.application.model.ReservationState
 import com.buyeong.umji.api.inventory.application.model.StockState
 import com.buyeong.umji.api.inventory.application.model.StockView
-import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
 import com.buyeong.umji.api.inventory.application.port.out.InventoryStorePort
 import java.time.Instant
 import java.util.UUID
 
-class InventoryService(private val store: InventoryStorePort) : InventoryUseCase {
-    override fun stock(skuId: UUID): StockView {
+class InventoryService(private val store: InventoryStorePort) {
+    fun stock(skuId: UUID): StockView {
         val sku = sku(skuId)
         return store.stock(skuId)?.toView() ?: StockState(sku, 0, 0, 0).toView()
     }
 
-    override fun movements(skuId: UUID, page: Int, size: Int): MovementPageState {
+    fun movements(skuId: UUID, page: Int, size: Int): MovementPageState {
         sku(skuId)
         return store.movements(skuId, page, size)
     }
 
-    override fun adjust(skuId: UUID, quantityDelta: Int, reason: String, memo: String?, safetyStock: Int?): StockView {
+    fun adjust(skuId: UUID, quantityDelta: Int, reason: String, memo: String?, safetyStock: Int?): StockView {
         require(quantityDelta != 0) { "재고 조정 수량은 0일 수 없습니다." }
         require(safetyStock == null || safetyStock >= 0) { "안전 재고는 0 이상이어야 합니다." }
         val stock = store.lockStock(skuId)
@@ -32,7 +31,7 @@ class InventoryService(private val store: InventoryStorePort) : InventoryUseCase
         return next.toView()
     }
 
-    override fun reserve(skuId: UUID, quantity: Int, reservationKey: UUID, expiresAt: Instant?): StockView {
+    fun reserve(skuId: UUID, quantity: Int, reservationKey: UUID, expiresAt: Instant?): StockView {
         require(quantity > 0) { "예약 수량은 1 이상이어야 합니다." }
         require(store.reservation(reservationKey) == null) { "이미 처리된 재고 예약입니다." }
         val stock = store.lockStock(skuId)
@@ -44,7 +43,7 @@ class InventoryService(private val store: InventoryStorePort) : InventoryUseCase
         return updated.toView()
     }
 
-    override fun release(reservationKey: UUID): StockView {
+    fun release(reservationKey: UUID): StockView {
         val reservation = reservation(reservationKey)
         require(reservation.status == RESERVED) { "해제할 수 없는 재고 예약입니다." }
         val stock = store.lockStock(reservation.sku.id)
@@ -55,7 +54,7 @@ class InventoryService(private val store: InventoryStorePort) : InventoryUseCase
         return updated.toView()
     }
 
-    override fun confirm(reservationKey: UUID): StockView {
+    fun confirm(reservationKey: UUID): StockView {
         val reservation = reservation(reservationKey)
         require(reservation.status == RESERVED) { "확정할 수 없는 재고 예약입니다." }
         val stock = store.lockStock(reservation.sku.id)

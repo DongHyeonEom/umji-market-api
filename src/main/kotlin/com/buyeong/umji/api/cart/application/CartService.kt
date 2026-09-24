@@ -6,16 +6,15 @@ import com.buyeong.umji.api.cart.application.model.CartItemView
 import com.buyeong.umji.api.cart.application.model.CartState
 import com.buyeong.umji.api.cart.application.model.CartView
 import com.buyeong.umji.api.cart.application.model.UpdateCartItemCommand
-import com.buyeong.umji.api.cart.application.port.`in`.CartUseCase
 import com.buyeong.umji.api.cart.application.port.out.CartStorePort
 import com.buyeong.umji.api.cart.application.port.out.SellableSkuQueryPort
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import java.util.UUID
 
-class CartService(private val carts: CartStorePort, private val skus: SellableSkuQueryPort) : CartUseCase {
-    override fun cart(accountId: UUID): CartView = carts.find(accountId)?.toView() ?: CartView(emptyList())
+class CartService(private val carts: CartStorePort, private val skus: SellableSkuQueryPort) {
+    fun cart(accountId: UUID): CartView = carts.find(accountId)?.toView() ?: CartView(emptyList())
 
-    override fun add(accountId: UUID, command: AddCartItemCommand): CartView {
+    fun add(accountId: UUID, command: AddCartItemCommand): CartView {
         val sku = skus.find(command.skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
         require(sku.salesStatus == ON_SALE) { "판매 중인 SKU만 장바구니에 담을 수 있습니다." }
         val current = carts.find(accountId) ?: CartState(accountId, emptyList())
@@ -28,19 +27,19 @@ class CartService(private val carts: CartStorePort, private val skus: SellableSk
         return carts.save(updated).toView()
     }
 
-    override fun update(accountId: UUID, itemId: UUID, command: UpdateCartItemCommand): CartView {
+    fun update(accountId: UUID, itemId: UUID, command: UpdateCartItemCommand): CartView {
         val cart = carts.find(accountId) ?: throw ItemNotFoundException("장바구니를 찾을 수 없습니다.")
         requireItem(cart, itemId)
         return carts.save(cart.copy(items = cart.items.map { if (it.id == itemId) it.copy(quantity = command.quantity) else it })).toView()
     }
 
-    override fun remove(accountId: UUID, itemId: UUID) {
+    fun remove(accountId: UUID, itemId: UUID) {
         val cart = carts.find(accountId) ?: throw ItemNotFoundException("장바구니를 찾을 수 없습니다.")
         requireItem(cart, itemId)
         carts.save(cart.copy(items = cart.items.filterNot { it.id == itemId }))
     }
 
-    override fun clearForCheckout(accountId: UUID) {
+    fun clearForCheckout(accountId: UUID) {
         val cart = carts.find(accountId) ?: return
         carts.save(cart.copy(items = emptyList()))
     }

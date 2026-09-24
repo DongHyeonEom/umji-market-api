@@ -9,7 +9,6 @@ import com.buyeong.umji.api.auth.application.model.PhoneLoginCommand
 import com.buyeong.umji.api.auth.application.model.RefreshSessionRecord
 import com.buyeong.umji.api.auth.application.model.RefreshTokenCommand
 import com.buyeong.umji.api.auth.application.model.RevokeRefreshTokenCommand
-import com.buyeong.umji.api.auth.application.port.`in`.AuthenticationUseCase
 import com.buyeong.umji.api.auth.application.port.out.AccessTokenIssuerPort
 import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
 import com.buyeong.umji.api.auth.application.port.out.RefreshSessionPort
@@ -25,8 +24,8 @@ class AuthenticationService(
     private val accounts: AccountAuthenticationPort,
     private val refreshSessions: RefreshSessionPort,
     private val accessTokens: AccessTokenIssuerPort,
-) : AuthenticationUseCase {
-    override fun login(command: PhoneLoginCommand): LoginResult {
+) {
+    fun login(command: PhoneLoginCommand): LoginResult {
         val phone = PhoneNumberHelper.normalizeMobilePhoneNumber(command.phone)
         val account = accounts.findByNormalizedPhone(phone)
             ?: return LoginResult(AuthenticationStatus.PHONE_VERIFICATION_REQUIRED)
@@ -35,7 +34,7 @@ class AuthenticationService(
         return LoginResult(AuthenticationStatus.AUTHENTICATED, accountResponse(account), createTokenPair(account, command.deviceId))
     }
 
-    override fun refresh(command: RefreshTokenCommand): IssuedTokens {
+    fun refresh(command: RefreshTokenCommand): IssuedTokens {
         val session = refreshSessions.findLockedByHash(hash(command.refreshToken))
             ?: throw ClientBadRequestException("유효하지 않은 Refresh Token입니다.")
         val now = Instant.now()
@@ -49,7 +48,7 @@ class AuthenticationService(
         return createTokenPair(session.account, command.deviceId ?: session.deviceId)
     }
 
-    override fun revoke(command: RevokeRefreshTokenCommand) {
+    fun revoke(command: RevokeRefreshTokenCommand) {
         refreshSessions.findLockedByHash(hash(command.refreshToken))?.let { session ->
             if (session.revokedAt == null) refreshSessions.save(session.copy(revokedAt = Instant.now()))
         }
