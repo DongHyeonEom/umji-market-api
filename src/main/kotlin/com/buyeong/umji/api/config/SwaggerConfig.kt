@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class SwaggerConfig {
     companion object {
-        private const val BASE_PACKAGE = "com.buyeong.umji.api.controller"
+        private const val BASE_PACKAGE = "com.buyeong.umji.api"
     }
 
     @Bean
