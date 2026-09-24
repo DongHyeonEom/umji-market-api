@@ -20,7 +20,7 @@ CREATE TABLE purchase_order (
 
 CREATE TABLE order_number_sequence (
     order_date DATE PRIMARY KEY,
-    last_value BIGINT NOT NULL
+    sequence_value BIGINT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE order_item (

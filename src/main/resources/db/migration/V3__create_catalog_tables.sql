@@ -17,7 +17,7 @@ CREATE TABLE category (
     CONSTRAINT CK_category_depth CHECK (depth >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE INDEX IX_category_parent_display_order ON category(parent_id, display_order);
-CREATE INDEX IX_category_path ON category(path);
+CREATE INDEX IX_category_path ON category(path(191));
 
 CREATE TABLE brand (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

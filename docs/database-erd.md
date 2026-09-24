@@ -250,7 +250,7 @@ erDiagram
     }
     ORDER_NUMBER_SEQUENCE {
         DATE order_date PK "주문번호 발급 기준 날짜"
-        BIGINT last_value "해당 날짜 마지막 발급 순번"
+        BIGINT sequence_value "해당 날짜 마지막 발급 순번"
     }
     ORDER_ITEM {
         BIGINT id PK "주문 항목 내부 ID"

@@ -13,6 +13,6 @@ class OrderNumberSequenceEntity {
     @Column(name = "order_date", nullable = false)
     lateinit var orderDate: LocalDate
 
-    @Column(name = "last_value", nullable = false)
+    @Column(name = "sequence_value", nullable = false)
     var lastValue: Long = 0
 }
