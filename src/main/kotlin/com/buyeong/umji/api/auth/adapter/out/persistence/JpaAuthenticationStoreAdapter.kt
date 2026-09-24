@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.jdbc.core.JdbcTemplate
 import java.time.Instant
+import java.nio.ByteBuffer
+import java.util.UUID
 
 @Component
 class JpaAuthenticationStoreAdapter(
@@ -25,6 +27,15 @@ class JpaAuthenticationStoreAdapter(
 
     @Transactional(readOnly = true)
     override fun findByNormalizedPhone(phone: String): AccountRecord? = accounts.findByPhoneNormalized(phone)?.toRecord()
+
+    @Transactional(readOnly = true)
+    override fun isTokenCurrent(id: UUID, tokenVersion: Long): Boolean =
+        jdbc.query(
+            "SELECT 1 FROM account WHERE public_id = ? AND status = 'ACTIVE' AND token_version = ?",
+            { result, _ -> result.getInt(1) == 1 },
+            ByteBuffer.allocate(16).putLong(id.mostSignificantBits).putLong(id.leastSignificantBits).array(),
+            tokenVersion,
+        ).firstOrNull() == true
 
     @Transactional
     override fun recordLogin(accountId: java.util.UUID, at: Instant) {
@@ -45,6 +56,7 @@ class JpaAuthenticationStoreAdapter(
         entity.deviceId = session.deviceId
         entity.revokedAt = session.revokedAt
         entity.lastUsedAt = session.lastUsedAt
+        entity.expiresAt = session.expiresAt
         refreshTokens.save(entity)
     }
 
@@ -62,6 +74,6 @@ class JpaAuthenticationStoreAdapter(
         return AccountRecord(accountPublicId, name, status, tokenVersion, permissions)
     }
     private fun RefreshTokenEntity.toRecord() = RefreshSessionRecord(
-        tokenHash, account.toRecord(), deviceId, revokedAt, lastUsedAt,
+        tokenHash, account.toRecord(), deviceId, revokedAt, lastUsedAt, expiresAt,
     )
 }

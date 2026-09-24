@@ -9,6 +9,7 @@ interface AccountAuthenticationPort {
     fun findByPublicId(id: UUID): AccountRecord?
     fun findByNormalizedPhone(phone: String): AccountRecord?
     fun recordLogin(accountId: UUID, at: Instant)
+    fun isTokenCurrent(id: UUID, tokenVersion: Long): Boolean
 }
 
 interface RefreshSessionPort {

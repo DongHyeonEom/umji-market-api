@@ -19,7 +19,7 @@
 | 재고 조회·변동 조회 endpoint | `INVENTORY_READ` |
 | 재고 조정 endpoint | `INVENTORY_WRITE` |
 
-Role-permission 기본 매핑은 Flyway V10에서 적용함. 계정 role 부여·회수 API는 미구현 상태이며 `account_role` 관리 정책은 별도 작업 필요. Access Token에 발급 당시 permission을 담으므로 role 변경은 기존 Access Token 만료 또는 갱신 후 반영됨. 현재 Access Token 유효기간은 15분.
+Role-permission 기본 매핑은 Flyway V10에서 적용함. 계정 role 부여·회수 API는 미구현 상태이며 `account_role` 관리 정책은 별도 작업 필요. Access Token에 발급 당시 permission을 담음. 매 요청 시 token version을 DB와 대조하므로 token version 변경 시 기존 Access Token은 즉시 인증 실패하고, 새 토큰부터 변경된 permission이 반영됨. 계정 정지는 상태 검사로 즉시 인증 실패 처리됨. 인증 불가 응답은 `401`, 권한 부족 응답은 `403`임.
 
 ### 초기 관리자 role bootstrap
 
