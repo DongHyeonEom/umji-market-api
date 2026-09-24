@@ -10,6 +10,12 @@
 - 코드와 검증이 끝난 항목만 완료 처리하고, 기능 문서와 구현 현황도 함께 갱신
 - 정책 미확정 항목은 임의로 확정하지 않고 설계 결정 항목으로 유지
 
+## 개발 도구 정비
+
+- [x] ktlint Gradle 실행기와 Kotlin 플러그인 호환 버전 정리
+- [x] `.editorconfig` 빈 설정값 수정 및 전체 Kotlin 소스 ktlint 포맷 적용
+- [x] `ktlintCheck` 전체 source set 통과 확인
+
 ## 우선순위 1 — 관리자 권한 경계
 
 - [ ] endpoint별 role/permission 인가 적용 마무리

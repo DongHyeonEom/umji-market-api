@@ -17,15 +17,17 @@ class JwtAccessTokenIssuer(
 ) : AccessTokenIssuerPort {
     override fun issue(account: AccountRecord, now: Instant, expiresAt: Instant): String =
         requireNotNull(encoderProvider.ifAvailable) { "JWT 발급 설정이 필요합니다." }
-            .encode(JwtEncoderParameters.from(
-                JwtClaimsSet.builder()
-                    .issuer(properties.issuer)
-                    .audience(listOf(properties.audience))
-                    .subject(account.id.toString())
-                    .issuedAt(now)
-                    .expiresAt(expiresAt)
-                    .claim("tokenVersion", account.tokenVersion)
-                    .claim("permissions", account.permissions.sorted())
-                    .build(),
-            )).tokenValue
+            .encode(
+                JwtEncoderParameters.from(
+                    JwtClaimsSet.builder()
+                        .issuer(properties.issuer)
+                        .audience(listOf(properties.audience))
+                        .subject(account.id.toString())
+                        .issuedAt(now)
+                        .expiresAt(expiresAt)
+                        .claim("tokenVersion", account.tokenVersion)
+                        .claim("permissions", account.permissions.sorted())
+                        .build(),
+                ),
+            ).tokenValue
 }

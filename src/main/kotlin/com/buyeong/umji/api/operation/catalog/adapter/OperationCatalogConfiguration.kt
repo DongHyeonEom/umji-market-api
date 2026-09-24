@@ -16,8 +16,15 @@ class OperationCatalogConfiguration {
 
 @Transactional
 class TransactionalOperationCatalogUseCase(private val delegate: OperationCatalogUseCase) : OperationCatalogUseCase by delegate {
-    @Transactional(readOnly = true) override fun categories() = delegate.categories()
-    @Transactional(readOnly = true) override fun brands(page: Int, size: Int) = delegate.brands(page, size)
-    @Transactional(readOnly = true) override fun products(page: Int, size: Int) = delegate.products(page, size)
-    @Transactional(readOnly = true) override fun product(id: UUID) = delegate.product(id)
+    @Transactional(readOnly = true)
+    override fun categories() = delegate.categories()
+
+    @Transactional(readOnly = true)
+    override fun brands(page: Int, size: Int) = delegate.brands(page, size)
+
+    @Transactional(readOnly = true)
+    override fun products(page: Int, size: Int) = delegate.products(page, size)
+
+    @Transactional(readOnly = true)
+    override fun product(id: UUID) = delegate.product(id)
 }

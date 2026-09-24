@@ -65,14 +65,16 @@ class JpaInventoryStoreAdapter(
 
     @Transactional
     override fun saveMovement(sku: SkuReference, type: String, delta: Int, referenceType: String?, referenceId: UUID?, memo: String?) {
-        inventory.saveMovement(InventoryMovementEntity().apply {
-            this.sku = entitySku(sku.id)
-            movementType = type
-            quantityDelta = delta
-            this.referenceType = referenceType
-            this.referenceId = referenceId
-            this.memo = memo?.trim()?.ifBlank { null }
-        })
+        inventory.saveMovement(
+            InventoryMovementEntity().apply {
+                this.sku = entitySku(sku.id)
+                movementType = type
+                quantityDelta = delta
+                this.referenceType = referenceType
+                this.referenceId = referenceId
+                this.memo = memo?.trim()?.ifBlank { null }
+            },
+        )
     }
 
     @Transactional(readOnly = true)
@@ -87,6 +89,13 @@ class JpaInventoryStoreAdapter(
     private fun InventoryStockEntity.toState() = StockState(sku.toReference(), onHandQuantity, reservedQuantity, safetyStockQuantity)
     private fun StockReservationEntity.toState() = ReservationState(reservationKey, sku.toReference(), quantity, status, expiresAt, releasedAt)
     private fun InventoryMovementEntity.toState() = MovementState(
-        requireNotNull(id), sku.toReference(), movementType, quantityDelta, referenceType, referenceId, memo, occurredAt,
+        requireNotNull(id),
+        sku.toReference(),
+        movementType,
+        quantityDelta,
+        referenceType,
+        referenceId,
+        memo,
+        occurredAt,
     )
 }

@@ -36,7 +36,7 @@ repositories {
 }
 
 ktlint {
-    version.set("1.7.1")
+    version.set("1.5.0")
 }
 
 // Version constants

@@ -34,12 +34,14 @@ ktlint_standard_string-template-indent = disabled
 ktlint_standard_try-catch-finally-spacing = disabled
 ktlint_standard_type-argument-list-spacing = disabled
 ktlint_standard_type-parameter-list-spacing = disabled
+# `in`은 입력 adapter/port 패키지 경로로 사용하므로 패키지명 검사 제외
+ktlint_standard_package-name = disabled
 
 # === IntelliJ 기본값과 다른 설정만 ===
 
 # Wildcard import 완전 비활성화 (기본값: 5)
 ij_kotlin_name_count_to_use_star_import = 99
-ij_kotlin_packages_to_use_import_on_demand =
+ij_kotlin_packages_to_use_import_on_demand = unset
 
 # 파라미터/인자 줄바꿈 강제 (기본값: off)
 ij_kotlin_call_parameters_wrap = on_every_item

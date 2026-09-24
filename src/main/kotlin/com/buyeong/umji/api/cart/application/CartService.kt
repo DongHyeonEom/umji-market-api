@@ -48,9 +48,13 @@ class CartService(private val carts: CartStorePort, private val skus: SellableSk
     private fun requireItem(cart: CartState, itemId: UUID) =
         cart.items.firstOrNull { it.id == itemId } ?: throw ItemNotFoundException("장바구니 항목을 찾을 수 없습니다.")
 
-    private fun CartState.toView() = CartView(items.map {
-        CartItemView(requireNotNull(it.id), it.sku.id, it.sku.code, it.sku.productName, it.sku.name, it.quantity, it.sku.price, it.sku.salesStatus)
-    })
+    private fun CartState.toView() = CartView(
+        items.map {
+            CartItemView(requireNotNull(it.id), it.sku.id, it.sku.code, it.sku.productName, it.sku.name, it.quantity, it.sku.price, it.sku.salesStatus)
+        },
+    )
 
-    private companion object { const val ON_SALE = "ON_SALE" }
+    private companion object {
+        const val ON_SALE = "ON_SALE"
+    }
 }

@@ -1,6 +1,5 @@
 package com.buyeong.umji.api.inventory.application
 
-import com.buyeong.umji.api.inventory.application.model.ReservationState
 import com.buyeong.umji.api.inventory.application.model.SkuReference
 import com.buyeong.umji.api.inventory.application.model.StockState
 import com.buyeong.umji.api.inventory.application.port.out.InventoryStorePort

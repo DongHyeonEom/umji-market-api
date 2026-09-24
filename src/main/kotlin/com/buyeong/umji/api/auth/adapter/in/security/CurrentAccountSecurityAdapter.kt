@@ -21,5 +21,7 @@ class CurrentAccountSecurityAdapter(private val accounts: AccountAuthenticationP
         return account.id
     }
 
-    private companion object { const val ACTIVE = "ACTIVE" }
+    private companion object {
+        const val ACTIVE = "ACTIVE"
+    }
 }

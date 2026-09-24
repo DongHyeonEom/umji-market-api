@@ -16,8 +16,12 @@ class OrderJpaEntityService(
 ) {
     fun findWithItems(id: UUID, accountId: Long): PurchaseOrderEntity? = orders.findWithItemsByPublicIdAndAccountId(id, accountId)
     fun findAll(accountId: Long, pageable: Pageable): Page<PurchaseOrderEntity> = orders.findAllByAccountId(accountId, pageable)
+
     @Transactional fun saveAndFlush(order: PurchaseOrderEntity): PurchaseOrderEntity = orders.saveAndFlush(order)
+
     @Transactional fun saveHistory(history: OrderStatusHistoryEntity): OrderStatusHistoryEntity = histories.save(history)
+
     @Transactional fun lockedSequence(date: LocalDate): OrderNumberSequenceEntity? = sequences.findLockedByOrderDate(date)
+
     @Transactional fun saveAndFlushSequence(sequence: OrderNumberSequenceEntity): OrderNumberSequenceEntity = sequences.saveAndFlush(sequence)
 }

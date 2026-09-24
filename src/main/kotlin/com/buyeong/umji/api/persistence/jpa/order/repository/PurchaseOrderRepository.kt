@@ -8,7 +8,9 @@ import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface PurchaseOrderRepository : JpaRepository<PurchaseOrderEntity, Long> {
-    @Query("select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId and purchaseOrder.account.id = :accountId")
+    @Query(
+        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId and purchaseOrder.account.id = :accountId",
+    )
     fun findWithItemsByPublicIdAndAccountId(@Param("publicId") publicId: UUID, @Param("accountId") accountId: Long): PurchaseOrderEntity?
 
     fun findAllByAccountId(accountId: Long, pageable: Pageable): Page<PurchaseOrderEntity>

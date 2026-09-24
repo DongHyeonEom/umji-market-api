@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.operation.account.application.port.`in`
 
 import com.buyeong.umji.api.operation.account.application.model.AccountData
-import com.buyeong.umji.api.operation.account.application.model.NewAccount
-import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
+import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
+import com.buyeong.umji.api.operation.account.application.model.NewAccount
 import java.util.UUID
 
 interface OperationAccountUseCase {

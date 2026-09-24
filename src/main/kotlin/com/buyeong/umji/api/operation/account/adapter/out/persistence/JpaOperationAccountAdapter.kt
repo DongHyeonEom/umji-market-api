@@ -1,8 +1,15 @@
 package com.buyeong.umji.api.operation.account.adapter.out.persistence
 
-import com.buyeong.umji.api.operation.account.application.model.*
+import com.buyeong.umji.api.operation.account.application.model.AccountData
+import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
+import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
+import com.buyeong.umji.api.operation.account.application.model.ConsentData
+import com.buyeong.umji.api.operation.account.application.model.NewAccount
 import com.buyeong.umji.api.operation.account.application.port.out.OperationAccountPort
-import com.buyeong.umji.api.persistence.jpa.account.*
+import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.BusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.ConsentHistoryEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
@@ -14,13 +21,15 @@ import java.util.UUID
 @Transactional
 class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService) : OperationAccountPort {
     override fun create(command: NewAccount): AccountData {
-        val entity = accounts.save(AccountEntity().apply {
-            name = command.name
-            phone = command.phone
-            phoneNormalized = command.normalizedPhone
-            email = command.email
-            status = "PENDING_CONSENT"
-        })
+        val entity = accounts.save(
+            AccountEntity().apply {
+                name = command.name
+                phone = command.phone
+                phoneNormalized = command.normalizedPhone
+                email = command.email
+                status = "PENDING_CONSENT"
+            },
+        )
         command.profile?.let { saveProfile(entity, it) }
         return data(entity)
     }
@@ -35,7 +44,10 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService) 
     }
 
     override fun updateStatus(id: UUID, status: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
-        if (entity.status != status) { entity.status = status; entity.tokenVersion++ }
+        if (entity.status != status) {
+            entity.status = status
+            entity.tokenVersion++
+        }
         data(entity)
     }
 
@@ -46,10 +58,16 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService) 
     }
 
     override fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
-        accounts.saveConsent(ConsentHistoryEntity().apply {
-            account = entity; consentType = consent.consentType; documentVersion = consent.documentVersion
-            consentMethod = consent.consentMethod; evidenceReference = consent.evidenceReference; consentedAt = Instant.now()
-        })
+        accounts.saveConsent(
+            ConsentHistoryEntity().apply {
+                account = entity
+                consentType = consent.consentType
+                documentVersion = consent.documentVersion
+                consentMethod = consent.consentMethod
+                evidenceReference = consent.evidenceReference
+                consentedAt = Instant.now()
+            },
+        )
         entity.status = nextStatus
         data(entity, true)
     }
@@ -58,7 +76,8 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService) 
     override fun hasConsent(id: UUID, consentType: String): Boolean = accounts.findByPublicId(id)?.id?.let { accounts.hasConsent(it, consentType) } ?: false
 
     override fun approve(id: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
-        entity.status = "ACTIVE"; entity.tokenVersion++
+        entity.status = "ACTIVE"
+        entity.tokenVersion++
         data(entity, true)
     }
 
@@ -80,10 +99,13 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService) 
         val profile = accounts.profile(accountId)?.let {
             BusinessProfileData(it.businessName, it.businessRegistrationNumber, it.representativeName, it.businessPhone, it.postalCode, it.address1, it.address2, it.status)
         }
-        val consents = if (includeConsents) accounts.consents(accountId).map {
-            ConsentData(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.consentedAt)
-        } else emptyList()
+        val consents = if (includeConsents) {
+            accounts.consents(accountId).map {
+                ConsentData(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.consentedAt)
+            }
+        } else {
+            emptyList()
+        }
         return AccountData(requireNotNull(entity.publicId), entity.name, entity.phone, entity.email, entity.status, entity.tokenVersion, profile, consents)
     }
-
 }

@@ -39,7 +39,12 @@ class JpaOrderStoreAdapter(
         }
         draft.items.forEach { item -> order.add(item.toEntity()) }
         val saved = orders.saveAndFlush(order)
-        orders.saveHistory(OrderStatusHistoryEntity().apply { this.order = saved; toStatus = draft.status })
+        orders.saveHistory(
+            OrderStatusHistoryEntity().apply {
+                this.order = saved
+                toStatus = draft.status
+            },
+        )
         return saved.toView()
     }
 
