@@ -123,3 +123,4 @@ kotlin-ide/
 
 # Local-only application settings
 /src/main/resources/application-local.yml
+/src/test/integration/resources/application-test.yml

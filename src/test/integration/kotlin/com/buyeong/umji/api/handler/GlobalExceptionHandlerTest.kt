@@ -2,6 +2,7 @@ package com.buyeong.umji.api.handler
 
 import com.buyeong.umji.api.exception.ApiCallException
 import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -12,7 +13,8 @@ import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
-import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.context.annotation.Import
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -27,8 +29,9 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(controllers = [TestExceptionController::class])
+@AutoConfigureMockMvc(addFilters = false)
+@Import(GlobalExceptionHandler::class, DefaultErrorMessageService::class)
 class GlobalExceptionHandlerTest(
     private val mockMvc: MockMvc,
 ) : DescribeSpec({

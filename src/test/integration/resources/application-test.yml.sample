@@ -1,3 +1,5 @@
+# 로컬 통합 테스트 설정 샘플
+# application-local.yml을 복사해 application-test.yml로 두면 로컬 앱과 같은 DB 연결 설정 사용
 server:
   port: 8888
   ssl:
