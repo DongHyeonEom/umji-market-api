@@ -1,6 +1,7 @@
 # 제품 작업 체크리스트
 
-현재 구현 현황은 [implementation-status.md](implementation-status.md), 도메인별 API 계약은 [services/README.md](services/README.md), 아키텍처 기준은 [architecture.md](architecture.md)를 기준으로 함. 이 문서는 앞으로 진행할 기능의 우선순위와 완료 조건을 관리함.
+현재 구현 현황은 [implementation-status.md](implementation-status.md), 도메인별 API 계약은 [services/README.md](services/README.md), 아키텍처 기준은 [architecture.md](architecture.md)를 기준으로 함.\
+이 문서는 앞으로 진행할 기능의 우선순위와 완료 조건을 관리함.
 
 ## 진행 규칙
 

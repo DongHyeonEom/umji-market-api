@@ -1,6 +1,8 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V10이 관리하는 테이블과 컬럼을 설명함. 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고. 미구현 테이블은 포함하지 않음.
+이 문서는 현재 Flyway V2–V10이 관리하는 테이블과 컬럼을 설명함.\
+실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.\
+미구현 테이블은 포함하지 않음.
 
 ## 표기
 
@@ -329,4 +331,6 @@ erDiagram
 | V8 | `cart`, `cart_item` |
 | V9 | `purchase_order`, `order_number_sequence`, `order_item`, `order_status_history` |
 
-새 스키마 변경은 다음 Flyway 버전으로 추가함. 적용된 version migration은 수정하지 않음. 결제·취소/환불·OTP·파일·알림·운영 감사 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.
+새 스키마 변경은 다음 Flyway 버전으로 추가함.\
+적용된 version migration은 수정하지 않음.\
+결제·취소/환불·OTP·파일·알림·운영 감사 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.
