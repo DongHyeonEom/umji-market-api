@@ -1,6 +1,6 @@
 # 제품 작업 체크리스트
 
-현재 구현 현황은 [implementation-status.md](implementation-status.md), 도메인별 API 계약은 [services/README.md](services/README.md), 아키텍처 기준은 [architecture.md](architecture.md)를 기준으로 함.\
+현재 구현 현황은 [implementation-status.md](implementation-status.md), 도메인별 API 계약은 [services/README.md](services/README.md), 아키텍처 기준은 [architecture.md](architecture.md)를 기준으로 함.
 이 문서는 앞으로 진행할 기능의 우선순위와 완료 조건을 관리함.
 
 ## 진행 규칙
@@ -51,6 +51,8 @@
 ## 우선순위 3 — 결제와 주문 완료 흐름
 
 - [ ] 결제 도메인 정책 및 경계 결정
+  - [ ] 기존 엄지마켓 계좌 입금 방식의 계좌 종류·안내·입금자명/금액 수집 정책 확정
+  - [ ] 운영자 실제 입금 대조 및 확인 권한·이력 정책 확정
   - [ ] PG·결제 수단·결제 제한 사항 결정
   - [ ] 결제 상태와 주문 상태 전이 정의
   - [ ] PG callback 멱등성 및 위변조 검증 기준 정의
@@ -68,7 +70,8 @@
 
 - [ ] 배송 흐름
   - [ ] 배송 상태와 주문 상태 연결 기준 정의
-  - [ ] 운송장 등록·조회와 배송 변경 권한 정의
+  - [ ] 운영자 택배사·송장번호 등록과 배송 변경 권한 정의
+  - [ ] 주문 조회에서 택배사 배송 현황을 WebView로 표시하는 방식 결정
   - [ ] 배송 완료 처리와 주문 조회 반영
 - [ ] 사용자 프로필·주소 API
   - [ ] 본인 계정 확인을 인증 subject 기준으로 적용
