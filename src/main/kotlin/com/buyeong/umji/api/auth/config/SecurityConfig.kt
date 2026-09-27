@@ -57,6 +57,7 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.HEAD, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")
                         .requestMatchers(HttpMethod.POST, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_WRITE")
                         .requestMatchers(HttpMethod.PATCH, "/api/operation/products/**").hasAuthority("PRODUCT_WRITE")
+                        .requestMatchers(HttpMethod.GET, "/api/operation/audit-logs/**").hasAuthority("ADMIN_AUDIT_READ")
                         .requestMatchers(HttpMethod.GET, "/api/operation/inventory/**").hasAuthority("INVENTORY_READ")
                         .requestMatchers(HttpMethod.HEAD, "/api/operation/inventory/**").hasAuthority("INVENTORY_READ")
                         .requestMatchers(HttpMethod.PATCH, "/api/operation/inventory/**").hasAuthority("INVENTORY_WRITE")

@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V10이 관리하는 테이블과 컬럼을 설명함.
+이 문서는 현재 Flyway V2–V11이 관리하는 테이블과 컬럼을 설명함.
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.
 미구현 테이블은 포함하지 않음.
 
@@ -282,6 +282,15 @@ erDiagram
         DATETIME changed_at "업무상 변경 시각"
         DATETIME created_at "이력 저장 시각"
     }
+    OPERATION_AUDIT_LOG {
+        BIGINT id PK "운영 감사 로그 ID"
+        BINARY actor_public_id "운영자 공개 UUID, nullable"
+        VARCHAR action "HTTP method와 route template"
+        VARCHAR resource_type "대상 리소스 유형"
+        BINARY resource_public_id "대상 리소스 공개 UUID, nullable"
+        VARCHAR request_trace_id "요청 추적 ID, nullable"
+        DATETIME occurred_at "변경 시각"
+    }
 
     ACCOUNT ||--o{ ACCOUNT_ROLE : has
     ROLE ||--o{ ACCOUNT_ROLE : assigned
@@ -316,6 +325,8 @@ erDiagram
 
 - `account_role`과 `role_permission`은 각각 계정-역할, 역할-권한 다대다 연결임.
   `account_role.granted_by`는 migration에서 FK 제약이 없음.
+- `operation_audit_log`의 운영자·대상 공개 UUID는 삭제·정책 변경과 무관하게 이력에서 식별 가능하도록 FK 없이 보관.
+  이름과 변경 전·후 값은 저장하지 않으며 V11 감사 정책에 따라 730일 후 삭제.
 - `refresh_token.expires_at`은 V6 이후 nullable임.
   `account.phone_normalized`는 V6에서 추가된 unique 정규화 번호임.
 - 카테고리는 자기 참조 트리임.
@@ -339,7 +350,9 @@ erDiagram
 | V7 | `inventory_stock`, `inventory_movement`, `stock_reservation` |
 | V8 | `cart`, `cart_item` |
 | V9 | `purchase_order`, `order_number_sequence`, `order_item`, `order_status_history` |
+| V10 | 시스템 role-permission 기본 매핑 |
+| V11 | `operation_audit_log`, `ADMIN_AUDIT_READ` permission 및 `SUPER_ADMIN` role mapping |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.
 적용된 version migration은 수정하지 않음.
-결제·취소/환불·OTP·파일·알림·운영 감사 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.
+결제·취소/환불·OTP·파일·알림 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.

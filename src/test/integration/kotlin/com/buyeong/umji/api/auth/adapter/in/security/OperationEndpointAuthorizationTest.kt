@@ -10,6 +10,9 @@ import com.buyeong.umji.api.inventory.application.model.StockView
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationAccountController
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
+import com.buyeong.umji.api.operation.audit.adapter.`in`.web.OperationAuditController
+import com.buyeong.umji.api.operation.audit.application.model.OperationAuditPage
+import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
 import com.buyeong.umji.api.operation.catalog.adapter.`in`.web.OperationCatalogController
 import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
 import org.junit.jupiter.api.Test
@@ -36,7 +39,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
 @WebMvcTest(
-    controllers = [OperationAccountController::class, OperationCatalogController::class, OperationInventoryController::class],
+    controllers = [OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class, OperationInventoryController::class],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
 @AutoConfigureMockMvc
@@ -52,6 +55,9 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var inventory: InventoryUseCase
+
+    @MockitoBean
+    private lateinit var audit: OperationAuditUseCase
 
     @MockitoBean
     private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
@@ -137,6 +143,21 @@ class OperationEndpointAuthorizationTest(
     @Test
     fun `account endpoint accepts account management permission`() {
         mockMvc.perform(get("/api/operation/accounts/roles").with(authorities("ADMIN_ACCOUNT_MANAGE")))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `audit log endpoint denies ordinary account management permission`() {
+        mockMvc.perform(get("/api/operation/audit-logs").with(authorities("ADMIN_ACCOUNT_MANAGE")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `audit log endpoint accepts dedicated audit permission`() {
+        Mockito.`when`(audit.search(com.buyeong.umji.api.operation.audit.application.model.OperationAuditQuery(null, null, null, null, 0, 20)))
+            .thenReturn(OperationAuditPage(emptyList(), 0, 20, 0, 0))
+
+        mockMvc.perform(get("/api/operation/audit-logs").with(authorities("ADMIN_AUDIT_READ")))
             .andExpect(status().isOk)
     }
 

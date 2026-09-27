@@ -10,7 +10,8 @@
 
 | Role | Permission |
 | --- | --- |
-| `ADMIN`, `SUPER_ADMIN` | 전체 permission |
+| `ADMIN` | `ADMIN_AUDIT_READ`를 제외한 운영 permission |
+| `SUPER_ADMIN` | 전체 permission (`ADMIN_AUDIT_READ` 포함) |
 | `PRODUCT_MANAGER` | `PRODUCT_READ`, `PRODUCT_WRITE` |
 | `ORDER_MANAGER` | `ORDER_READ`, `ORDER_WRITE` |
 | `INVENTORY_MANAGER` | `INVENTORY_READ`, `INVENTORY_WRITE` |
@@ -18,12 +19,13 @@
 | Endpoint | Required permission |
 | --- | --- |
 | `/api/operation/accounts/**` | `ADMIN_ACCOUNT_MANAGE` |
+| `GET /api/operation/audit-logs` | `ADMIN_AUDIT_READ` |
 | 카탈로그 조회 endpoint | `PRODUCT_READ` |
 | 카탈로그 생성·수정 endpoint | `PRODUCT_WRITE` |
 | 재고 조회·변동 조회 endpoint | `INVENTORY_READ` |
 | 재고 조정 endpoint | `INVENTORY_WRITE` |
 
-Role-permission 기본 매핑은 Flyway V10에서 적용함.
+기본 role-permission 매핑은 Flyway V10, 감사 로그 조회 permission은 V11에서 적용함.
 `ADMIN_ACCOUNT_MANAGE` 권한으로 role 관리 endpoint를 이용할 수 있음.
 운영 API에서 관리 가능한 role은 `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`로 제한하며 `ADMIN`, `SUPER_ADMIN`, `CUSTOMER`는 API로 부여·회수할 수 없음.
 중복 부여와 이미 회수된 role의 회수는 멱등 처리.
@@ -80,6 +82,27 @@ COMMIT;
 모든 endpoint는 `ADMIN_ACCOUNT_MANAGE` 권한 필요.
 부여 시 `granted_by`에는 요청자 계정이 기록됨.
 
+### 운영 변경 감사 로그
+
+운영자 계정·role, 카테고리·브랜드·상품 및 SKU, 관리자 재고 조정의 성공한 변경 요청을 기록함.
+감사 로그에는 운영자 공개 UUID, endpoint method·route template, 대상 리소스 공개 UUID, 요청 trace ID, UTC 발생 시각만 저장함.
+요청 본문, 변경 전·후 값, 이름·전화번호·이메일·사업자 정보·주소·동의 근거·인증 정보·재고 메모는 저장하지 않음.
+로컬 `BYPASS` 요청처럼 인증 subject가 없는 경우 운영자 UUID는 nullable로 기록됨.
+role 변경 시 제한된 role code를 action 값에 포함함.
+감사 로그 기록에 실패하면 같은 요청의 업무 변경도 rollback 처리함.
+
+감사 로그 보존 기간은 발생 시각부터 730일.
+매일 03:15 UTC에 10,000건 단위로 만료 데이터를 삭제함.
+삭제 작업은 만료 행이 batch보다 적게 남을 때까지 반복 수행함.
+
+| Method | Endpoint | 동작 |
+| --- | --- | --- |
+| `GET` | `/api/operation/audit-logs?actorId=&resourceType=&from=&until=&page=&size=` | 운영 변경 이력 검색 |
+
+조회 권한은 `ADMIN_AUDIT_READ`이며 `SUPER_ADMIN`에만 부여함.
+일반 `ADMIN`은 로그를 조회할 수 없음.
+`from`은 포함, `until`은 제외하는 UTC ISO-8601 시각 범위이며 페이지 크기는 최대 100.
+
 ## 계정
 
 - `POST /api/operation/accounts`
@@ -101,4 +124,4 @@ COMMIT;
 
 계정과 카탈로그는 각각 `operation/account`, `operation/catalog`에 배치.
 HTTP 모델은 web adapter에서 application 명령·응답 모델로 바꾸고, persistence adapter에서만 JPA Entity를 사용함.
-운영 변경 감사 로그는 미구현.
+감사 로그 저장·조회·보존 정책 적용은 이 문서의 기준을 사용함.

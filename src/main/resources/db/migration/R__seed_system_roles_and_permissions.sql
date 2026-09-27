@@ -11,5 +11,6 @@ INSERT INTO permission (code, name) VALUES
     ('PRODUCT_READ', '상품 조회'), ('PRODUCT_WRITE', '상품 관리'),
     ('ORDER_READ', '주문 조회'), ('ORDER_WRITE', '주문 관리'),
     ('INVENTORY_READ', '재고 조회'), ('INVENTORY_WRITE', '재고 관리'),
-    ('ADMIN_ACCOUNT_MANAGE', '관리자 계정 관리')
+    ('ADMIN_ACCOUNT_MANAGE', '관리자 계정 관리'),
+    ('ADMIN_AUDIT_READ', '운영 감사 로그 조회')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
