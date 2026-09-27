@@ -34,6 +34,23 @@ class OperationAuditMySqlIntegrationTest {
         )
         assertThat(flywayV11Count).isEqualTo(1)
 
+        val flywayV12Count = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '12' AND success = TRUE",
+            Int::class.java,
+        )
+        assertThat(flywayV12Count).isEqualTo(1)
+        val missingPaymentRows = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM purchase_order o LEFT JOIN order_payment p ON p.order_id = o.id WHERE p.id IS NULL",
+            Int::class.java,
+        )
+        assertThat(missingPaymentRows).isZero()
+
+        val unpaidOrderWithoutPaymentCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM purchase_order o LEFT JOIN order_payment p ON p.order_id = o.id WHERE p.id IS NULL",
+            Int::class.java,
+        )
+        assertThat(unpaidOrderWithoutPaymentCount).isZero()
+
         val tableCount = jdbc.queryForObject(
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'operation_audit_log'",
             Int::class.java,

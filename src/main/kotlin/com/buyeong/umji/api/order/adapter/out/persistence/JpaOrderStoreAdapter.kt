@@ -13,6 +13,7 @@ import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderNumberSequenceEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderStatusHistoryEntity
+import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -26,6 +27,7 @@ class JpaOrderStoreAdapter(
     private val accounts: AccountJpaEntityService,
     private val catalog: CatalogJpaEntityService,
     private val orders: OrderJpaEntityService,
+    private val payments: OrderPaymentJpaEntityService,
 ) : OrderStorePort {
     override fun save(draft: OrderDraft): OrderView {
         val account = accounts.findByPublicId(draft.accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
@@ -39,6 +41,7 @@ class JpaOrderStoreAdapter(
         }
         draft.items.forEach { item -> order.add(item.toEntity()) }
         val saved = orders.saveAndFlush(order)
+        saved.payment = payments.initialize(saved)
         orders.saveHistory(
             OrderStatusHistoryEntity().apply {
                 this.order = saved
@@ -94,6 +97,8 @@ class JpaOrderStoreAdapter(
                 unitPrice = item.unitPrice, quantity = item.quantity, lineAmount = item.lineAmount, status = item.status,
             )
         },
+        paymentMethod = payment.paymentMethod,
+        paymentStatus = payment.status,
     )
 
     private companion object {

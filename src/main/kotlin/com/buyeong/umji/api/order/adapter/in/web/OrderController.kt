@@ -51,6 +51,8 @@ class OrderController(
         totalAmount,
         orderedAt,
         items.map { it.toResponse() },
+        paymentMethod,
+        paymentStatus,
     )
 
     private fun OrderItemView.toResponse() = OrderItemResponse(

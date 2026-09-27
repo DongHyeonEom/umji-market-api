@@ -61,6 +61,7 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/operation/inventory/**").hasAuthority("INVENTORY_READ")
                         .requestMatchers(HttpMethod.HEAD, "/api/operation/inventory/**").hasAuthority("INVENTORY_READ")
                         .requestMatchers(HttpMethod.PATCH, "/api/operation/inventory/**").hasAuthority("INVENTORY_WRITE")
+                        .requestMatchers("/api/operation/payments/**").hasAuthority("ORDER_WRITE")
                         .requestMatchers("/api/operation/**").denyAll()
                         .anyRequest().authenticated()
                 }

@@ -12,6 +12,6 @@
 | 주문 | [order.md](order.md) | 생성·조회 구현 |
 | 재고 | [inventory.md](inventory.md) | 조정·예약 구현 |
 | 운영 | [operation.md](operation.md) | 계정·카탈로그 운영 구현 |
-| 결제 | [payment.md](payment.md) | 미구현 |
+| 결제 | [payment.md](payment.md) | 수동 계좌이체 입금 상태 확인 |
 | 파일 | [file.md](file.md) | 미구현 |
 | 알림 | [notification.md](notification.md) | 미구현 |

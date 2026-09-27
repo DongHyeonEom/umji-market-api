@@ -28,6 +28,9 @@ class OrderStatusHistoryEntity {
     @Column(name = "to_status", nullable = false)
     lateinit var toStatus: String
 
+    @Column(name = "reason_code")
+    var reasonCode: String? = null
+
     @Column(name = "changed_at", nullable = false)
     var changedAt: Instant = Instant.now()
 }
