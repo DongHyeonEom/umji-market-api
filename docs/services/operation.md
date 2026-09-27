@@ -114,7 +114,10 @@ role 변경 시 제한된 role code를 action 값에 포함함.
 - `POST /api/operation/accounts/{id}/approve`
 
 계정은 동의·프로필 상태에 따라 대기 상태를 거쳐 승인됨.
-개인정보 동의 이력을 확인한 뒤 승인하고 계정 token version을 갱신함.
+운영자는 오프라인 서면 동의를 받은 기존 거래처의 계정에 `consentMethod=WRITTEN`으로 개인정보 동의 이력을 기록할 수 있음.
+동의 처리자 UUID와 문서 버전·증빙 참조를 이력에 보관하며, 서명 원본은 운영 절차에 따라 오프라인으로 보관.
+개인정보 동의 이력을 확인한 뒤 승인 endpoint로 활성화하고 계정 token version을 갱신함.
+상태 변경 endpoint로 `ACTIVE`를 직접 지정하는 것은 차단되며, 동의 확인이 포함된 승인 endpoint를 사용함.
 
 ## 카탈로그
 

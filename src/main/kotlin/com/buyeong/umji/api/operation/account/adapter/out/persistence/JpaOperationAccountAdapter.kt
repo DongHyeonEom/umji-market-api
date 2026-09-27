@@ -60,9 +60,12 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService, 
     }
 
     override fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+        val processor = accounts.findByPublicId(consent.processedBy)
+            ?: throw IllegalStateException("동의 처리자 계정을 찾을 수 없습니다.")
         accounts.saveConsent(
             ConsentHistoryEntity().apply {
                 account = entity
+                processedBy = processor
                 consentType = consent.consentType
                 documentVersion = consent.documentVersion
                 consentMethod = consent.consentMethod
@@ -150,7 +153,7 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService, 
         }
         val consents = if (includeConsents) {
             accounts.consents(accountId).map {
-                ConsentData(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.consentedAt)
+                ConsentData(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.processedBy?.publicId, it.consentedAt)
             }
         } else {
             emptyList()

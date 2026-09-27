@@ -23,5 +23,12 @@ data class OperationBusinessProfileResponse(
     val address2: String?,
     val status: String,
 )
-data class OperationConsentResponse(val consentType: String, val documentVersion: String, val consentMethod: String, val evidenceReference: String?, val consentedAt: Instant)
+data class OperationConsentResponse(
+    val consentType: String,
+    val documentVersion: String,
+    val consentMethod: String,
+    val evidenceReference: String?,
+    val processedBy: UUID?,
+    val consentedAt: Instant,
+)
 data class OperationRoleResponse(val code: String, val name: String)

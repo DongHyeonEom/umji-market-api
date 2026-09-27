@@ -22,6 +22,10 @@ class ConsentHistoryEntity {
     @JoinColumn(name = "account_id", nullable = false)
     lateinit var account: AccountEntity
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "processed_by")
+    var processedBy: AccountEntity? = null
+
     @Column(name = "consent_type", nullable = false)
     lateinit var consentType: String
 

@@ -16,6 +16,7 @@ class OperationAccountService(private val accounts: OperationAccountPort) : Oper
     override fun detail(id: UUID) = accounts.find(id) ?: missing()
     override fun status(id: UUID, status: String): AccountData {
         require(status in STATUSES) { "유효하지 않은 계정 상태입니다." }
+        require(status != ACTIVE) { "개인정보 동의 확인 후 승인 API를 이용해야 합니다." }
         return accounts.updateStatus(id, status) ?: missing()
     }
     override fun profile(id: UUID, profile: BusinessProfileData): AccountData {
@@ -53,6 +54,7 @@ class OperationAccountService(private val accounts: OperationAccountPort) : Oper
         const val PENDING_PROFILE = "PENDING_PROFILE"
         const val PENDING_REVIEW = "PENDING_REVIEW"
         const val PERSONAL_INFORMATION = "PERSONAL_INFORMATION"
+        const val ACTIVE = "ACTIVE"
         val STATUSES = setOf(PENDING_CONSENT, PENDING_PROFILE, PENDING_REVIEW, "ACTIVE", "SUSPENDED", "WITHDRAWN")
         val METHODS = setOf("ONLINE", "WRITTEN")
         val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER")

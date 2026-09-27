@@ -98,7 +98,16 @@ class OperationAccountController(private val useCase: OperationAccountUseCase, p
     fun consent(
         @PathVariable id: UUID,
         @Valid @RequestBody request: CreateConsentRequest,
-    ) = useCase.consent(id, ConsentCommand(request.consentType, request.documentVersion, request.consentMethod, request.evidenceReference.clean())).toResponse()
+    ) = useCase.consent(
+        id,
+        ConsentCommand(
+            request.consentType,
+            request.documentVersion,
+            request.consentMethod,
+            request.evidenceReference.clean(),
+            currentAccounts.activeAccountPublicId(),
+        ),
+    ).toResponse()
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
@@ -135,7 +144,7 @@ class OperationAccountController(private val useCase: OperationAccountUseCase, p
         tokenVersion,
         profile?.toResponse(),
         consents.map {
-            OperationConsentResponse(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.consentedAt)
+            OperationConsentResponse(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.processedBy, it.consentedAt)
         },
     )
     private fun String?.clean() = this?.trim()?.ifBlank { null }
