@@ -23,7 +23,7 @@
   - [x] 관리자 endpoint 권한 매트릭스와 기본 거부 정책 정의
   - [x] Access Token permission claim 기반 서버 권한 검사 적용
   - [x] 인증 실패 `401`, 권한 부족 `403` 계약 및 endpoint별 정책 문서화
-  - [ ] 권한 인가 자동화 테스트 추가 및 실행
+  - [x] 권한 인가 자동화 테스트 추가 및 실행
   - [x] 초기 최고 관리자 role bootstrap 절차 문서화
   - [ ] 관리자 role 부여·회수 API 구현
     - [x] 운영 관리자 전용 role 목록·계정 role 조회·부여·회수 endpoint 제공
