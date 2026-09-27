@@ -11,6 +11,8 @@ data class OrderResponse(
     val totalAmount: Long,
     val orderedAt: Instant,
     val items: List<OrderItemResponse>,
+    val paymentMethod: String,
+    val paymentStatus: String,
 )
 
 data class OrderItemResponse(

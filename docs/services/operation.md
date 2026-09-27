@@ -20,6 +20,7 @@
 | --- | --- |
 | `/api/operation/accounts/**` | `ADMIN_ACCOUNT_MANAGE` |
 | `GET /api/operation/audit-logs` | `ADMIN_AUDIT_READ` |
+| `/api/operation/payments/**` | `ORDER_WRITE` |
 | 카탈로그 조회 endpoint | `PRODUCT_READ` |
 | 카탈로그 생성·수정 endpoint | `PRODUCT_WRITE` |
 | 재고 조회·변동 조회 endpoint | `INVENTORY_READ` |
@@ -102,6 +103,12 @@ role 변경 시 제한된 role code를 action 값에 포함함.
 조회 권한은 `ADMIN_AUDIT_READ`이며 `SUPER_ADMIN`에만 부여함.
 일반 `ADMIN`은 로그를 조회할 수 없음.
 `from`은 포함, `until`은 제외하는 UTC ISO-8601 시각 범위이며 페이지 크기는 최대 100.
+
+### 입금 상태 확인
+
+`ORDER_WRITE` 권한 운영자는 `GET /api/operation/payments`로 기본 입금 대기·부분 입금 확인 필요 목록을 조회하고, `PATCH /api/operation/payments/{orderId}/status`로 상태를 변경함.
+입금 확인 응답에는 주문자명과 연락처가 포함되며, 실제 은행 내역 확인과 부분 입금 후속 통화는 운영 절차로 수행.
+상태 변경은 payment history와 운영 변경 감사 로그에 처리자·시각을 남김.
 
 ## 계정
 

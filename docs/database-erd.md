@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V11이 관리하는 테이블과 컬럼을 설명함.
+이 문서는 현재 Flyway V2–V12가 관리하는 테이블과 컬럼을 설명함.
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.
 미구현 테이블은 포함하지 않음.
 
@@ -282,6 +282,21 @@ erDiagram
         DATETIME changed_at "업무상 변경 시각"
         DATETIME created_at "이력 저장 시각"
     }
+    ORDER_PAYMENT {
+        BIGINT id PK "Payment ID"
+        BIGINT order_id FK,UK "One payment per order"
+        VARCHAR payment_method "Extensible payment method code"
+        VARCHAR status "Payment status"
+        DATETIME updated_at "Last status change"
+    }
+    ORDER_PAYMENT_STATUS_HISTORY {
+        BIGINT id PK "Payment status history ID"
+        BIGINT payment_id FK "Payment ID"
+        VARCHAR from_status "Previous status, nullable on initial entry"
+        VARCHAR to_status "New status"
+        BIGINT processed_by FK "Operator account ID, nullable"
+        DATETIME changed_at "Processed at"
+    }
     OPERATION_AUDIT_LOG {
         BIGINT id PK "운영 감사 로그 ID"
         BINARY actor_public_id "운영자 공개 UUID, nullable"
@@ -319,6 +334,9 @@ erDiagram
     PURCHASE_ORDER ||--|{ ORDER_ITEM : contains
     PRODUCT_SKU ||--o{ ORDER_ITEM : snapshots
     PURCHASE_ORDER ||--o{ ORDER_STATUS_HISTORY : tracks
+    PURCHASE_ORDER ||--o| ORDER_PAYMENT : payment
+    ORDER_PAYMENT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : tracks
+    ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
 ```
 
 ## 관계 및 유의사항
@@ -352,7 +370,8 @@ erDiagram
 | V9 | `purchase_order`, `order_number_sequence`, `order_item`, `order_status_history` |
 | V10 | 시스템 role-permission 기본 매핑 |
 | V11 | `operation_audit_log`, `ADMIN_AUDIT_READ` permission 및 `SUPER_ADMIN` role mapping |
+| V12 | `order_payment`, `order_payment_status_history`, 기존 주문 결제 상태 초기화 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.
 적용된 version migration은 수정하지 않음.
-결제·취소/환불·SMS 본인 확인·파일·알림 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.
+취소/환불·SMS 본인 확인·파일·알림 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.

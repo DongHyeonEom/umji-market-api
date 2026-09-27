@@ -42,6 +42,8 @@ data class OrderView(
     val totalAmount: Long,
     val orderedAt: Instant,
     val items: List<OrderItemView>,
+    val paymentMethod: String = "BANK_TRANSFER",
+    val paymentStatus: String = "WAITING_FOR_DEPOSIT",
 )
 
 data class OrderItemView(

@@ -8,6 +8,7 @@ import com.buyeong.umji.api.exception.ErrorMessageService
 import com.buyeong.umji.api.inventory.adapter.`in`.web.OperationInventoryController
 import com.buyeong.umji.api.inventory.application.model.StockView
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.operation.payment.adapter.`in`.web.OperationPaymentController
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationAccountController
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.operation.audit.adapter.`in`.web.OperationAuditController
@@ -15,6 +16,8 @@ import com.buyeong.umji.api.operation.audit.application.model.OperationAuditPage
 import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
 import com.buyeong.umji.api.operation.catalog.adapter.`in`.web.OperationCatalogController
 import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
+import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
+import com.buyeong.umji.api.payment.application.model.PaymentQueuePage
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -39,7 +42,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
 @WebMvcTest(
-    controllers = [OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class, OperationInventoryController::class],
+    controllers = [OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class, OperationInventoryController::class, OperationPaymentController::class],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
 @AutoConfigureMockMvc
@@ -58,6 +61,9 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var audit: OperationAuditUseCase
+
+    @MockitoBean
+    private lateinit var payments: TransactionalPaymentUseCase
 
     @MockitoBean
     private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
@@ -158,6 +164,19 @@ class OperationEndpointAuthorizationTest(
             .thenReturn(OperationAuditPage(emptyList(), 0, 20, 0, 0))
 
         mockMvc.perform(get("/api/operation/audit-logs").with(authorities("ADMIN_AUDIT_READ")))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `payment queue rejects non order write permission`() {
+        mockMvc.perform(get("/api/operation/payments").with(authorities("PRODUCT_READ")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `payment queue accepts order write permission`() {
+        Mockito.`when`(payments.queue(null, 0, 20)).thenReturn(PaymentQueuePage(emptyList(), 0, 20, 0, 0))
+        mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_WRITE")))
             .andExpect(status().isOk)
     }
 
