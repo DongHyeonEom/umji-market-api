@@ -34,6 +34,7 @@
   - [ ] 관리자 계정·카탈로그·재고 변경 이력 기록을 MySQL 통합 검증
     - [x] 성공 변경 event 구성과 요청 본문·민감 값 제외
     - [x] event 기록과 업무 변경을 동일 트랜잭션으로 처리
+    - [x] Flyway V11 및 MySQL 저장·조회·보존 삭제를 검증하는 Testcontainers 통합 테스트 추가
     - [ ] Flyway V11 적용 및 MySQL 감사 로그 저장·조회·삭제 통합 검증
   - [x] `SUPER_ADMIN` 전용 조회 endpoint 및 만료 데이터 일일 정리 방법 마련
 
