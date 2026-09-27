@@ -19,16 +19,16 @@
 
 ## 우선순위 1 — 관리자 권한 경계
 
-- [ ] endpoint별 role/permission 인가 적용 마무리
+- [x] endpoint별 role/permission 인가 적용 마무리
   - [x] 관리자 endpoint 권한 매트릭스와 기본 거부 정책 정의
   - [x] Access Token permission claim 기반 서버 권한 검사 적용
   - [x] 인증 실패 `401`, 권한 부족 `403` 계약 및 endpoint별 정책 문서화
   - [x] 권한 인가 자동화 테스트 추가 및 실행
   - [x] 초기 최고 관리자 role bootstrap 절차 문서화
-  - [ ] 관리자 role 부여·회수 API 구현
+  - [x] 관리자 role 부여·회수 API 구현
     - [x] 운영 관리자 전용 role 목록·계정 role 조회·부여·회수 endpoint 제공
     - [x] 시스템 관리자 role의 API 부여·회수 차단 및 role 변경 시 대상 token version 갱신
-    - [ ] 권한 경계·중복 요청·토큰 무효화 자동화 검증
+    - [x] 권한 경계·중복 요청·토큰 무효화 자동화 검증
 - [ ] 운영 변경 감사 로그
   - [ ] 기록 대상·민감정보 제외 기준·보존 정책 정의
   - [ ] 관리자 계정·카탈로그·재고 변경 이력 기록
