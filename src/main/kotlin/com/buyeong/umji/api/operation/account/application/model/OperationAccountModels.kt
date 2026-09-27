@@ -13,7 +13,14 @@ data class BusinessProfileData(
     val address2: String?,
     val status: String = "COMPLETED",
 )
-data class ConsentData(val consentType: String, val documentVersion: String, val consentMethod: String, val evidenceReference: String?, val consentedAt: Instant)
+data class ConsentData(
+    val consentType: String,
+    val documentVersion: String,
+    val consentMethod: String,
+    val evidenceReference: String?,
+    val processedBy: UUID?,
+    val consentedAt: Instant,
+)
 data class AccountData(
     val id: UUID,
     val name: String,
@@ -25,5 +32,11 @@ data class AccountData(
     val consents: List<ConsentData> = emptyList(),
 )
 data class NewAccount(val name: String, val phone: String, val normalizedPhone: String, val email: String?, val profile: BusinessProfileData?)
-data class ConsentCommand(val consentType: String, val documentVersion: String, val consentMethod: String, val evidenceReference: String?)
+data class ConsentCommand(
+    val consentType: String,
+    val documentVersion: String,
+    val consentMethod: String,
+    val evidenceReference: String?,
+    val processedBy: UUID,
+)
 data class ManagedRole(val code: String, val name: String)
