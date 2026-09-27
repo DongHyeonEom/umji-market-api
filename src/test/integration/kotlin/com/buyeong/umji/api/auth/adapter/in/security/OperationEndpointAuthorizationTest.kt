@@ -1,0 +1,152 @@
+package com.buyeong.umji.api.auth.adapter.`in`.security
+
+import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
+import com.buyeong.umji.api.auth.config.AuthenticationProperties
+import com.buyeong.umji.api.auth.config.JwtProperties
+import com.buyeong.umji.api.auth.config.SecurityConfig
+import com.buyeong.umji.api.exception.ErrorMessageService
+import com.buyeong.umji.api.inventory.adapter.`in`.web.OperationInventoryController
+import com.buyeong.umji.api.inventory.application.model.StockView
+import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationAccountController
+import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
+import com.buyeong.umji.api.operation.catalog.adapter.`in`.web.OperationCatalogController
+import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Import
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.oauth2.jwt.JwtDecoder
+import org.springframework.security.oauth2.jwt.JwtEncoder
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.RequestPostProcessor
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.UUID
+
+@WebMvcTest(
+    controllers = [OperationAccountController::class, OperationCatalogController::class, OperationInventoryController::class],
+    properties = ["umji.security.authentication.mode=REQUIRED"],
+)
+@AutoConfigureMockMvc
+@Import(SecurityConfig::class, OperationEndpointAuthorizationTestConfiguration::class)
+class OperationEndpointAuthorizationTest(
+    @Autowired private val mockMvc: MockMvc,
+) {
+    @MockitoBean
+    private lateinit var accounts: OperationAccountUseCase
+
+    @MockitoBean
+    private lateinit var catalog: OperationCatalogUseCase
+
+    @MockitoBean
+    private lateinit var inventory: InventoryUseCase
+
+    @MockitoBean
+    private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
+
+    @MockitoBean
+    private lateinit var errorMessages: ErrorMessageService
+
+    @MockitoBean
+    private lateinit var accountAuthentication: AccountAuthenticationPort
+
+    @MockitoBean
+    private lateinit var jwtDecoder: JwtDecoder
+
+    @MockitoBean
+    private lateinit var jwtEncoder: JwtEncoder
+
+    @Test
+    fun `anonymous operation request returns 401`() {
+        mockMvc.perform(get("/api/operation/inventory/skus/${UUID.randomUUID()}"))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `unmapped operation endpoint is denied by default`() {
+        mockMvc.perform(get("/api/operation/unmapped").with(authorities("PRODUCT_READ")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `inventory endpoint rejects product permission`() {
+        mockMvc.perform(get("/api/operation/inventory/skus/${UUID.randomUUID()}").with(authorities("PRODUCT_READ")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `inventory endpoint accepts inventory read permission`() {
+        val skuId = UUID.randomUUID()
+        Mockito.`when`(inventory.stock(skuId)).thenReturn(StockView(skuId, "SKU-1", 10, 0, 10, 0))
+        mockMvc.perform(get("/api/operation/inventory/skus/$skuId").with(authorities("INVENTORY_READ")))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `inventory adjustment rejects read only permission`() {
+        mockMvc.perform(
+            patch("/api/operation/inventory/skus/${UUID.randomUUID()}")
+                .with(authorities("INVENTORY_READ"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"quantityDelta":1,"reason":"ADJUSTMENT"}"""),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `catalog endpoint rejects inventory permission`() {
+        mockMvc.perform(get("/api/operation/categories").with(authorities("INVENTORY_READ")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `catalog endpoint accepts product read permission`() {
+        mockMvc.perform(get("/api/operation/categories").with(authorities("PRODUCT_READ")))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `catalog write endpoint rejects product read only permission`() {
+        mockMvc.perform(
+            post("/api/operation/categories")
+                .with(authorities("PRODUCT_READ"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"name":"상의","displayStatus":"VISIBLE"}"""),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `account endpoint rejects catalog permission`() {
+        mockMvc.perform(get("/api/operation/accounts/roles").with(authorities("PRODUCT_READ")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `account endpoint accepts account management permission`() {
+        mockMvc.perform(get("/api/operation/accounts/roles").with(authorities("ADMIN_ACCOUNT_MANAGE")))
+            .andExpect(status().isOk)
+    }
+
+    private fun authorities(vararg permissions: String): RequestPostProcessor =
+        user("operator").authorities(*permissions.map(::SimpleGrantedAuthority).toTypedArray())
+}
+
+@TestConfiguration(proxyBeanMethods = false)
+@EnableConfigurationProperties(AuthenticationProperties::class, JwtProperties::class)
+class OperationEndpointAuthorizationTestConfiguration {
+    @Bean
+    fun operationAuthorization(properties: AuthenticationProperties) = OperationAuthorization(properties)
+}
