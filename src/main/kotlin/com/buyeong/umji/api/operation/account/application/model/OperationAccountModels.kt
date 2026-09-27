@@ -26,3 +26,4 @@ data class AccountData(
 )
 data class NewAccount(val name: String, val phone: String, val normalizedPhone: String, val email: String?, val profile: BusinessProfileData?)
 data class ConsentCommand(val consentType: String, val documentVersion: String, val consentMethod: String, val evidenceReference: String?)
+data class ManagedRole(val code: String, val name: String)

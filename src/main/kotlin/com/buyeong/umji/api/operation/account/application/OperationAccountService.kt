@@ -4,6 +4,7 @@ import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.application.model.AccountData
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
+import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.operation.account.application.port.out.OperationAccountPort
@@ -36,6 +37,16 @@ class OperationAccountService(private val accounts: OperationAccountPort) : Oper
         require(accounts.hasConsent(id, PERSONAL_INFORMATION)) { "개인정보 동의 이력이 필요합니다." }
         return accounts.approve(id) ?: missing()
     }
+    override fun managedRoles(): List<ManagedRole> = accounts.managedRoles()
+    override fun roles(id: UUID): List<ManagedRole> = accounts.roles(id) ?: missing()
+    override fun grantRole(id: UUID, roleCode: String, grantedBy: UUID): List<ManagedRole> {
+        require(roleCode in MANAGED_ROLE_CODES) { "부여할 수 없는 role입니다." }
+        return accounts.grantRole(id, roleCode, grantedBy) ?: missing()
+    }
+    override fun revokeRole(id: UUID, roleCode: String): List<ManagedRole> {
+        require(roleCode in MANAGED_ROLE_CODES) { "회수할 수 없는 role입니다." }
+        return accounts.revokeRole(id, roleCode) ?: missing()
+    }
     private fun missing(): Nothing = throw ItemNotFoundException("계정을 찾을 수 없습니다.")
     private companion object {
         const val PENDING_CONSENT = "PENDING_CONSENT"
@@ -44,5 +55,6 @@ class OperationAccountService(private val accounts: OperationAccountPort) : Oper
         const val PERSONAL_INFORMATION = "PERSONAL_INFORMATION"
         val STATUSES = setOf(PENDING_CONSENT, PENDING_PROFILE, PENDING_REVIEW, "ACTIVE", "SUSPENDED", "WITHDRAWN")
         val METHODS = setOf("ONLINE", "WRITTEN")
+        val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER")
     }
 }
