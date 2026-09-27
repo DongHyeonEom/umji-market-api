@@ -8,20 +8,17 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.MySQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
-import org.testcontainers.utility.DockerImageName
+import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
-@ActiveProfiles("testcontainers")
-@Testcontainers(disabledWithoutDocker = true)
+@ActiveProfiles("local")
+@Transactional
+@Rollback
 class OperationAuditMySqlIntegrationTest {
     @Autowired
     private lateinit var jdbc: JdbcTemplate
@@ -31,6 +28,12 @@ class OperationAuditMySqlIntegrationTest {
 
     @Test
     fun `flyway creates audit schema and mysql supports record search and retention deletion`() {
+        val flywayV11Count = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '11' AND success = TRUE",
+            Int::class.java,
+        )
+        assertThat(flywayV11Count).isEqualTo(1)
+
         val tableCount = jdbc.queryForObject(
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'operation_audit_log'",
             Int::class.java,
@@ -61,7 +64,7 @@ class OperationAuditMySqlIntegrationTest {
         val now = Instant.now()
         audit.record(OperationAuditEvent(actorId, "PRODUCT_UPDATED", "PRODUCT", resourceId, "mysql-integration", now.minusSeconds(60)))
         audit.record(OperationAuditEvent(actorId, "STOCK_UPDATED", "INVENTORY", resourceId, "mysql-integration", now.minusSeconds(30)))
-        audit.record(OperationAuditEvent(null, "OLD_EVENT", "PRODUCT", null, null, now.minus(Duration.ofDays(731))))
+        audit.record(OperationAuditEvent(actorId, "OLD_EVENT", "PRODUCT", null, "mysql-integration-expired", now.minus(Duration.ofDays(731))))
 
         val results = audit.search(OperationAuditQuery(actorId, "PRODUCT", now.minusSeconds(120), now, 0, 10))
         assertThat(results.totalElements).isEqualTo(1)
@@ -70,28 +73,18 @@ class OperationAuditMySqlIntegrationTest {
         assertThat(results.items.single().requestTraceId).isEqualTo("mysql-integration")
 
         val deleted = audit.purgeExpired(now.minus(Duration.ofDays(730)), 10_000)
-        assertThat(deleted).isEqualTo(1)
-        assertThat(audit.search(OperationAuditQuery(null, null, null, null, 0, 100)).totalElements).isEqualTo(2)
-    }
-
-    companion object {
-        @Container
-        @JvmStatic
-        val mysql: MySQLContainer<*> =
-            MySQLContainer(DockerImageName.parse("mysql:8.0"))
-                .withDatabaseName("test")
-                .withUsername("test")
-                .withPassword("test")
-
-        @JvmStatic
-        @DynamicPropertySource
-        fun mysqlProperties(registry: DynamicPropertyRegistry) {
-            registry.add("spring.datasource.write.url", mysql::getJdbcUrl)
-            registry.add("spring.datasource.write.username", mysql::getUsername)
-            registry.add("spring.datasource.write.password", mysql::getPassword)
-            registry.add("spring.datasource.read.url", mysql::getJdbcUrl)
-            registry.add("spring.datasource.read.username", mysql::getUsername)
-            registry.add("spring.datasource.read.password", mysql::getPassword)
-        }
+        assertThat(deleted).isGreaterThanOrEqualTo(1)
+        val deletedEvent = audit.search(
+            OperationAuditQuery(
+                actorId,
+                "PRODUCT",
+                now.minus(Duration.ofDays(732)),
+                now.minus(Duration.ofDays(730)),
+                0,
+                10,
+            ),
+        )
+        assertThat(deletedEvent.totalElements).isZero()
+        assertThat(audit.search(OperationAuditQuery(actorId, null, null, null, 0, 10)).totalElements).isEqualTo(2)
     }
 }
