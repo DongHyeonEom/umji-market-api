@@ -75,4 +75,4 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 - 기능 작업의 체크리스트 변경은 해당 기능 브랜치와 PR에 포함함.
   문서 작업 및 일반 수정의 체크리스트 변경은 해당 작업 브랜치의 기존 커밋 규칙을 따름.
 
-루트 `E:\buyeong_dev\umji-market\AGENTS.md`의 공통 기준도 함께 적용함
+상위 경로 `../AGENTS.md`의 공통 기준도 함께 적용함
