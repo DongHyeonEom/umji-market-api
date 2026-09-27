@@ -1,8 +1,10 @@
 package com.buyeong.umji.api.operation.account.adapter.`in`.web
 
+import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 import com.buyeong.umji.api.operation.account.application.model.AccountData
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
+import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.operation.model.BusinessProfileRequest
@@ -11,6 +13,7 @@ import com.buyeong.umji.api.operation.model.CreateOperationAccountRequest
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.operation.model.OperationBusinessProfileResponse
 import com.buyeong.umji.api.operation.model.OperationConsentResponse
+import com.buyeong.umji.api.operation.model.OperationRoleResponse
 import com.buyeong.umji.api.operation.model.UpdateAccountStatusRequest
 import com.buyeong.umji.api.util.PhoneNumberHelper
 import jakarta.validation.Valid
@@ -19,6 +22,7 @@ import jakarta.validation.constraints.Min
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -34,7 +38,25 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/operation/accounts")
 @Validated
-class OperationAccountController(private val useCase: OperationAccountUseCase) {
+class OperationAccountController(private val useCase: OperationAccountUseCase, private val currentAccounts: CurrentAccountPort) {
+    @GetMapping("/roles")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
+    fun managedRoles() = useCase.managedRoles().map { it.toResponse() }
+
+    @GetMapping("/{id}/roles")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
+    fun roles(@PathVariable id: UUID) = useCase.roles(id).map { it.toResponse() }
+
+    @PutMapping("/{id}/roles/{roleCode}")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
+    fun grantRole(@PathVariable id: UUID, @PathVariable roleCode: String) =
+        useCase.grantRole(id, roleCode, currentAccounts.activeAccountPublicId()).map { it.toResponse() }
+
+    @DeleteMapping("/{id}/roles/{roleCode}")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
+    fun revokeRole(@PathVariable id: UUID, @PathVariable roleCode: String) =
+        useCase.revokeRole(id, roleCode).map { it.toResponse() }
+
     @PostMapping
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     @ResponseStatus(HttpStatus.CREATED)
@@ -103,6 +125,7 @@ class OperationAccountController(private val useCase: OperationAccountUseCase) {
         address2,
         status,
     )
+    private fun ManagedRole.toResponse() = OperationRoleResponse(code, name)
     private fun AccountData.toResponse() = OperationAccountResponse(
         id,
         name,

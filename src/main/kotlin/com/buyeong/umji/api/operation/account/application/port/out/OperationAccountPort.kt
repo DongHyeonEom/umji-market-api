@@ -3,6 +3,7 @@ package com.buyeong.umji.api.operation.account.application.port.out
 import com.buyeong.umji.api.operation.account.application.model.AccountData
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
+import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
 import java.util.UUID
 
@@ -15,4 +16,8 @@ interface OperationAccountPort {
     fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData?
     fun hasConsent(id: UUID, consentType: String): Boolean
     fun approve(id: UUID): AccountData?
+    fun managedRoles(): List<ManagedRole>
+    fun roles(id: UUID): List<ManagedRole>?
+    fun grantRole(id: UUID, roleCode: String, grantedBy: UUID): List<ManagedRole>?
+    fun revokeRole(id: UUID, roleCode: String): List<ManagedRole>?
 }

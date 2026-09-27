@@ -4,6 +4,7 @@ import com.buyeong.umji.api.operation.account.application.model.AccountData
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.application.model.ConsentData
+import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
 import com.buyeong.umji.api.operation.account.application.port.out.OperationAccountPort
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
@@ -12,6 +13,7 @@ import com.buyeong.umji.api.persistence.jpa.account.BusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.ConsentHistoryEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -19,7 +21,7 @@ import java.util.UUID
 
 @Component
 @Transactional
-class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService) : OperationAccountPort {
+class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService, private val jdbc: JdbcTemplate) : OperationAccountPort {
     override fun create(command: NewAccount): AccountData {
         val entity = accounts.save(
             AccountEntity().apply {
@@ -80,6 +82,53 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService) 
         entity.tokenVersion++
         data(entity, true)
     }
+
+    @Transactional(readOnly = true)
+    override fun managedRoles(): List<ManagedRole> = jdbc.query(
+        "SELECT code, name FROM role WHERE code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER') ORDER BY code",
+    ) { result, _ -> ManagedRole(result.getString("code"), result.getString("name")) }
+
+    @Transactional(readOnly = true)
+    override fun roles(id: UUID): List<ManagedRole>? {
+        val accountId = internalAccountId(id) ?: return null
+        return rolesFor(accountId)
+    }
+
+    override fun grantRole(id: UUID, roleCode: String, grantedBy: UUID): List<ManagedRole>? {
+        val targetId = internalAccountId(id) ?: return null
+        val grantorId = internalAccountId(grantedBy) ?: throw IllegalStateException("권한 부여자를 찾을 수 없습니다.")
+        val changed = jdbc.update(
+            """INSERT IGNORE INTO account_role (account_id, role_id, granted_by)
+                SELECT ?, r.id, ? FROM role r WHERE r.code = ? AND r.code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER')
+            """.trimIndent(),
+            targetId,
+            grantorId,
+            roleCode,
+        )
+        if (changed > 0) jdbc.update("UPDATE account SET token_version = token_version + 1 WHERE id = ?", targetId)
+        return rolesFor(targetId)
+    }
+
+    override fun revokeRole(id: UUID, roleCode: String): List<ManagedRole>? {
+        val targetId = internalAccountId(id) ?: return null
+        val changed = jdbc.update(
+            """DELETE ar FROM account_role ar JOIN role r ON r.id = ar.role_id
+                WHERE ar.account_id = ? AND r.code = ? AND r.code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER')
+            """.trimIndent(),
+            targetId,
+            roleCode,
+        )
+        if (changed > 0) jdbc.update("UPDATE account SET token_version = token_version + 1 WHERE id = ?", targetId)
+        return rolesFor(targetId)
+    }
+
+    private fun internalAccountId(publicId: UUID): Long? = accounts.findByPublicId(publicId)?.id
+
+    private fun rolesFor(accountId: Long): List<ManagedRole> = jdbc.query(
+        "SELECT r.code, r.name FROM account_role ar JOIN role r ON r.id = ar.role_id WHERE ar.account_id = ? ORDER BY r.code",
+        { result, _ -> ManagedRole(result.getString("code"), result.getString("name")) },
+        accountId,
+    )
 
     private fun saveProfile(entity: AccountEntity, data: BusinessProfileData) {
         val profile = accounts.profile(requireNotNull(entity.id)) ?: BusinessProfileEntity().apply { account = entity }

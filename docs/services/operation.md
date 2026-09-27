@@ -24,7 +24,10 @@
 | 재고 조정 endpoint | `INVENTORY_WRITE` |
 
 Role-permission 기본 매핑은 Flyway V10에서 적용함.
-계정 role 부여·회수 API는 미구현 상태이며 `account_role` 관리 정책은 별도 작업 필요.
+`ADMIN_ACCOUNT_MANAGE` 권한으로 role 관리 endpoint를 이용할 수 있음.
+운영 API에서 관리 가능한 role은 `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`로 제한하며 `ADMIN`, `SUPER_ADMIN`, `CUSTOMER`는 API로 부여·회수할 수 없음.
+중복 부여와 이미 회수된 role의 회수는 멱등 처리.
+role이 실제 변경되면 대상 계정의 token version을 증가시켜 기존 Access Token을 즉시 거부하며, 새 토큰에 변경된 권한을 반영함.
 Access Token에 발급 당시 permission을 담음.
 매 요청 시 token version을 DB와 대조하므로 token version 변경 시 기존 Access Token은 즉시 인증 실패하고, 새 토큰부터 변경된 permission이 반영됨.
 계정 정지는 상태 검사로 즉시 인증 실패 처리됨.
@@ -63,7 +66,19 @@ COMMIT;
 
 결과에 대상 계정과 `SUPER_ADMIN`이 한 건씩 표시되는지 확인.
 결과가 비어 있거나 예상과 다르면 `COMMIT` 전 `ROLLBACK` 수행.
-일반 운영 role의 부여·회수는 별도 운영 절차 또는 관리자 role 관리 API 도입 전까지 승인된 DB 작업으로 처리.
+시스템 role bootstrap은 계속 승인된 DB 작업으로 처리.
+
+### 관리자 role endpoint
+
+| Method | Endpoint | 동작 |
+| --- | --- | --- |
+| `GET` | `/api/operation/accounts/roles` | API에서 관리 가능한 운영 role 목록 |
+| `GET` | `/api/operation/accounts/{id}/roles` | 계정에 부여된 role 목록 |
+| `PUT` | `/api/operation/accounts/{id}/roles/{roleCode}` | 운영 role 부여 |
+| `DELETE` | `/api/operation/accounts/{id}/roles/{roleCode}` | 운영 role 회수 |
+
+모든 endpoint는 `ADMIN_ACCOUNT_MANAGE` 권한 필요.
+부여 시 `granted_by`에는 요청자 계정이 기록됨.
 
 ## 계정
 
@@ -86,4 +101,4 @@ COMMIT;
 
 계정과 카탈로그는 각각 `operation/account`, `operation/catalog`에 배치.
 HTTP 모델은 web adapter에서 application 명령·응답 모델로 바꾸고, persistence adapter에서만 JPA Entity를 사용함.
-Role 관리와 운영 변경 감사 로그는 미구현.
+운영 변경 감사 로그는 미구현.
