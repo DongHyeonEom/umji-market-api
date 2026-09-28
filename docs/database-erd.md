@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V14가 관리하는 테이블과 컬럼을 설명함.
+이 문서는 현재 Flyway V2–V15가 관리하는 테이블과 컬럼을 설명함.
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.
 미구현 테이블은 포함하지 않음.
 
@@ -390,6 +390,7 @@ erDiagram
 | V12 | `order_payment`, `order_payment_status_history`, 기존 주문 결제 상태 초기화 |
 | V13 | 계정 세금계산서 발행 기본값, 주문별 발행 여부와 입금 계좌 스냅샷 |
 | V14 | `order_shipment`, 기존 주문 배송 준비 상태 초기화 |
+| V15 | 결제 이슈 검토 상태 제약 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.
 적용된 version migration은 수정하지 않음.
