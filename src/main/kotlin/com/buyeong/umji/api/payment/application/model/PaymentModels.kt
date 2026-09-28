@@ -26,7 +26,6 @@ data class PaymentRecord(
     val orderId: UUID,
     val orderStatus: String,
     val paymentStatus: String,
-    val reservationKeys: List<UUID>,
 )
 
 data class PaymentStatusChange(
@@ -34,5 +33,4 @@ data class PaymentStatusChange(
     val orderStatus: String,
     val paymentStatus: String,
     val changed: Boolean,
-    val reservationKeys: List<UUID>,
 )

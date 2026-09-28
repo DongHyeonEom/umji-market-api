@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V13가 관리하는 테이블과 컬럼을 설명함.
+이 문서는 현재 Flyway V2–V14가 관리하는 테이블과 컬럼을 설명함.
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.
 미구현 테이블은 포함하지 않음.
 
@@ -302,6 +302,16 @@ erDiagram
         BIGINT processed_by FK "Operator account ID, nullable"
         DATETIME changed_at "Processed at"
     }
+    ORDER_SHIPMENT {
+        BIGINT id PK "배송 정보 내부 ID"
+        BIGINT order_id FK,UK "주문 ID, 주문당 하나"
+        VARCHAR status "배송 상태 코드"
+        VARCHAR carrier_code "택배사 코드, nullable"
+        VARCHAR tracking_number "송장번호, nullable"
+        BIGINT processed_by FK "최근 처리 운영자 ID, nullable"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
     OPERATION_AUDIT_LOG {
         BIGINT id PK "운영 감사 로그 ID"
         BINARY actor_public_id "운영자 공개 UUID, nullable"
@@ -342,6 +352,8 @@ erDiagram
     PURCHASE_ORDER ||--o| ORDER_PAYMENT : payment
     ORDER_PAYMENT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : tracks
     ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
+    PURCHASE_ORDER ||--o| ORDER_SHIPMENT : shipment
+    ACCOUNT ||--o{ ORDER_SHIPMENT : processes
 ```
 
 ## 관계 및 유의사항
@@ -377,6 +389,7 @@ erDiagram
 | V11 | `operation_audit_log`, `ADMIN_AUDIT_READ` permission 및 `SUPER_ADMIN` role mapping |
 | V12 | `order_payment`, `order_payment_status_history`, 기존 주문 결제 상태 초기화 |
 | V13 | 계정 세금계산서 발행 기본값, 주문별 발행 여부와 입금 계좌 스냅샷 |
+| V14 | `order_shipment`, 기존 주문 배송 준비 상태 초기화 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.
 적용된 version migration은 수정하지 않음.

@@ -66,6 +66,7 @@ endpoint별 권한, 실제 감사 대상, 개인정보 제외, role bootstrap과
 | `/api/operation/accounts/**` | `ADMIN_ACCOUNT_MANAGE` |
 | `GET /api/operation/audit-logs` | `ADMIN_AUDIT_READ` |
 | `/api/operation/payments/**` | `ORDER_WRITE` |
+| `/api/operation/orders/{orderId}/shipment/**` | `ORDER_WRITE` |
 | 카탈로그 조회 endpoint | `PRODUCT_READ` |
 | 카탈로그 생성·수정 endpoint | `PRODUCT_WRITE` |
 | 재고 조회·변동 조회 endpoint | `INVENTORY_READ` |

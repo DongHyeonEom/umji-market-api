@@ -24,7 +24,8 @@ stateDiagram-v2
 
 `WAITING_FOR_DEPOSIT`와 `PARTIAL_PAYMENT_REVIEW_REQUIRED`는 입금 확인 축의 상태.
 입금 확인 상태 변경은 배송 상태를 자동 변경하지 않는 것이 확정된 정책.
-현재 구현은 `PAYMENT_CONFIRMED` 전이에서 주문을 `PAID`로 바꾸고 재고 예약을 확정하므로, 입금과 출고가 독립적인 흐름으로 분리되도록 후속 수정 필요.
+`PAYMENT_CONFIRMED` 전이는 주문을 `PAID`로 변경.
+재고 예약 확정과 배송 상태 변경은 송장 등록에서 별도로 처리.
 입금 확인 완료 이후 되돌리는 전이는 거부.
 현재 만료·실패·취소·일반 입금 이슈 분류 전이는 제공하지 않음.
 
@@ -45,9 +46,9 @@ stateDiagram-v2
 
 | 결제 상태 | 의미 | 주문·재고 처리 |
 | --- | --- | --- |
-| `WAITING_FOR_DEPOSIT` | 운영자의 입금 확인 전 | 주문 `PENDING_PAYMENT`, 재고 예약 유지 |
-| `PARTIAL_PAYMENT_REVIEW_REQUIRED` | 운영자가 부분 입금으로 표시 | 주문 `PENDING_PAYMENT`, 재고 예약 유지, 운영자가 전화로 후속 처리 |
-| `PAYMENT_CONFIRMED` | 운영자가 전액 입금 확인 완료로 표시 | 주문 `PAID`, 재고 예약 확정 |
+| `WAITING_FOR_DEPOSIT` | 운영자의 입금 확인 전 | 주문 `PENDING_PAYMENT`, 송장 등록 전까지 재고 예약 유지 |
+| `PARTIAL_PAYMENT_REVIEW_REQUIRED` | 운영자가 부분 입금으로 표시 | 주문 `PENDING_PAYMENT`, 배송과 재고 상태 유지, 운영자가 전화로 후속 처리 |
+| `PAYMENT_CONFIRMED` | 운영자가 전액 입금 확인 완료로 표시 | 주문 `PAID`, 배송 상태는 유지 |
 
 상태 변경은 처리자·시각과 함께 별도 이력으로 남기고 운영 변경 감사 로그도 기록.
 초기 범위에서는 실제 입금액 세부내역이나 입금자명을 입력·저장하지 않음.
@@ -60,7 +61,8 @@ stateDiagram-v2
 주문에는 당시 세금계산서 발행 선택과 안내 계좌 정보를 저장해 이후 계정 기본값이나 환경설정 계좌 변경이 기존 주문에 영향을 주지 않도록 함.
 기존 주문은 migration에서 세금계산서 미발행으로 초기화되며, 과거 안내 계좌 스냅샷은 없음.
 
-주문 완료·재고 확정은 전액 입금 확인 트랜잭션 안에서 수행.
+주문 결제 상태 변경은 입금 확인 트랜잭션에서 수행.
+재고 예약 확정은 배송 송장 등록 트랜잭션에서 수행.
 PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.
 
 ## Endpoint
@@ -71,6 +73,6 @@ PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.
 - `GET /api/orders/checkout-options`: 계정 기본 발행 여부와 두 계좌 안내 정보 반환.
 - `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정.
   `updateDefaultTaxInvoicePreference=true`는 고객이 계정 기본값 변경을 확인한 경우에만 전달.
-- 사용자 주문 목록·상세 응답에 `paymentMethod`, `paymentStatus`, 주문 당시 `taxInvoiceRequested` 및 계좌 안내 스냅샷 포함.
+- 사용자 주문 목록·상세 응답에 `paymentMethod`, `paymentStatus`, 독립 배송 `shippingStatus`, 택배사·송장번호, 주문 당시 `taxInvoiceRequested` 및 계좌 안내 스냅샷 포함.
 
 환경변수는 `UMJI_BANK_STANDARD_NAME`, `UMJI_BANK_STANDARD_ACCOUNT_NUMBER`, `UMJI_BANK_STANDARD_ACCOUNT_HOLDER`와 `UMJI_BANK_TAX_INVOICE_NAME`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER`를 사용.

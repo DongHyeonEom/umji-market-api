@@ -64,6 +64,9 @@ data class OrderView(
     val depositBankName: String? = null,
     val depositAccountNumber: String? = null,
     val depositAccountHolder: String? = null,
+    val shippingStatus: String = "READY_TO_SHIP",
+    val carrierCode: String? = null,
+    val trackingNumber: String? = null,
 )
 
 data class OrderItemView(
