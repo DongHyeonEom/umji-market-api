@@ -56,6 +56,10 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 - `docs/implementation-status.md`: 현재 구현 상태 요약
 - `docs/todo.md`: 우선순위가 있는 미완료 작업과 완료 체크리스트
 
+DB 스키마나 영속 데이터 규칙을 변경하면 해당 Flyway migration과 같은 변경에 `docs/database.md`, `docs/database-erd.md`를 함께 갱신함.
+`database.md`에는 migration 버전과 변경 요약·현재 DB 규칙을 반영하고, `database-erd.md`에는 전체 현재 스키마의 테이블·컬럼·타입·nullable·키·관계를 반영함.
+변경 후 두 문서를 전체 migration 및 실제 DDL과 대조해 누락·불일치가 없는지 확인함.
+
 ## 문서 작성 규칙
 
 - 문서의 현재 동작은 코드·설정·Flyway migration과 일치시킴.
