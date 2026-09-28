@@ -32,6 +32,18 @@ class PurchaseOrderEntity : DomainPublicEntity() {
     @Column(name = "total_amount", nullable = false)
     var totalAmount: Long = 0
 
+    @Column(name = "tax_invoice_requested", nullable = false)
+    var taxInvoiceRequested: Boolean = false
+
+    @Column(name = "deposit_bank_name")
+    var depositBankName: String? = null
+
+    @Column(name = "deposit_account_number")
+    var depositAccountNumber: String? = null
+
+    @Column(name = "deposit_account_holder")
+    var depositAccountHolder: String? = null
+
     @Column(name = "ordered_at", nullable = false)
     var orderedAt: Instant = Instant.now()
 
