@@ -32,6 +32,11 @@ class PaymentService(
 
     private companion object {
         const val PAYMENT_CONFIRMED = "PAYMENT_CONFIRMED"
-        val PAYMENT_STATUSES = setOf("WAITING_FOR_DEPOSIT", "PARTIAL_PAYMENT_REVIEW_REQUIRED", PAYMENT_CONFIRMED)
+        val PAYMENT_STATUSES = setOf(
+            "WAITING_FOR_DEPOSIT",
+            "PARTIAL_PAYMENT_REVIEW_REQUIRED",
+            "PAYMENT_ISSUE_REVIEW_REQUIRED",
+            PAYMENT_CONFIRMED,
+        )
     }
 }

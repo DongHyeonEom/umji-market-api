@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V14로 관리함.
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V15로 관리함.
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.
 
@@ -38,6 +38,7 @@
 | V12 | `order_payment`, `order_payment_status_history`; 기존 주문의 초기 결제 상태 생성 |
 | V13 | 계정별 세금계산서 발행 기본값과 주문별 발행 여부·입금 계좌 스냅샷 |
 | V14 | `order_shipment`; 기존 주문의 배송 준비 상태 backfill |
+| V15 | 결제 이슈 검토 상태 허용 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.
 

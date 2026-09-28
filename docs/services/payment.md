@@ -3,7 +3,8 @@
 ## 구현 상태
 
 수동 계좌이체 결제 상태와 운영자 확인 API를 구현함.
-PG 연동, 환불, 입금 기한 만료 처리는 아직 구현되지 않았음.
+PG 연동과 환불은 아직 구현되지 않았음.
+입금 만료는 두지 않으며 자동 만료·예약 해제 작업은 없음.
 
 ## 알고리즘 흐름
 
@@ -16,18 +17,26 @@ stateDiagram-v2
     WAITING_FOR_DEPOSIT --> WAITING_FOR_DEPOSIT: 중복 요청은 변경 없음
     WAITING_FOR_DEPOSIT --> PARTIAL_PAYMENT_REVIEW_REQUIRED: 운영자가 부분 입금 확인
     WAITING_FOR_DEPOSIT --> PAYMENT_CONFIRMED: 운영자가 전액 입금 확인
+    WAITING_FOR_DEPOSIT --> PAYMENT_ISSUE_REVIEW_REQUIRED: 운영자가 일반 이슈로 표시
     PARTIAL_PAYMENT_REVIEW_REQUIRED --> WAITING_FOR_DEPOSIT: 운영자가 대기 상태로 변경
     PARTIAL_PAYMENT_REVIEW_REQUIRED --> PARTIAL_PAYMENT_REVIEW_REQUIRED: 중복 요청은 변경 없음
     PARTIAL_PAYMENT_REVIEW_REQUIRED --> PAYMENT_CONFIRMED: 운영자가 전액 입금 확인
+    PARTIAL_PAYMENT_REVIEW_REQUIRED --> PAYMENT_ISSUE_REVIEW_REQUIRED: 운영자가 일반 이슈로 표시
+    PAYMENT_ISSUE_REVIEW_REQUIRED --> PAYMENT_ISSUE_REVIEW_REQUIRED: 중복 요청은 변경 없음
+    PAYMENT_ISSUE_REVIEW_REQUIRED --> WAITING_FOR_DEPOSIT: 운영자가 대기 상태로 변경
+    PAYMENT_ISSUE_REVIEW_REQUIRED --> PARTIAL_PAYMENT_REVIEW_REQUIRED: 운영자가 부분 입금으로 변경
+    PAYMENT_ISSUE_REVIEW_REQUIRED --> PAYMENT_CONFIRMED: 운영자가 전액 입금으로 변경
     PAYMENT_CONFIRMED --> PAYMENT_CONFIRMED: 중복 확인 요청은 변경 없음
 ```
 
-`WAITING_FOR_DEPOSIT`와 `PARTIAL_PAYMENT_REVIEW_REQUIRED`는 입금 확인 축의 상태.
+`WAITING_FOR_DEPOSIT`, `PARTIAL_PAYMENT_REVIEW_REQUIRED`, `PAYMENT_ISSUE_REVIEW_REQUIRED`는 입금 확인 축의 상태.
 입금 확인 상태 변경은 배송 상태를 자동 변경하지 않는 것이 확정된 정책.
 `PAYMENT_CONFIRMED` 전이는 주문을 `PAID`로 변경.
 재고 예약 확정과 배송 상태 변경은 송장 등록에서 별도로 처리.
 입금 확인 완료 이후 되돌리는 전이는 거부.
-현재 만료·실패·취소·일반 입금 이슈 분류 전이는 제공하지 않음.
+`PAYMENT_ISSUE_REVIEW_REQUIRED`는 세부 내용 없이 표시하는 공통 이슈 상태.
+부분 입금 외 발생 내용은 현재 기록하거나 사용자에게 표시하지 않음.
+입금 만료·실패·취소 전이는 제공하지 않음.
 
 ## 초기 결제 방식
 
@@ -48,6 +57,7 @@ stateDiagram-v2
 | --- | --- | --- |
 | `WAITING_FOR_DEPOSIT` | 운영자의 입금 확인 전 | 주문 `PENDING_PAYMENT`, 송장 등록 전까지 재고 예약 유지 |
 | `PARTIAL_PAYMENT_REVIEW_REQUIRED` | 운영자가 부분 입금으로 표시 | 주문 `PENDING_PAYMENT`, 배송과 재고 상태 유지, 운영자가 전화로 후속 처리 |
+| `PAYMENT_ISSUE_REVIEW_REQUIRED` | 운영자가 세부 내용 없이 일반 이슈로 표시 | 주문 결제 상태와 배송·재고 상태 유지 |
 | `PAYMENT_CONFIRMED` | 운영자가 전액 입금 확인 완료로 표시 | 주문 `PAID`, 배송 상태는 유지 |
 
 상태 변경은 처리자·시각과 함께 별도 이력으로 남기고 운영 변경 감사 로그도 기록.
@@ -67,8 +77,8 @@ PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.
 
 ## Endpoint
 
-- `GET /api/operation/payments?status=&page=&size=`: 대기·부분 입금 확인 대상 목록.
-  상태 생략 시 대기 및 부분 입금 대상 반환.
+- `GET /api/operation/payments?status=&page=&size=`: 입금 대기·부분 입금·일반 이슈 대상 목록.
+  상태 생략 시 세 상태를 반환.
 - `PATCH /api/operation/payments/{orderId}/status`: 운영자 입금 상태 변경.
 - `GET /api/orders/checkout-options`: 계정 기본 발행 여부와 두 계좌 안내 정보 반환.
 - `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정.
