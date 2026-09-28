@@ -1,8 +1,8 @@
 # 구현 현황
 
-이 문서는 현재 저장소의 구현 상태만 요약함.
-변경 이력이나 과거 작업 순서는 기록하지 않음.
-endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규칙은 [architecture.md](architecture.md)를 기준으로 함.
+이 문서는 현재 저장소의 구현 상태만 요약함.<br>
+변경 이력이나 과거 작업 순서는 기록하지 않음.<br>
+endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규칙은 [architecture.md](architecture.md)를 기준으로 함.<br>
 
 ## 기반
 
@@ -33,11 +33,11 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 - 주문 취소·환불, 배송 상태 이력
 - 파일 업로드 API, 알림 발송
 
-미구현 endpoint나 흐름은 실제 구현처럼 문서화하지 않음.
-정책 결정이 필요한 항목은 해당 기능을 시작할 때 별도 설계함.
+미구현 endpoint나 흐름은 실제 구현처럼 문서화하지 않음.<br>
+정책 결정이 필요한 항목은 해당 기능을 시작할 때 별도 설계함.<br>
 
 ## Flyway
 
-현재 버전 마이그레이션은 V2부터 V15까지이며, 재실행 seed는 R 스크립트임.
-버전 파일은 적용 후 수정하지 않고 새 변경은 다음 버전 migration으로 추가함.
-정확한 버전별 테이블 목록은 [database.md](database.md)를 참고.
+현재 버전 마이그레이션은 V2부터 V15까지이며, 재실행 seed는 R 스크립트임.<br>
+버전 파일은 적용 후 수정하지 않고 새 변경은 다음 버전 migration으로 추가함.<br>
+정확한 버전별 테이블 목록은 [database.md](database.md)를 참고.<br>
