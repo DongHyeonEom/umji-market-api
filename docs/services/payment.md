@@ -22,10 +22,11 @@ stateDiagram-v2
     PAYMENT_CONFIRMED --> PAYMENT_CONFIRMED: 중복 확인 요청은 변경 없음
 ```
 
-`WAITING_FOR_DEPOSIT`와 `PARTIAL_PAYMENT_REVIEW_REQUIRED`는 주문 `PENDING_PAYMENT`와 재고 예약을 유지.
-`PAYMENT_CONFIRMED` 전이는 같은 트랜잭션에서 주문을 `PAID`로 변경하고 모든 재고 예약을 확정.
+`WAITING_FOR_DEPOSIT`와 `PARTIAL_PAYMENT_REVIEW_REQUIRED`는 입금 확인 축의 상태.
+입금 확인 상태 변경은 배송 상태를 자동 변경하지 않는 것이 확정된 정책.
+현재 구현은 `PAYMENT_CONFIRMED` 전이에서 주문을 `PAID`로 바꾸고 재고 예약을 확정하므로, 입금과 출고가 독립적인 흐름으로 분리되도록 후속 수정 필요.
 입금 확인 완료 이후 되돌리는 전이는 거부.
-현재 만료·실패·취소 전이는 제공하지 않음.
+현재 만료·실패·취소·일반 입금 이슈 분류 전이는 제공하지 않음.
 
 ## 초기 결제 방식
 
