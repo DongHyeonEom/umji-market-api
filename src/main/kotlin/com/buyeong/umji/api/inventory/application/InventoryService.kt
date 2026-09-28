@@ -56,6 +56,7 @@ class InventoryService(private val store: InventoryStorePort) {
 
     fun confirm(reservationKey: UUID): StockView {
         val reservation = reservation(reservationKey)
+        if (reservation.status == CONFIRMED) return store.stock(reservation.sku.id)?.toView() ?: error("재고를 찾을 수 없습니다.")
         require(reservation.status == RESERVED) { "확정할 수 없는 재고 예약입니다." }
         val stock = store.lockStock(reservation.sku.id)
         val updated = stock.copy(onHand = stock.onHand - reservation.quantity, reserved = stock.reserved - reservation.quantity)

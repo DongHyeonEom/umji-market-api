@@ -17,6 +17,9 @@ data class OrderResponse(
     val depositBankName: String?,
     val depositAccountNumber: String?,
     val depositAccountHolder: String?,
+    val shippingStatus: String,
+    val carrierCode: String?,
+    val trackingNumber: String?,
 )
 
 data class BankAccountInstructionsResponse(

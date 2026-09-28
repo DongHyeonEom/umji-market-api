@@ -2,6 +2,7 @@ package com.buyeong.umji.api.persistence.jpa.order
 
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
+import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentEntity
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -52,6 +53,9 @@ class PurchaseOrderEntity : DomainPublicEntity() {
 
     @OneToOne(mappedBy = "order", fetch = FetchType.LAZY, optional = false)
     lateinit var payment: OrderPaymentEntity
+
+    @OneToOne(mappedBy = "order", fetch = FetchType.LAZY, optional = false)
+    lateinit var shipment: OrderShipmentEntity
 
     fun add(item: OrderItemEntity) {
         item.order = this

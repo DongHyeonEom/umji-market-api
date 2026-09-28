@@ -1,25 +1,25 @@
 package com.buyeong.umji.api.order.adapter.`in`.web
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
+import com.buyeong.umji.api.order.application.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
-import com.buyeong.umji.api.order.application.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
-import com.buyeong.umji.api.order.model.OrderItemResponse
-import com.buyeong.umji.api.order.model.OrderPageResponse
-import com.buyeong.umji.api.order.model.OrderResponse
 import com.buyeong.umji.api.order.model.BankAccountInstructionsResponse
 import com.buyeong.umji.api.order.model.CreateOrderRequest
 import com.buyeong.umji.api.order.model.OrderCheckoutOptionsResponse
+import com.buyeong.umji.api.order.model.OrderItemResponse
+import com.buyeong.umji.api.order.model.OrderPageResponse
+import com.buyeong.umji.api.order.model.OrderResponse
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.http.HttpStatus
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -70,6 +70,9 @@ class OrderController(
         depositBankName,
         depositAccountNumber,
         depositAccountHolder,
+        shippingStatus,
+        carrierCode,
+        trackingNumber,
     )
 
     private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(

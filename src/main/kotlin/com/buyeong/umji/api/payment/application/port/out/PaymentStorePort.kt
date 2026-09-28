@@ -10,7 +10,3 @@ interface PaymentStorePort {
     fun lock(orderId: UUID): PaymentRecord?
     fun updateStatus(record: PaymentRecord, status: String, operatorId: UUID): PaymentStatusChange
 }
-
-interface PaymentInventoryPort {
-    fun confirm(reservationKey: UUID)
-}

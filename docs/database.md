@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V13으로 관리함.
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V14로 관리함.
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.
 
@@ -37,6 +37,7 @@
 | V11 | `operation_audit_log`, `ADMIN_AUDIT_READ` permission 및 `SUPER_ADMIN` role mapping |
 | V12 | `order_payment`, `order_payment_status_history`; 기존 주문의 초기 결제 상태 생성 |
 | V13 | 계정별 세금계산서 발행 기본값과 주문별 발행 여부·입금 계좌 스냅샷 |
+| V14 | `order_shipment`; 기존 주문의 배송 준비 상태 backfill |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.
 
@@ -59,5 +60,5 @@
 해당 기능이 확정되면 정책과 테이블을 설계하고 새 Flyway migration으로 추가함.
 설계안이나 Mermaid 관계도만으로 실제 테이블이 생성된 것으로 보지 않음.
 
-추가 PG·결제 수단, 배송, 부분 취소·환불 및 감사 로그 외 데이터 보존 기간은 미확정 정책임.
+택배사 배송 현황 연동, 배송 완료 처리, 미입금 만료, 부분 취소·환불 및 감사 로그 외 데이터 보존 기간은 미확정 정책임.
 확정 전에는 구체적인 테이블 계약을 현재 스키마로 문서화하지 않음.

@@ -12,8 +12,9 @@ import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderNumberSequenceEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderStatusHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.OrderStatusHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -28,6 +29,7 @@ class JpaOrderStoreAdapter(
     private val catalog: CatalogJpaEntityService,
     private val orders: OrderJpaEntityService,
     private val payments: OrderPaymentJpaEntityService,
+    private val shipments: OrderShipmentJpaEntityService,
 ) : OrderStorePort {
     override fun defaultTaxInvoiceRequested(accountId: UUID): Boolean =
         account(accountId).defaultTaxInvoiceRequested
@@ -55,6 +57,7 @@ class JpaOrderStoreAdapter(
         draft.items.forEach { item -> order.add(item.toEntity()) }
         val saved = orders.saveAndFlush(order)
         saved.payment = payments.initialize(saved)
+        saved.shipment = shipments.initialize(saved)
         orders.saveHistory(
             OrderStatusHistoryEntity().apply {
                 this.order = saved
@@ -118,6 +121,9 @@ class JpaOrderStoreAdapter(
         depositBankName = depositBankName,
         depositAccountNumber = depositAccountNumber,
         depositAccountHolder = depositAccountHolder,
+        shippingStatus = shipment.status,
+        carrierCode = shipment.carrierCode,
+        trackingNumber = shipment.trackingNumber,
     )
 
     private companion object {

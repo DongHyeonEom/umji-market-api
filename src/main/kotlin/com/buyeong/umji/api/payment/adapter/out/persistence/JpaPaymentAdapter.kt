@@ -31,7 +31,6 @@ class JpaPaymentAdapter(private val payments: OrderPaymentJpaEntityService) : Pa
             orderId = requireNotNull(payment.order.publicId),
             orderStatus = payment.order.status,
             paymentStatus = payment.status,
-            reservationKeys = payment.order.items.map { it.reservationKey },
         )
     }
 
@@ -43,7 +42,6 @@ class JpaPaymentAdapter(private val payments: OrderPaymentJpaEntityService) : Pa
             orderStatus = changed.order.status,
             paymentStatus = changed.status,
             changed = true,
-            reservationKeys = if (status == PAYMENT_CONFIRMED) changed.order.items.map { it.reservationKey } else emptyList(),
         )
     }
 
