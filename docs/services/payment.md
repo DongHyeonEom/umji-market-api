@@ -36,6 +36,9 @@ stateDiagram-v2
 입금 확인 완료 이후 되돌리는 전이는 거부.
 `PAYMENT_ISSUE_REVIEW_REQUIRED`는 세부 내용 없이 표시하는 공통 이슈 상태.
 부분 입금 외 발생 내용은 현재 기록하거나 사용자에게 표시하지 않음.
+이슈 상태에서 운영자는 시스템 밖에서 계좌·주문 확인과 후속 처리를 진행.
+처리 후 `WAITING_FOR_DEPOSIT`, `PARTIAL_PAYMENT_REVIEW_REQUIRED`, `PAYMENT_CONFIRMED` 중 확인 결과에 맞는 상태로 변경.
+미해결 이슈는 기존 상태를 유지하며, 상태 변경 처리자·시각은 기존 결제 이력에 저장.
 입금 만료·실패·취소 전이는 제공하지 않음.
 
 ## 초기 결제 방식
