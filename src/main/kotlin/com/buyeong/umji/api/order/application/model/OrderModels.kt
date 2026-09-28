@@ -19,7 +19,23 @@ data class OrderDraft(
     val orderedAt: Instant,
     val subtotalAmount: Long,
     val totalAmount: Long,
+    val taxInvoiceRequested: Boolean,
+    val depositBankName: String,
+    val depositAccountNumber: String,
+    val depositAccountHolder: String,
     val items: List<OrderItemDraft>,
+)
+
+data class BankAccountInstructions(
+    val bankName: String,
+    val accountNumber: String,
+    val accountHolder: String,
+)
+
+data class OrderCheckoutOptions(
+    val defaultTaxInvoiceRequested: Boolean,
+    val standardBankAccount: BankAccountInstructions,
+    val taxInvoiceBankAccount: BankAccountInstructions,
 )
 
 data class OrderItemDraft(
@@ -44,6 +60,10 @@ data class OrderView(
     val items: List<OrderItemView>,
     val paymentMethod: String = "BANK_TRANSFER",
     val paymentStatus: String = "WAITING_FOR_DEPOSIT",
+    val taxInvoiceRequested: Boolean = false,
+    val depositBankName: String? = null,
+    val depositAccountNumber: String? = null,
+    val depositAccountHolder: String? = null,
 )
 
 data class OrderItemView(

@@ -2,6 +2,7 @@ package com.buyeong.umji.api.order.adapter
 
 import com.buyeong.umji.api.order.application.OrderService
 import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
+import com.buyeong.umji.api.order.application.port.out.BankAccountInstructionsPort
 import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import org.springframework.context.annotation.Bean
@@ -14,5 +15,6 @@ class OrderApplicationConfiguration {
         checkoutCart: CheckoutCartPort,
         inventory: InventoryReservationPort,
         orders: OrderStorePort,
-    ) = OrderService(checkoutCart, inventory, orders)
+        bankAccounts: BankAccountInstructionsPort,
+    ) = OrderService(checkoutCart, inventory, orders, bankAccounts)
 }

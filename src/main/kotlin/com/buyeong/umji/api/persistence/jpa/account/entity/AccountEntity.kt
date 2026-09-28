@@ -37,6 +37,9 @@ class AccountEntity {
     @Column(name = "token_version", nullable = false)
     var tokenVersion: Long = 0
 
+    @Column(name = "default_tax_invoice_requested", nullable = false)
+    var defaultTaxInvoiceRequested: Boolean = false
+
     @Column(name = "last_login_at")
     var lastLoginAt: java.time.Instant? = null
 

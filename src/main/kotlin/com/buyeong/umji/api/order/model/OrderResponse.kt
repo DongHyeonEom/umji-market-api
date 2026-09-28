@@ -13,6 +13,27 @@ data class OrderResponse(
     val items: List<OrderItemResponse>,
     val paymentMethod: String,
     val paymentStatus: String,
+    val taxInvoiceRequested: Boolean,
+    val depositBankName: String?,
+    val depositAccountNumber: String?,
+    val depositAccountHolder: String?,
+)
+
+data class BankAccountInstructionsResponse(
+    val bankName: String,
+    val accountNumber: String,
+    val accountHolder: String,
+)
+
+data class OrderCheckoutOptionsResponse(
+    val defaultTaxInvoiceRequested: Boolean,
+    val standardBankAccount: BankAccountInstructionsResponse,
+    val taxInvoiceBankAccount: BankAccountInstructionsResponse,
+)
+
+data class CreateOrderRequest(
+    val taxInvoiceRequested: Boolean? = null,
+    val updateDefaultTaxInvoicePreference: Boolean = false,
 )
 
 data class OrderItemResponse(

@@ -29,8 +29,17 @@ class JpaOrderStoreAdapter(
     private val orders: OrderJpaEntityService,
     private val payments: OrderPaymentJpaEntityService,
 ) : OrderStorePort {
+    override fun defaultTaxInvoiceRequested(accountId: UUID): Boolean =
+        account(accountId).defaultTaxInvoiceRequested
+
+    override fun updateDefaultTaxInvoiceRequested(accountId: UUID, requested: Boolean) {
+        val account = account(accountId)
+        account.defaultTaxInvoiceRequested = requested
+        accounts.save(account)
+    }
+
     override fun save(draft: OrderDraft): OrderView {
-        val account = accounts.findByPublicId(draft.accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
+        val account = account(draft.accountId)
         val order = PurchaseOrderEntity().apply {
             this.account = account
             orderNumber = nextOrderNumber(draft.orderedAt)
@@ -38,6 +47,10 @@ class JpaOrderStoreAdapter(
             orderedAt = draft.orderedAt
             subtotalAmount = draft.subtotalAmount
             totalAmount = draft.totalAmount
+            taxInvoiceRequested = draft.taxInvoiceRequested
+            depositBankName = draft.depositBankName
+            depositAccountNumber = draft.depositAccountNumber
+            depositAccountHolder = draft.depositAccountHolder
         }
         draft.items.forEach { item -> order.add(item.toEntity()) }
         val saved = orders.saveAndFlush(order)
@@ -61,6 +74,8 @@ class JpaOrderStoreAdapter(
 
     private fun accountInternalId(publicId: UUID): Long =
         requireNotNull(accounts.findByPublicId(publicId)?.id) { "계정을 찾을 수 없습니다." }
+
+    private fun account(publicId: UUID) = accounts.findByPublicId(publicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
 
     private fun nextOrderNumber(orderedAt: java.time.Instant): String {
         val date = orderedAt.atZone(ZoneOffset.UTC).toLocalDate()
@@ -99,6 +114,10 @@ class JpaOrderStoreAdapter(
         },
         paymentMethod = payment.paymentMethod,
         paymentStatus = payment.status,
+        taxInvoiceRequested = taxInvoiceRequested,
+        depositBankName = depositBankName,
+        depositAccountNumber = depositAccountNumber,
+        depositAccountHolder = depositAccountHolder,
     )
 
     private companion object {

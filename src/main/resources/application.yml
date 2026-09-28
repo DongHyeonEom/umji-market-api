@@ -71,6 +71,18 @@ management:
       probes:
         enabled: true
 
+umji:
+  payment:
+    bank-account:
+      standard:
+        bank-name: ${UMJI_BANK_STANDARD_NAME:}
+        account-number: ${UMJI_BANK_STANDARD_ACCOUNT_NUMBER:}
+        account-holder: ${UMJI_BANK_STANDARD_ACCOUNT_HOLDER:}
+      tax-invoice:
+        bank-name: ${UMJI_BANK_TAX_INVOICE_NAME:}
+        account-number: ${UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER:}
+        account-holder: ${UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER:}
+
 logging:
   config: classpath:logback-spring-${spring.profiles.active}.xml
 
