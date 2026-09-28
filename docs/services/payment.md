@@ -65,10 +65,12 @@ PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.
 
 ## Endpoint
 
-- `GET /api/operation/payments?status=&page=&size=`: 대기·부분 입금 확인 대상 목록. 상태 생략 시 대기 및 부분 입금 대상 반환.
+- `GET /api/operation/payments?status=&page=&size=`: 대기·부분 입금 확인 대상 목록.
+  상태 생략 시 대기 및 부분 입금 대상 반환.
 - `PATCH /api/operation/payments/{orderId}/status`: 운영자 입금 상태 변경.
 - `GET /api/orders/checkout-options`: 계정 기본 발행 여부와 두 계좌 안내 정보 반환.
-- `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정. `updateDefaultTaxInvoicePreference=true`는 고객이 계정 기본값 변경을 확인한 경우에만 전달.
+- `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정.
+  `updateDefaultTaxInvoicePreference=true`는 고객이 계정 기본값 변경을 확인한 경우에만 전달.
 - 사용자 주문 목록·상세 응답에 `paymentMethod`, `paymentStatus`, 주문 당시 `taxInvoiceRequested` 및 계좌 안내 스냅샷 포함.
 
 환경변수는 `UMJI_BANK_STANDARD_NAME`, `UMJI_BANK_STANDARD_ACCOUNT_NUMBER`, `UMJI_BANK_STANDARD_ACCOUNT_HOLDER`와 `UMJI_BANK_TAX_INVOICE_NAME`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER`를 사용.

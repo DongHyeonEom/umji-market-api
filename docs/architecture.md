@@ -48,7 +48,8 @@ Application은 출력 Port를 호출하며, adapter가 DB나 외부 API에 연�
 Port는 실제 경계가 필요한 곳에 두고, 이름보다 의존 방향을 준수.
 JPA Entity와 Spring Data Repository는 `persistence/jpa/{aggregate}` 구현 내부에 배치.
 
-현재 adapter/application 경계를 적용한 도메인은 인증, 카탈로그, 장바구니, 주문, 결제, 재고, 관리자 계정, 관리자 카탈로그, 운영 감사 로그임. account 사용자 API, 파일, 알림 기능은 아직 구현되지 않았음.
+현재 adapter/application 경계를 적용한 도메인은 인증, 카탈로그, 장바구니, 주문, 결제, 재고, 관리자 계정, 관리자 카탈로그, 운영 감사 로그임.
+account 사용자 API, 파일, 알림 기능은 아직 구현되지 않았음.
 
 ## 도메인 책임
 

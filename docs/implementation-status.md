@@ -1,7 +1,8 @@
 # 구현 현황
 
 이 문서는 현재 저장소의 구현 상태만 요약함.
-변경 이력이나 과거 작업 순서는 기록하지 않음. endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규칙은 [architecture.md](architecture.md)를 기준으로 함.
+변경 이력이나 과거 작업 순서는 기록하지 않음.
+endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규칙은 [architecture.md](architecture.md)를 기준으로 함.
 
 ## 기반
 
