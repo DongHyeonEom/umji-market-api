@@ -19,7 +19,9 @@ Controller는 입력 adapter, application UseCase는 업무 흐름, JPA 구현�
 ./gradlew bootRun --args='--spring.profiles.active=local'
 ```
 
-필수 변수: `DB_READ_URL`, `DB_WRITE_URL`, `DB_USER_NAME`, `DB_USER_PASSWORD`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY_ID`, `JWT_RSA_PUBLIC_KEY_PATH`, `JWT_RSA_PRIVATE_KEY_PATH`.
+필수 변수: `DB_READ_URL`, `DB_WRITE_URL`, `DB_USER_NAME`, `DB_USER_PASSWORD`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY_ID`, `JWT_RSA_PUBLIC_KEY_PATH`, `JWT_RSA_PRIVATE_KEY_PATH`, `UMJI_BANK_STANDARD_NAME`, `UMJI_BANK_STANDARD_ACCOUNT_NUMBER`, `UMJI_BANK_STANDARD_ACCOUNT_HOLDER`, `UMJI_BANK_TAX_INVOICE_NAME`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER`.
+
+계좌 안내 변수는 세금계산서 미발행 계좌(`UMJI_BANK_STANDARD_*`)와 발행 계좌(`UMJI_BANK_TAX_INVOICE_*`)를 각각 설정함. 주문 생성 시 선택한 계좌 정보는 주문에 스냅샷으로 저장.
 
 로컬 프로필은 인증을 우회하는 `BYPASS` 설정을 사용함.
 운영 환경 사용 금지.

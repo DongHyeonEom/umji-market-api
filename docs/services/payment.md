@@ -5,6 +5,28 @@
 수동 계좌이체 결제 상태와 운영자 확인 API를 구현함.
 PG 연동, 환불, 입금 기한 만료 처리는 아직 구현되지 않았음.
 
+## 알고리즘 흐름
+
+결제 생성 및 입금 승인 알고리즘의 단일 기준은 [order.md](order.md)의 주문·입금 확인 흐름.
+이 문서에서는 결제 상태의 조건과 변경 결과를 정의.
+
+```mermaid
+stateDiagram-v2
+    [*] --> WAITING_FOR_DEPOSIT: 주문 생성
+    WAITING_FOR_DEPOSIT --> WAITING_FOR_DEPOSIT: 중복 요청은 변경 없음
+    WAITING_FOR_DEPOSIT --> PARTIAL_PAYMENT_REVIEW_REQUIRED: 운영자가 부분 입금 확인
+    WAITING_FOR_DEPOSIT --> PAYMENT_CONFIRMED: 운영자가 전액 입금 확인
+    PARTIAL_PAYMENT_REVIEW_REQUIRED --> WAITING_FOR_DEPOSIT: 운영자가 대기 상태로 변경
+    PARTIAL_PAYMENT_REVIEW_REQUIRED --> PARTIAL_PAYMENT_REVIEW_REQUIRED: 중복 요청은 변경 없음
+    PARTIAL_PAYMENT_REVIEW_REQUIRED --> PAYMENT_CONFIRMED: 운영자가 전액 입금 확인
+    PAYMENT_CONFIRMED --> PAYMENT_CONFIRMED: 중복 확인 요청은 변경 없음
+```
+
+`WAITING_FOR_DEPOSIT`와 `PARTIAL_PAYMENT_REVIEW_REQUIRED`는 주문 `PENDING_PAYMENT`와 재고 예약을 유지.
+`PAYMENT_CONFIRMED` 전이는 같은 트랜잭션에서 주문을 `PAID`로 변경하고 모든 재고 예약을 확정.
+입금 확인 완료 이후 되돌리는 전이는 거부.
+현재 만료·실패·취소 전이는 제공하지 않음.
+
 ## 초기 결제 방식
 
 초기 결제 수단은 수동 계좌이체만 제공.
@@ -31,7 +53,11 @@ PG 연동, 환불, 입금 기한 만료 처리는 아직 구현되지 않았음.
 부분·초과 입금 상세 조정 및 환불은 운영자가 별도 연락으로 처리.
 
 주문 생성 시 재고를 예약하는 현재 동작을 유지하며, 미입금 예약 자동 만료·해제는 초기 범위에서 수행하지 않음.
-계좌 안내 정보의 구성 및 표시 위치는 미확정.
+입금 계좌는 환경변수로 세금계산서 미발행 계좌와 발행 계좌를 각각 관리.
+계정별 세금계산서 발행 기본값은 미발행으로 시작하며, 주문 화면에서 기본값을 토글할 수 있음.
+고객이 토글을 바꾸고 계정 기본값 변경까지 확인한 경우 주문 생성 요청에 해당 선택을 함께 전달.
+주문에는 당시 세금계산서 발행 선택과 안내 계좌 정보를 저장해 이후 계정 기본값이나 환경설정 계좌 변경이 기존 주문에 영향을 주지 않도록 함.
+기존 주문은 migration에서 세금계산서 미발행으로 초기화되며, 과거 안내 계좌 스냅샷은 없음.
 
 주문 완료·재고 확정은 전액 입금 확인 트랜잭션 안에서 수행.
 PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.
@@ -40,4 +66,8 @@ PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.
 
 - `GET /api/operation/payments?status=&page=&size=`: 대기·부분 입금 확인 대상 목록. 상태 생략 시 대기 및 부분 입금 대상 반환.
 - `PATCH /api/operation/payments/{orderId}/status`: 운영자 입금 상태 변경.
-- 사용자 주문 목록·상세 응답에 `paymentMethod`, `paymentStatus` 포함.
+- `GET /api/orders/checkout-options`: 계정 기본 발행 여부와 두 계좌 안내 정보 반환.
+- `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정. `updateDefaultTaxInvoicePreference=true`는 고객이 계정 기본값 변경을 확인한 경우에만 전달.
+- 사용자 주문 목록·상세 응답에 `paymentMethod`, `paymentStatus`, 주문 당시 `taxInvoiceRequested` 및 계좌 안내 스냅샷 포함.
+
+환경변수는 `UMJI_BANK_STANDARD_NAME`, `UMJI_BANK_STANDARD_ACCOUNT_NUMBER`, `UMJI_BANK_STANDARD_ACCOUNT_HOLDER`와 `UMJI_BANK_TAX_INVOICE_NAME`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER`를 사용.

@@ -48,7 +48,7 @@ Application은 출력 Port를 호출하며, adapter가 DB나 외부 API에 연�
 Port는 실제 경계가 필요한 곳에 두고, 이름보다 의존 방향을 준수.
 JPA Entity와 Spring Data Repository는 `persistence/jpa/{aggregate}` 구현 내부에 배치.
 
-현재 adapter/application 경계를 적용한 도메인은 인증, 카탈로그, 장바구니, 주문, 재고, 관리자 계정, 관리자 카탈로그, 운영 감사 로그임. account 사용자 API, 결제, 파일, 알림 기능은 아직 구현되지 않았음.
+현재 adapter/application 경계를 적용한 도메인은 인증, 카탈로그, 장바구니, 주문, 결제, 재고, 관리자 계정, 관리자 카탈로그, 운영 감사 로그임. account 사용자 API, 파일, 알림 기능은 아직 구현되지 않았음.
 
 ## 도메인 책임
 
@@ -61,7 +61,8 @@ JPA Entity와 Spring Data Repository는 `persistence/jpa/{aggregate}` 구현 내
 | order | 주문·주문 항목 및 상태 이력 |
 | inventory | SKU 재고·예약·변동 이력 |
 | operation | 관리자 계정·상품 운영 |
-| payment, file, notification | 구현 전 |
+| payment | 수동 계좌이체 안내와 운영자 입금 확인 |
+| file, notification | 구현 전 |
 
 관리자 URL prefix는 `/api/operation/**`임.
 인증 `REQUIRED` 모드에서는 인증된 요청에 endpoint별 permission을 검사함.

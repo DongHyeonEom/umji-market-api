@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V12가 관리하는 테이블과 컬럼을 설명함.
+이 문서는 현재 Flyway V2–V13가 관리하는 테이블과 컬럼을 설명함.
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.
 미구현 테이블은 포함하지 않음.
 
@@ -28,6 +28,7 @@ erDiagram
         VARCHAR email "이메일, nullable"
         VARCHAR status "계정 상태"
         BIGINT token_version "토큰 무효화 버전"
+        BOOLEAN default_tax_invoice_requested "세금계산서 발행 기본값"
         DATETIME last_login_at "마지막 로그인 시각, nullable"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
@@ -248,6 +249,10 @@ erDiagram
         VARCHAR status "주문 상태"
         BIGINT subtotal_amount "상품 소계"
         BIGINT total_amount "주문 총액"
+        BOOLEAN tax_invoice_requested "주문 당시 세금계산서 발행 선택"
+        VARCHAR deposit_bank_name "입금 은행 스냅샷, nullable"
+        VARCHAR deposit_account_number "입금 계좌번호 스냅샷, nullable"
+        VARCHAR deposit_account_holder "입금 예금주 스냅샷, nullable"
         DATETIME ordered_at "주문 시각"
         BIGINT version "낙관적 잠금 버전"
         DATETIME created_at "생성 시각"
@@ -371,6 +376,7 @@ erDiagram
 | V10 | 시스템 role-permission 기본 매핑 |
 | V11 | `operation_audit_log`, `ADMIN_AUDIT_READ` permission 및 `SUPER_ADMIN` role mapping |
 | V12 | `order_payment`, `order_payment_status_history`, 기존 주문 결제 상태 초기화 |
+| V13 | 계정 세금계산서 발행 기본값, 주문별 발행 여부와 입금 계좌 스냅샷 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.
 적용된 version migration은 수정하지 않음.
