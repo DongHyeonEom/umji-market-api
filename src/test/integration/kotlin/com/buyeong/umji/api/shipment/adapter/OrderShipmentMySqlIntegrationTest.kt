@@ -59,13 +59,22 @@ class OrderShipmentMySqlIntegrationTest {
         val orderId = createOrder(customerId, skuId, reservationKey)
         createShipment(orderId)
 
+        assertThat(paymentStatus(orderId)).isEqualTo("WAITING_FOR_DEPOSIT")
+
         val dispatch = shipments.beginDispatch(orderId, operatorId)
         assertThat(dispatch.status).isEqualTo("PREPARING")
+        assertReservation(reservationKey, "RESERVED", 10, 1)
 
         val tracking = shipments.registerTracking(orderId, " CJ ", " 1234567890 ", operatorId)
         assertThat(tracking.status).isEqualTo("IN_TRANSIT")
+        assertThat(tracking.changed).isTrue()
         assertThat(tracking.carrierCode).isEqualTo("CJ")
         assertThat(tracking.trackingNumber).isEqualTo("1234567890")
+        assertReservation(reservationKey, "CONFIRMED", 9, 0)
+
+        val repeatedTracking = shipments.registerTracking(orderId, "CJ", "1234567890", operatorId)
+        assertThat(repeatedTracking.changed).isFalse()
+        assertReservation(reservationKey, "CONFIRMED", 9, 0)
 
         val persisted = jdbc.queryForMap(
             """SELECT s.status, s.carrier_code, s.tracking_number, a.public_id AS processed_by
@@ -183,6 +192,28 @@ class OrderShipmentMySqlIntegrationTest {
             Timestamp.from(orderedAt),
             Timestamp.from(orderedAt),
         )
+    }
+
+    private fun paymentStatus(orderId: UUID): String = jdbc.queryForObject(
+        "SELECT payment.status FROM order_payment payment JOIN purchase_order purchase_order ON purchase_order.id = payment.order_id WHERE purchase_order.public_id = ?",
+        String::class.java,
+        orderId.toBytes(),
+    )!!
+
+    private fun assertReservation(reservationKey: UUID, status: String, onHand: Int, reserved: Int) {
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM stock_reservation WHERE reservation_key = ?",
+                String::class.java,
+                reservationKey.toBytes(),
+            ),
+        ).isEqualTo(status)
+        val stock = jdbc.queryForMap(
+            "SELECT on_hand_quantity, reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT sku_id FROM stock_reservation WHERE reservation_key = ?)",
+            reservationKey.toBytes(),
+        )
+        assertThat(stock["on_hand_quantity"]).isEqualTo(onHand)
+        assertThat(stock["reserved_quantity"]).isEqualTo(reserved)
     }
 
     private fun UUID.toBytes(): ByteArray = ByteBuffer.allocate(16).putLong(mostSignificantBits).putLong(leastSignificantBits).array()
