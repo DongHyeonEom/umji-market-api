@@ -28,8 +28,10 @@ class ShipmentService(
             return current.toChange(false)
         }
         require(current.status == PREPARING || current.status == IN_TRANSIT) { "발송 처리 중인 주문만 송장 정보를 등록할 수 있습니다." }
+        if (current.status != IN_TRANSIT) {
+            current.reservationKeys.forEach { reservationKey -> inventory.confirm(reservationKey) }
+        }
         val changed = shipments.update(current, IN_TRANSIT, carrier, tracking, operatorId)
-        if (current.status != IN_TRANSIT) current.reservationKeys.forEach(inventory::confirm)
         return changed.toChange(true)
     }
 
