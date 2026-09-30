@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V17으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V18으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -41,6 +41,7 @@
 | V15 | 결제 이슈 검토 상태 허용 |
 | V16 | 공휴일 일정, 주문 취소 이력, 환불 상태 허용 |
 | V17 | 배송 상태 `DELIVERED` 허용 |
+| V18 | `buyer_group`, `buyer_group_member`, `buyer_group_business_profile`; 주문 구매자 그룹 귀속 및 기존 데이터 backfill |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -57,6 +58,14 @@
 - Refresh Token 원문은 저장하지 않고 hash를 저장함.<br>
   토큰 만료·폐기 의미는 인증 구현과 일치.<br>
 - 업체 동의 이력은 기존 행을 덮어쓰지 않고 새 이력으로 추가함.<br>
+- 구매 주문은 `buyer_group_id`로 그룹에 귀속하고, 기존 `purchase_order.account_id`는 실제 주문한 계정으로 유지함.<br>
+  현재 각 기존 계정에 개인 또는 사업자 구매자 그룹 하나를 생성해 기존 주문·프로필을 backfill함.<br>
+  기존 애플리케이션의 신규 주문 저장은 아직 그룹 ID를 기록하지 않으므로 migration 단계에서 `buyer_group_id`는 nullable로 유지함.<br>
+- `buyer_group.group_type`은 `BUSINESS` 또는 `INDIVIDUAL`이며, 사업자번호는 선택 정보임.<br>
+  사업자 그룹 식별자나 그룹 병합 키로 사용하지 않음.<br>
+- `buyer_group_member`는 계정과 그룹의 참여 관계이며 같은 계정이 여러 그룹에 속할 수 있음.<br>
+  사업자 그룹에 구성원을 추가하는 애플리케이션 기능은 아직 미구현.<br>
+- `business_profile`은 기존 계정 기능의 호환을 위해 유지하고, V18 시점의 사업자 프로필은 `buyer_group_business_profile`로 복사함.<br>
 
 ## 아직 없는 스키마
 

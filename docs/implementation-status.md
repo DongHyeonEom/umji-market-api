@@ -38,6 +38,6 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 
 ## Flyway
 
-현재 버전 마이그레이션은 V2부터 V17까지이며, 재실행 seed는 R 스크립트임.<br>
+현재 버전 마이그레이션은 V2부터 V18까지이며, 재실행 seed는 R 스크립트임.<br>
 버전 파일은 적용 후 수정하지 않고 새 변경은 다음 버전 migration으로 추가함.<br>
 정확한 버전별 테이블 목록은 [database.md](database.md)를 참고.<br>
