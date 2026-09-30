@@ -9,9 +9,10 @@
 재고는 주문 시 예약하고, 운영자가 등록한 휴무일과 주말을 제외한 평일 15:00(KST)에 배송 준비 상태로 전환하며 확정.<br>
 `READY_TO_SHIP` 상태에서 사용자는 주문 전체를 즉시 취소 가능. `PREPARING` 이후 송장 등록 전에는 취소 요청을 생성하고 운영자가 배송 담당자 확인 후 승인 또는 거절.<br>
 배송 준비 후 취소 승인 시 확정된 재고를 복구. 송장 등록으로 배송 중 상태가 된 주문은 취소 불가.<br>
-배송 추적은 주문 API 안의 확장 가능한 택배사 연동 경계를 통해 처리. 배송 중 주문은 스케줄러가 주기 조회하고, 사용자 요청 조회도 지원 가능한 구조로 설계.<br>
+배송 중 주문의 공식 배송 페이지를 1시간마다 조회하고, 고객의 배송 조회 요청 시에도 최신 상태를 확인.<br>
 조회 결과는 동일한 멱등 상태 갱신 흐름으로 저장. 배송 완료 후에도 택배사 공식 조회 화면과 송장번호 제공.<br>
-택배사 서버 API를 사용할 수 없는 경우 중계 API adapter를 연결하며, 운영자 수동 상태 보정 유지.<br>
+대신택배·천일택배는 공식 조회 페이지 HTML의 상태를 adapter로 추출. 공식 서버 API가 확인되기 전까지 HTML 변경·접근 차단을 고려해 미확인 응답에서는 배송 상태를 유지하고 운영자 수동 상태 보정 유지.<br>
+경동택배는 조회 페이지 링크만 제공 중이며 서버 측 응답·상태 adapter는 미확정.<br>
 
 ```mermaid
 flowchart TD
@@ -44,20 +45,27 @@ flowchart TD
         DUP -- 예 --> U[변경 없이 기존 배송 정보 반환]
         DUP -- 아니오 --> T[배송 정보 저장 및 IN_TRANSIT 반영]
         T --> U[사용자 주문 화면에 배송중·배송 조회 정보 제공]
-        U -. 배송 추적 자동화 계획 .-> TRACKSYNC
+        U --> TRACKSYNC
     end
 
-    subgraph TRACKING_SYNC[배송 추적 자동화 계획 - 미구현]
+    subgraph TRACKING_SYNC[배송 상태 자동 조회]
         TRACKSYNC{추적 조회 실행}
-        TRACKSYNC -- 스케줄러 주기 조회 --> TRACKER[택배사 또는 중계 API adapter]
-        TRACKSYNC -- 사용자의 새로고침 요청 --> TRACKER
-        TRACKER --> TRACKRESULT{조회 결과 상태}
+        TRACKSYNC -- 매시간 스케줄러 --> TRACKER[지원 택배사 HTML adapter]
+        TRACKSYNC -- 고객 배송 조회 요청 --> TRACKER
+        TRACKER --> CARRIER{택배사}
+        CARRIER -- 대신택배 --> DAESIN[대신 공식 조회 페이지]
+        CARRIER -- 천일택배 --> CHUNIL[천일 공식 조회 페이지]
+        CARRIER -- 경동택배 미지원 --> UNAVAILABLE[수동 보정 가능]
+        DAESIN --> PARSE[배송 상태 추출]
+        CHUNIL --> PARSE
+        UNAVAILABLE --> TRACKREVIEW
+        PARSE --> TRACKRESULT{조회 결과 상태}
         TRACKRESULT -- 배송중 --> TRACKSAVE[최신 배송 상태 저장]
         TRACKRESULT -- 배송완료 --> DONE[DELIVERED 상태 저장]
-        TRACKRESULT -- 연동 불가/조회 실패 --> TRACKREVIEW[상태 유지 및 운영자 확인 대상]
+        TRACKRESULT -- 연동 불가/조회 실패 --> TRACKREVIEW[상태 유지 및 오류 로그]
         TRACKSAVE --> U
         DONE --> D1[주문 조회에 배송완료·송장·공식 조회 링크 제공]
-        TRACKREVIEW --> OPFIX[ORDER_WRITE 운영자가 배송완료 보정 가능]
+        U --> OPFIX[ORDER_WRITE 운영자가 배송완료 보정 가능]
         OPFIX --> DONE
     end
 
@@ -69,7 +77,7 @@ flowchart TD
         C4 --> C5{운영자 결정}
         C5 -- 승인 --> C6[주문 취소 및 확정 재고 복구]
         C5 -- 거절 --> C7[취소 요청 거절 이력 저장]
-        T --> C8[배송 중 주문 취소 불가]
+        T --> C8[배송 중·배송 완료 주문 취소 불가]
         C2 --> C9{입금 확인 여부}
         C6 --> C9
         C9 -- 미입금 --> C10[환불 불필요]
@@ -120,6 +128,7 @@ flowchart TD
 - `POST /api/orders`
 - `GET /api/orders?page=&size=`
 - `GET /api/orders/{orderId}`
+- `POST /api/orders/{orderId}/shipment/refresh`
 - `PUT /api/operation/orders/{orderId}/shipment/tracking`
 - `POST /api/operation/orders/{orderId}/shipment/delivered`
 - `POST /api/orders/{orderId}/cancellation`
@@ -179,9 +188,10 @@ application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br
 `ORDER_WRITE` 운영자가 발송 처리를 시작하고, 배송 담당자가 택배사와 송장번호를 등록하면 `IN_TRANSIT`으로 변경.<br>
 고객은 주문 목록·상세 조회에서 배송 상태와 송장 정보를 확인함.<br>
 대신택배·경동택배·천일택배의 공식 조회 URL과 송장번호를 사용자 주문 응답에서 제공.<br>
-확인한 조회 URL은 대신택배 `https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=`, 경동택배 `https://kdexp.com/newDeliverySearch.kd?barcode=`, 천일택배 `http://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=`.<br>
-대신택배·천일택배의 예시 송장 조회 결과에서 HTML 본문에 `배송완료` 상태 확인. 두 사이트의 공식 응답은 조회 페이지 HTML이며, 정식 서버 API 계약은 확인되지 않음. HTML 구조 변경 또는 자동화 접근 차단에 대비한 adapter와 실패 처리가 필요.<br>
+확인한 조회 URL은 대신택배 `https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=`, 경동택배 `https://kdexp.com/newDeliverySearch.kd?barcode=`, 천일택배 `https://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=`.<br>
+대신택배·천일택배는 공식 조회 페이지를 매시간 조회하고, 고객의 `POST /api/orders/{orderId}/shipment/refresh` 요청 시에도 즉시 확인.<br>
+두 택배사 조회 페이지 HTML에서 배송 상태를 추출하는 outbound adapter 적용. 정식 서버 API 계약은 확인되지 않음. HTML 구조 변경 또는 자동화 접근 차단 시 배송 상태를 유지하고 운영자 보정 가능.<br>
 경동택배 조회 링크는 제공하나 현재 실행 환경에서 조회 요청은 `403`을 반환해 상태 응답 확인 미완료. 실제 추적번호를 사용한 결과 확인 후 adapter 범위 확정.<br>
-배송 조회 스케줄러·사용자 즉시 조회는 택배사별 outbound adapter를 통해 같은 상태 갱신 유스케이스를 호출하는 목표 흐름. 완료 자동 반영 adapter는 미구현.<br>
+스케줄 주기는 `shipment.tracking.poll-cron`으로 바꾸며 기본은 매시간 정각(KST). 고객 요청 조회와 배치 조회는 같은 멱등 상태 갱신 유스케이스 사용.<br>
 `POST /api/operation/orders/{orderId}/shipment/delivered`는 `ORDER_WRITE` 운영자의 수동 배송완료 보정 endpoint.<br>
 운영 배송 API는 `ORDER_WRITE` 권한을 요구.<br>

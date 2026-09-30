@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.order
 
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
+import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -27,6 +28,21 @@ class OrderShipmentJpaEntityService(
 
     fun readyOrderIds(): List<UUID> = shipments.findReadyOrderIds()
 
+    fun trackingCandidates(): List<ShipmentTrackingCandidate> = shipments.findTrackingCandidates()
+
+    fun trackingCandidateForCustomer(orderId: UUID, customerId: UUID): ShipmentTrackingCandidate? =
+        shipments.findTrackingCandidateForCustomer(orderId, customerId)
+
+    @Transactional
+    fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean {
+        val current = shipments.findForUpdateByOrderId(candidate.orderId) ?: return false
+        if (current.status != IN_TRANSIT || current.carrierCode != candidate.carrierCode || current.trackingNumber != candidate.trackingNumber) {
+            return false
+        }
+        update(current, DELIVERED, current.carrierCode, current.trackingNumber, null)
+        return true
+    }
+
     @Transactional
     fun update(
         shipment: OrderShipmentEntity,
@@ -45,5 +61,7 @@ class OrderShipmentJpaEntityService(
 
     private companion object {
         const val READY_TO_SHIP = "READY_TO_SHIP"
+        const val IN_TRANSIT = "IN_TRANSIT"
+        const val DELIVERED = "DELIVERED"
     }
 }

@@ -13,6 +13,7 @@ class ShipmentPreparationJobTest : DescribeSpec({
     val shipments = mockk<TransactionalShipmentUseCase>(relaxed = true)
     val holidays = mockk<ShippingHolidayUseCase>()
     val job = ShipmentPreparationJob(shipments, holidays)
+    val trackingJob = ShipmentTrackingJob(shipments)
 
     beforeTest { clearMocks(shipments, holidays, answers = false, recordedCalls = true) }
 
@@ -33,5 +34,10 @@ class ShipmentPreparationJobTest : DescribeSpec({
     it("주말에는 공휴일 조회나 배송 준비를 실행하지 않는다") {
         job.prepareFor(LocalDate.of(2026, 12, 26))
         verify(exactly = 0) { shipments.prepareReadyOrders() }
+    }
+
+    it("배송 추적 작업은 배송중 주문 동기화를 호출한다") {
+        trackingJob.synchronizeInTransitOrders()
+        verify(exactly = 1) { shipments.synchronizeTrackingStatus() }
     }
 })

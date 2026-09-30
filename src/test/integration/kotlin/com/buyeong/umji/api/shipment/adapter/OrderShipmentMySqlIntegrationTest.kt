@@ -5,6 +5,8 @@ import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShi
 import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
 import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
+import com.buyeong.umji.api.shipment.application.model.CarrierTrackingStatus
+import com.buyeong.umji.api.shipment.application.port.out.ShipmentTrackingPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -12,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.sql.Timestamp
@@ -40,6 +43,9 @@ class OrderShipmentMySqlIntegrationTest {
 
     @Autowired
     private lateinit var payments: TransactionalPaymentUseCase
+
+    @MockitoBean
+    private lateinit var trackingSource: ShipmentTrackingPort
 
     @Test
     fun `flyway v14 creates shipment rows for existing orders`() {
@@ -127,6 +133,46 @@ class OrderShipmentMySqlIntegrationTest {
         val deliveredOrder = orders.detail(customerId, orderId)
         assertThat(deliveredOrder.shippingStatus).isEqualTo("DELIVERED")
         assertThat(deliveredOrder.trackingNumber).isEqualTo("1234567890")
+    }
+
+    @Test
+    fun `carrier tracking completion updates matching in transit orders idempotently`() {
+        val operatorId = createAccount("tracking-poll-operator")
+        val customerId = createAccount("tracking-poll-customer")
+        val skuId = createSku(createProduct(createCategory()))
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customerId, skuId, reservationKey)
+        createShipment(orderId)
+        shipments.prepareOrder(orderId)
+        shipments.registerTracking(orderId, "DAESIN", "1501602023302", operatorId)
+        org.mockito.Mockito.`when`(trackingSource.lookup("DAESIN", "1501602023302"))
+            .thenReturn(CarrierTrackingStatus.DELIVERED)
+
+        assertThat(shipments.synchronizeTrackingStatus()).isEqualTo(1)
+        assertThat(orders.detail(customerId, orderId).shippingStatus).isEqualTo("DELIVERED")
+        assertThat(shipments.synchronizeTrackingStatus()).isZero()
+    }
+
+    @Test
+    fun `customer refresh checks shipment ownership before carrier lookup`() {
+        val operatorId = createAccount("tracking-refresh-operator")
+        val customerId = createAccount("tracking-refresh-customer")
+        val otherCustomerId = createAccount("tracking-refresh-other-customer")
+        val skuId = createSku(createProduct(createCategory()))
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customerId, skuId, reservationKey)
+        createShipment(orderId)
+        shipments.prepareOrder(orderId)
+        shipments.registerTracking(orderId, "DAESIN", "1501602023302", operatorId)
+        org.mockito.Mockito.`when`(trackingSource.lookup("DAESIN", "1501602023302"))
+            .thenReturn(CarrierTrackingStatus.DELIVERED)
+
+        org.assertj.core.api.Assertions.assertThatThrownBy {
+            shipments.refreshForCustomer(orderId, otherCustomerId)
+        }.isInstanceOf(com.buyeong.umji.api.exception.ItemNotFoundException::class.java)
+        assertThat(shipments.refreshForCustomer(orderId, customerId).status).isEqualTo("DELIVERED")
     }
 
     @Test
