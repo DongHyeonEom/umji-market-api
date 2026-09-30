@@ -60,10 +60,23 @@ class OrderShipmentMySqlIntegrationTest {
         createShipment(orderId)
 
         assertThat(paymentStatus(orderId)).isEqualTo("WAITING_FOR_DEPOSIT")
+        val readyOrder = orders.detail(customerId, orderId)
+        assertThat(readyOrder.shippingStatus).isEqualTo("READY_TO_SHIP")
+        assertThat(readyOrder.carrierCode).isNull()
+        assertThat(readyOrder.trackingNumber).isNull()
 
         val dispatch = shipments.beginDispatch(orderId, operatorId)
         assertThat(dispatch.status).isEqualTo("PREPARING")
+        assertThat(dispatch.changed).isTrue()
         assertReservation(reservationKey, "RESERVED", 10, 1)
+        val preparingOrder = orders.detail(customerId, orderId)
+        assertThat(preparingOrder.shippingStatus).isEqualTo("PREPARING")
+        assertThat(preparingOrder.carrierCode).isNull()
+        assertThat(preparingOrder.trackingNumber).isNull()
+
+        val repeatedDispatch = shipments.beginDispatch(orderId, operatorId)
+        assertThat(repeatedDispatch.status).isEqualTo("PREPARING")
+        assertThat(repeatedDispatch.changed).isFalse()
 
         val tracking = shipments.registerTracking(orderId, " CJ ", " 1234567890 ", operatorId)
         assertThat(tracking.status).isEqualTo("IN_TRANSIT")
