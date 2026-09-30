@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.payment.adapter
 
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
+import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -26,6 +27,82 @@ class ManualPaymentMySqlIntegrationTest {
 
     @Autowired
     private lateinit var transactionalPayments: TransactionalPaymentUseCase
+
+    @Autowired
+    private lateinit var orders: OrderUseCase
+
+    @Test
+    fun `general payment issue is visible and can be resolved with operator history`() {
+        val operatorId = createAccount("payment-issue-resolution-operator")
+        val customerId = createAccount("payment-issue-resolution-customer")
+        val categoryId = createCategory()
+        val productId = createProduct(categoryId)
+        val skuId = createSku(productId)
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customerId, skuId, reservationKey)
+        createPayment(orderId)
+        createShipment(orderId)
+
+        val issue = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId)
+        assertThat(issue.paymentStatus).isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
+        assertThat(issue.orderStatus).isEqualTo("PENDING_PAYMENT")
+
+        val repeatedIssue = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId)
+        assertThat(repeatedIssue.changed).isFalse()
+
+        val issueQueue = transactionalPayments.queue("PAYMENT_ISSUE_REVIEW_REQUIRED", 0, 10)
+        assertThat(issueQueue.items.map { it.orderId }).contains(orderId)
+
+        val customerOrder = orders.detail(customerId, orderId)
+        assertThat(customerOrder.paymentStatus).isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
+        assertThat(customerOrder.status).isEqualTo("PENDING_PAYMENT")
+        assertThat(customerOrder.shippingStatus).isEqualTo("READY_TO_SHIP")
+
+        assertThat(transactionalPayments.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId).paymentStatus)
+            .isEqualTo("PARTIAL_PAYMENT_REVIEW_REQUIRED")
+        assertThat(transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId).paymentStatus)
+            .isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
+        assertThat(transactionalPayments.updateStatus(orderId, "WAITING_FOR_DEPOSIT", operatorId).paymentStatus)
+            .isEqualTo("WAITING_FOR_DEPOSIT")
+        assertThat(transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId).paymentStatus)
+            .isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
+        val resolved = transactionalPayments.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId)
+        assertThat(resolved.paymentStatus).isEqualTo("PAYMENT_CONFIRMED")
+        assertThat(resolved.orderStatus).isEqualTo("PAID")
+
+        val actorInternalId = jdbc.queryForObject(
+            "SELECT id FROM account WHERE public_id = ?",
+            Long::class.java,
+            operatorId.toBytes(),
+        )
+        val history = jdbc.queryForList(
+            """SELECT history.from_status, history.to_status, history.processed_by
+                FROM order_payment_status_history history
+                JOIN order_payment payment ON payment.id = history.payment_id
+                JOIN purchase_order purchase_order ON purchase_order.id = payment.order_id
+                WHERE purchase_order.public_id = ? ORDER BY history.id""",
+            orderId.toBytes(),
+        )
+        val transitions = listOf(
+            null to "WAITING_FOR_DEPOSIT",
+            "WAITING_FOR_DEPOSIT" to "PAYMENT_ISSUE_REVIEW_REQUIRED",
+            "PAYMENT_ISSUE_REVIEW_REQUIRED" to "PARTIAL_PAYMENT_REVIEW_REQUIRED",
+            "PARTIAL_PAYMENT_REVIEW_REQUIRED" to "PAYMENT_ISSUE_REVIEW_REQUIRED",
+            "PAYMENT_ISSUE_REVIEW_REQUIRED" to "WAITING_FOR_DEPOSIT",
+            "WAITING_FOR_DEPOSIT" to "PAYMENT_ISSUE_REVIEW_REQUIRED",
+            "PAYMENT_ISSUE_REVIEW_REQUIRED" to "PAYMENT_CONFIRMED",
+        )
+        assertThat(history).hasSize(transitions.size)
+        history.forEachIndexed { index, row ->
+            assertThat(row["from_status"]).isEqualTo(transitions[index].first)
+            assertThat(row["to_status"]).isEqualTo(transitions[index].second)
+            if (index > 0) assertThat(row["processed_by"]).isEqualTo(actorInternalId)
+        }
+        assertThat(jdbc.queryForObject("SELECT status FROM stock_reservation WHERE reservation_key = ?", String::class.java, reservationKey.toBytes()))
+            .isEqualTo("RESERVED")
+        assertShipmentStatus(orderId, "READY_TO_SHIP")
+    }
 
     @Test
     fun `flyway v15 allows payment issue status and operator change is persisted in history`() {
