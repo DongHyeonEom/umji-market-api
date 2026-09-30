@@ -17,7 +17,10 @@ import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAudit
 import com.buyeong.umji.api.operation.catalog.adapter.`in`.web.OperationCatalogController
 import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
+import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.OperationShipmentController
+import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
 import com.buyeong.umji.api.payment.application.model.PaymentQueuePage
+import com.buyeong.umji.api.shipment.application.model.ShipmentChange
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -37,12 +40,13 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.request.RequestPostProcessor
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
 @WebMvcTest(
-    controllers = [OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class, OperationInventoryController::class, OperationPaymentController::class],
+    controllers = [OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class, OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
 @AutoConfigureMockMvc
@@ -64,6 +68,9 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var payments: TransactionalPaymentUseCase
+
+    @MockitoBean
+    private lateinit var shipments: TransactionalShipmentUseCase
 
     @MockitoBean
     private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
@@ -178,6 +185,58 @@ class OperationEndpointAuthorizationTest(
         Mockito.`when`(payments.queue(null, 0, 20)).thenReturn(PaymentQueuePage(emptyList(), 0, 20, 0, 0))
         mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_WRITE")))
             .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `shipment dispatch rejects non order write permission`() {
+        mockMvc.perform(
+            post("/api/operation/orders/${UUID.randomUUID()}/shipment/dispatch")
+                .with(authorities("INVENTORY_WRITE")),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `shipment dispatch accepts order write permission`() {
+        val orderId = UUID.randomUUID()
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(shipments.beginDispatch(orderId, operatorId)).thenReturn(
+            ShipmentChange(orderId, "PREPARING", null, null, true),
+        )
+
+        mockMvc.perform(post("/api/operation/orders/$orderId/shipment/dispatch").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `shipment tracking rejects non order write permission`() {
+        mockMvc.perform(
+            put(
+                "/api/operation/orders/${UUID.randomUUID()}/shipment/tracking",
+            )
+                .with(authorities("PRODUCT_WRITE"))
+                .contentType("application/json")
+                .content("""{"carrierCode":"CJ","trackingNumber":"1234567890"}"""),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `shipment tracking accepts order write permission`() {
+        val orderId = UUID.randomUUID()
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(shipments.registerTracking(orderId, "CJ", "1234567890", operatorId)).thenReturn(
+            ShipmentChange(orderId, "IN_TRANSIT", "CJ", "1234567890", true),
+        )
+
+        mockMvc.perform(
+            put(
+                "/api/operation/orders/$orderId/shipment/tracking",
+            )
+                .with(authorities("ORDER_WRITE"))
+                .contentType("application/json")
+                .content("""{"carrierCode":"CJ","trackingNumber":"1234567890"}"""),
+        ).andExpect(status().isOk)
     }
 
     private fun authorities(vararg permissions: String): RequestPostProcessor =
