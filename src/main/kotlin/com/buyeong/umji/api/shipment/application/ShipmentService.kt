@@ -36,13 +36,7 @@ class ShipmentService(
         return shipments.update(current, DELIVERED, current.carrierCode, current.trackingNumber, operatorId).toChange(true)
     }
 
-    override fun refreshForCustomer(orderId: UUID, customerId: UUID): ShipmentChange {
-        val candidate = shipments.trackingCandidateForCustomer(orderId, customerId)
-            ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
-        return synchronize(candidate)
-    }
-
-    override fun synchronizeTrackingStatus(): Int = shipments.trackingCandidates().count { candidate ->
+    override fun refreshForCustomer(customerId: UUID): Int = shipments.trackingCandidatesForCustomer(customerId).count { candidate ->
         synchronize(candidate).changed
     }
 

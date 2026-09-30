@@ -18,10 +18,7 @@ class JpaShipmentAdapter(
     override fun lock(orderId: UUID): ShipmentRecord? = shipments.findForUpdate(orderId)?.toRecord()
     override fun readyOrderIds(): List<UUID> = shipments.readyOrderIds()
 
-    override fun trackingCandidates(): List<ShipmentTrackingCandidate> = shipments.trackingCandidates()
-
-    override fun trackingCandidateForCustomer(orderId: UUID, customerId: UUID): ShipmentTrackingCandidate? =
-        shipments.trackingCandidateForCustomer(orderId, customerId)
+    override fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> = shipments.trackingCandidatesForCustomer(customerId)
 
     override fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean = shipments.markDeliveredIfCurrent(candidate)
 

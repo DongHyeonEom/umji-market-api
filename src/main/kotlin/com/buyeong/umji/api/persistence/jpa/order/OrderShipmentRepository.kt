@@ -17,20 +17,10 @@ interface OrderShipmentRepository : JpaRepository<OrderShipmentEntity, Long> {
             "purchaseOrder.publicId, shipment.status, shipment.carrierCode, shipment.trackingNumber) " +
             "from OrderShipmentEntity shipment join shipment.order purchaseOrder " +
             "where shipment.status = 'IN_TRANSIT' and shipment.carrierCode is not null and shipment.trackingNumber is not null " +
+            "and purchaseOrder.account.publicId = :customerId " +
             "order by shipment.updatedAt",
     )
-    fun findTrackingCandidates(): List<ShipmentTrackingCandidate>
-
-    @Query(
-        "select new com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate(" +
-            "purchaseOrder.publicId, shipment.status, shipment.carrierCode, shipment.trackingNumber) " +
-            "from OrderShipmentEntity shipment join shipment.order purchaseOrder join purchaseOrder.account account " +
-            "where purchaseOrder.publicId = :orderId and account.publicId = :customerId",
-    )
-    fun findTrackingCandidateForCustomer(
-        @Param("orderId") orderId: UUID,
-        @Param("customerId") customerId: UUID,
-    ): ShipmentTrackingCandidate?
+    fun findTrackingCandidatesForCustomer(@Param("customerId") customerId: UUID): List<ShipmentTrackingCandidate>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select shipment from OrderShipmentEntity shipment join fetch shipment.order purchaseOrder where purchaseOrder.publicId = :orderId")

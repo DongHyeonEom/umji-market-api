@@ -15,9 +15,7 @@ class TransactionalShipmentUseCase(private val shipments: ShipmentUseCase) {
     @Transactional
     fun markDelivered(orderId: UUID, operatorId: UUID): ShipmentChange = shipments.markDelivered(orderId, operatorId)
 
-    fun refreshForCustomer(orderId: UUID, customerId: UUID): ShipmentChange = shipments.refreshForCustomer(orderId, customerId)
-
-    fun synchronizeTrackingStatus(): Int = shipments.synchronizeTrackingStatus()
+    fun refreshForCustomer(customerId: UUID): Int = shipments.refreshForCustomer(customerId)
 
     @Transactional
     fun prepareReadyOrders(): Int = shipments.prepareReadyOrders()

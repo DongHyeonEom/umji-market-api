@@ -28,10 +28,7 @@ class OrderShipmentJpaEntityService(
 
     fun readyOrderIds(): List<UUID> = shipments.findReadyOrderIds()
 
-    fun trackingCandidates(): List<ShipmentTrackingCandidate> = shipments.findTrackingCandidates()
-
-    fun trackingCandidateForCustomer(orderId: UUID, customerId: UUID): ShipmentTrackingCandidate? =
-        shipments.findTrackingCandidateForCustomer(orderId, customerId)
+    fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> = shipments.findTrackingCandidatesForCustomer(customerId)
 
     @Transactional
     fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean {

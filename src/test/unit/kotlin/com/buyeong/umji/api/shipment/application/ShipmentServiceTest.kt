@@ -33,39 +33,35 @@ class ShipmentServiceTest : DescribeSpec({
         }
     }
 
-    it("고객이 배송 조회를 요청하고 배송완료 결과를 받으면 주문 상태를 DELIVERED로 전환한다") {
+    it("고객 주문 목록의 배송완료 송장은 DELIVERED로 전환한다") {
         val customerId = UUID.randomUUID()
         val candidate = ShipmentTrackingCandidate(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
-        every { store.trackingCandidateForCustomer(orderId, customerId) } returns candidate
+        every { store.trackingCandidatesForCustomer(customerId) } returns listOf(candidate)
         every { tracking.lookup("DAESIN", candidate.trackingNumber) } returns CarrierTrackingStatus.DELIVERED
         every { store.markDeliveredIfCurrent(candidate) } returns true
 
-        val result = service.refreshForCustomer(orderId, customerId)
+        val result = service.refreshForCustomer(customerId)
 
-        result.status shouldBe "DELIVERED"
-        result.changed shouldBe true
+        result shouldBe 1
+        verifyOrder {
+            store.trackingCandidatesForCustomer(customerId)
+            tracking.lookup("DAESIN", candidate.trackingNumber)
+            store.markDeliveredIfCurrent(candidate)
+        }
     }
 
-    it("매시간 배송 조회에서 배송완료 결과만 상태를 전환한다") {
-        val candidate = ShipmentTrackingCandidate(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
-        every { store.trackingCandidates() } returns listOf(candidate)
-        every { tracking.lookup("DAESIN", candidate.trackingNumber) } returns CarrierTrackingStatus.DELIVERED
-        every { store.markDeliveredIfCurrent(candidate) } returns true
-
-        service.synchronizeTrackingStatus() shouldBe 1
-    }
-
-    it("택배사 응답이 없으면 배송중 상태를 유지한다") {
+    it("택배사 응답이 없으면 배송중 상태를 유지하고 다른 주문도 계속 조회한다") {
         val customerId = UUID.randomUUID()
         val candidate = ShipmentTrackingCandidate(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
-        val current = ShipmentRecord(orderId, "IN_TRANSIT", "DAESIN", candidate.trackingNumber, emptyList())
-        every { store.trackingCandidateForCustomer(orderId, customerId) } returns candidate
+        val otherOrderId = UUID.randomUUID()
+        val otherCandidate = ShipmentTrackingCandidate(otherOrderId, "IN_TRANSIT", "CHUNIL", "72601701177")
+        every { store.trackingCandidatesForCustomer(customerId) } returns listOf(candidate, otherCandidate)
         every { tracking.lookup("DAESIN", candidate.trackingNumber) } returns CarrierTrackingStatus.UNAVAILABLE
-        every { store.lock(orderId) } returns current
+        every { tracking.lookup("CHUNIL", otherCandidate.trackingNumber) } returns CarrierTrackingStatus.DELIVERED
+        every { store.markDeliveredIfCurrent(otherCandidate) } returns true
 
-        val result = service.refreshForCustomer(orderId, customerId)
+        val result = service.refreshForCustomer(customerId)
 
-        result.status shouldBe "IN_TRANSIT"
-        result.changed shouldBe false
+        result shouldBe 1
     }
 })
