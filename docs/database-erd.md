@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V16가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V17가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -305,7 +305,7 @@ erDiagram
     ORDER_SHIPMENT {
         BIGINT id PK "배송 정보 내부 ID"
         BIGINT order_id FK,UK "주문 ID, 주문당 하나"
-        VARCHAR status "배송 상태 코드"
+        VARCHAR status "READY_TO_SHIP, PREPARING, IN_TRANSIT, DELIVERED"
         VARCHAR carrier_code "택배사 코드, nullable"
         VARCHAR tracking_number "송장번호, nullable"
         BIGINT processed_by FK "최근 처리 운영자 ID, nullable"
@@ -411,6 +411,7 @@ erDiagram
 | V14 | `order_shipment`, 기존 주문 배송 준비 상태 초기화 |
 | V15 | 결제 이슈 검토 상태 제약 추가 |
 | V16 | 공휴일 일정·취소 이력 테이블, 환불 상태 제약 추가 |
+| V17 | 배송 상태 `DELIVERED` 허용 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

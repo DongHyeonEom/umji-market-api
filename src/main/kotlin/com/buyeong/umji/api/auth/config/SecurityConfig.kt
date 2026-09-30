@@ -65,6 +65,7 @@ class SecurityConfig {
                         .requestMatchers("/api/operation/order-cancellations/**").hasAuthority("ORDER_WRITE")
                         .requestMatchers("/api/operation/shipping-holidays/**").hasAuthority("ORDER_WRITE")
                         .requestMatchers(HttpMethod.PUT, "/api/operation/orders/*/shipment/tracking").hasAuthority("ORDER_WRITE")
+                        .requestMatchers(HttpMethod.POST, "/api/operation/orders/*/shipment/delivered").hasAuthority("ORDER_WRITE")
                         .requestMatchers("/api/operation/**").denyAll()
                         .anyRequest().authenticated()
                 }
