@@ -71,6 +71,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("org.json:json:20250517")
+    implementation("org.jsoup:jsoup:1.23.2")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
 
     implementation("org.springframework.boot:spring-boot-starter-actuator")

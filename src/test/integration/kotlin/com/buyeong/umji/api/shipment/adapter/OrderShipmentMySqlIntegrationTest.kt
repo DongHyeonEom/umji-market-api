@@ -3,8 +3,11 @@ package com.buyeong.umji.api.shipment.adapter
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
 import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
 import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
+import com.buyeong.umji.api.order.application.port.`in`.CustomerOrderListingUseCase
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
 import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
+import com.buyeong.umji.api.shipment.application.model.CarrierTrackingStatus
+import com.buyeong.umji.api.shipment.application.port.out.ShipmentTrackingPort
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -12,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.sql.Timestamp
@@ -33,6 +37,9 @@ class OrderShipmentMySqlIntegrationTest {
     private lateinit var orders: OrderUseCase
 
     @Autowired
+    private lateinit var customerOrderListing: CustomerOrderListingUseCase
+
+    @Autowired
     private lateinit var cancellations: TransactionalOrderCancellationUseCase
 
     @Autowired
@@ -40,6 +47,9 @@ class OrderShipmentMySqlIntegrationTest {
 
     @Autowired
     private lateinit var payments: TransactionalPaymentUseCase
+
+    @MockitoBean
+    private lateinit var trackingSource: ShipmentTrackingPort
 
     @Test
     fun `flyway v14 creates shipment rows for existing orders`() {
@@ -127,6 +137,28 @@ class OrderShipmentMySqlIntegrationTest {
         val deliveredOrder = orders.detail(customerId, orderId)
         assertThat(deliveredOrder.shippingStatus).isEqualTo("DELIVERED")
         assertThat(deliveredOrder.trackingNumber).isEqualTo("1234567890")
+    }
+
+    @Test
+    fun `customer order list refreshes only its in transit shipment before returning`() {
+        val operatorId = createAccount("tracking-list-operator")
+        val customerId = createAccount("tracking-list-customer")
+        val otherCustomerId = createAccount("tracking-list-other-customer")
+        val skuId = createSku(createProduct(createCategory()))
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customerId, skuId, reservationKey)
+        createShipment(orderId)
+        shipments.prepareOrder(orderId)
+        shipments.registerTracking(orderId, "DAESIN", "1501602023302", operatorId)
+        org.mockito.Mockito.`when`(trackingSource.lookup("DAESIN", "1501602023302"))
+            .thenReturn(CarrierTrackingStatus.DELIVERED)
+
+        assertThat(customerOrderListing.list(otherCustomerId, 0, 20).items).isEmpty()
+        val page = customerOrderListing.list(customerId, 0, 20)
+
+        assertThat(page.items).hasSize(1)
+        assertThat(page.items.single().shippingStatus).isEqualTo("DELIVERED")
     }
 
     @Test

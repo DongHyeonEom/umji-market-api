@@ -12,3 +12,7 @@ interface OrderUseCase {
     fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage
     fun detail(accountPublicId: UUID, orderId: UUID): OrderView
 }
+
+interface CustomerOrderListingUseCase {
+    fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage
+}

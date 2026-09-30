@@ -13,7 +13,6 @@ class ShipmentPreparationJobTest : DescribeSpec({
     val shipments = mockk<TransactionalShipmentUseCase>(relaxed = true)
     val holidays = mockk<ShippingHolidayUseCase>()
     val job = ShipmentPreparationJob(shipments, holidays)
-
     beforeTest { clearMocks(shipments, holidays, answers = false, recordedCalls = true) }
 
     it("등록 공휴일에는 배송 준비와 재고 확정을 실행하지 않는다") {

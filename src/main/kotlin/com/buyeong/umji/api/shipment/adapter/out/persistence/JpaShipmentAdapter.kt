@@ -4,6 +4,7 @@ import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
 import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
 import com.buyeong.umji.api.shipment.application.model.ShipmentRecord
+import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentInventoryPort
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentStorePort
 import org.springframework.stereotype.Component
@@ -16,6 +17,10 @@ class JpaShipmentAdapter(
 ) : ShipmentStorePort, ShipmentInventoryPort {
     override fun lock(orderId: UUID): ShipmentRecord? = shipments.findForUpdate(orderId)?.toRecord()
     override fun readyOrderIds(): List<UUID> = shipments.readyOrderIds()
+
+    override fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> = shipments.trackingCandidatesForCustomer(customerId)
+
+    override fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean = shipments.markDeliveredIfCurrent(candidate)
 
     override fun update(
         record: ShipmentRecord,

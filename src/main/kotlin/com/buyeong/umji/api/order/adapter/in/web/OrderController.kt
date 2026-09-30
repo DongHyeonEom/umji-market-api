@@ -5,6 +5,7 @@ import com.buyeong.umji.api.order.application.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
+import com.buyeong.umji.api.order.application.port.`in`.CustomerOrderListingUseCase
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
 import com.buyeong.umji.api.order.model.BankAccountInstructionsResponse
 import com.buyeong.umji.api.order.model.CreateOrderRequest
@@ -32,6 +33,7 @@ import java.util.UUID
 class OrderController(
     private val currentAccounts: CurrentAccountPort,
     private val orders: OrderUseCase,
+    private val customerOrders: CustomerOrderListingUseCase,
 ) {
     @GetMapping("/checkout-options")
     fun checkoutOptions(): OrderCheckoutOptionsResponse = orders.checkoutOptions(currentAccounts.activeAccountPublicId()).toResponse()
@@ -49,7 +51,10 @@ class OrderController(
     fun list(
         @RequestParam(defaultValue = "0") @Min(0) page: Int,
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
-    ): OrderPageResponse = orders.list(currentAccounts.activeAccountPublicId(), page, size).toResponse()
+    ): OrderPageResponse {
+        val customerId = currentAccounts.activeAccountPublicId()
+        return customerOrders.list(customerId, page, size).toResponse()
+    }
 
     @GetMapping("/{orderId}")
     fun detail(@PathVariable orderId: UUID): OrderResponse = orders.detail(currentAccounts.activeAccountPublicId(), orderId).toResponse()
