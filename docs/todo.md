@@ -78,7 +78,7 @@
 
 - [x] Flyway V12, 기존 주문 backfill, 운영자 입금 queue의 MySQL 통합 검증
 - [x] Flyway V14, 기존 주문 배송 상태 backfill과 송장 정보 persistence MySQL 통합 검증
-- [ ] Flyway V15, 결제 이슈 상태 제약과 운영자 변경 이력 MySQL 통합 검증
+- [x] Flyway V15, 결제 이슈 상태 제약과 운영자 변경 이력 MySQL 통합 검증
 - [ ] Flyway V13, 계정 기본값·주문 선택·입금 계좌 snapshot의 MySQL 통합 검증
 - [ ] 계정 기본값·토글 선택·기본값 변경 확인·주문 계좌 snapshot 자동화 검증
 - [ ] 전액 입금 시 주문 결제 상태만 갱신하고 부분 입금 시 재고·배송 상태를 유지하는 자동화 검증

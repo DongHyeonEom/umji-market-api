@@ -2,9 +2,11 @@ package com.buyeong.umji.api.payment.adapter
 
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.dao.DataAccessException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
@@ -24,6 +26,50 @@ class ManualPaymentMySqlIntegrationTest {
 
     @Autowired
     private lateinit var transactionalPayments: TransactionalPaymentUseCase
+
+    @Test
+    fun `flyway v15 allows payment issue status and operator change is persisted in history`() {
+        val migrationCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '15' AND success = TRUE",
+            Int::class.java,
+        )
+        assertThat(migrationCount).isEqualTo(1)
+
+        val actor = createAccount("payment-issue-operator")
+        val customer = createAccount("payment-issue-customer")
+        val categoryId = createCategory()
+        val productId = createProduct(categoryId)
+        val skuId = createSku(productId)
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customer, skuId, reservationKey)
+        createPayment(orderId)
+
+        val result = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", actor)
+
+        assertThat(result.orderStatus).isEqualTo("PENDING_PAYMENT")
+        assertThat(result.paymentStatus).isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
+        val history = jdbc.queryForMap(
+            """SELECT history.from_status, history.to_status, history.processed_by
+                FROM order_payment_status_history history
+                JOIN order_payment payment ON payment.id = history.payment_id
+                JOIN purchase_order purchase_order ON purchase_order.id = payment.order_id
+                WHERE purchase_order.public_id = ? AND history.to_status = 'PAYMENT_ISSUE_REVIEW_REQUIRED'""",
+            orderId.toBytes(),
+        )
+        assertThat(history["from_status"]).isEqualTo("WAITING_FOR_DEPOSIT")
+        assertThat(history["to_status"]).isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
+        assertThat(history["processed_by"]).isEqualTo(
+            jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, actor.toBytes()),
+        )
+
+        assertThatThrownBy {
+            jdbc.update(
+                "UPDATE order_payment SET status = 'UNSUPPORTED_PAYMENT_STATUS' WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+                orderId.toBytes(),
+            )
+        }.isInstanceOf(DataAccessException::class.java)
+    }
 
     @Test
     fun `flyway initializes payment states and mysql supports the operator payment queue`() {
@@ -47,7 +93,7 @@ class ManualPaymentMySqlIntegrationTest {
     }
 
     @Test
-    fun `partial payment stays pending and full confirmation settles order and inventory atomically`() {
+    fun `partial and full confirmation update payment while inventory reservation stays for shipment`() {
         val actor = createAccount("payment-operator")
         val customer = createAccount("payment-customer")
         val categoryId = createCategory()
@@ -69,7 +115,9 @@ class ManualPaymentMySqlIntegrationTest {
         assertThat(confirmed.orderStatus).isEqualTo("PAID")
         assertThat(confirmed.paymentStatus).isEqualTo("PAYMENT_CONFIRMED")
         assertThat(jdbc.queryForObject("SELECT status FROM purchase_order WHERE public_id = ?", String::class.java, orderId.toBytes())).isEqualTo("PAID")
-        assertThat(jdbc.queryForObject("SELECT status FROM stock_reservation WHERE reservation_key = ?", String::class.java, reservationKey.toBytes())).isEqualTo("CONFIRMED")
+        assertThat(jdbc.queryForObject("SELECT status FROM stock_reservation WHERE reservation_key = ?", String::class.java, reservationKey.toBytes())).isEqualTo("RESERVED")
+        assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes())).isEqualTo(1)
+        assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes())).isEqualTo(10)
         assertThat(jdbc.queryForObject("SELECT on_hand_quantity - reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes())).isEqualTo(9)
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_payment_status_history WHERE payment_id = (SELECT id FROM order_payment WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?))", Int::class.java, orderId.toBytes())).isEqualTo(3)
     }
