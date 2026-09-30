@@ -8,7 +8,6 @@ import com.buyeong.umji.api.exception.ErrorMessageService
 import com.buyeong.umji.api.inventory.adapter.`in`.web.OperationInventoryController
 import com.buyeong.umji.api.inventory.application.model.StockView
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
-import com.buyeong.umji.api.operation.payment.adapter.`in`.web.OperationPaymentController
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationAccountController
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.operation.audit.adapter.`in`.web.OperationAuditController
@@ -16,9 +15,14 @@ import com.buyeong.umji.api.operation.audit.application.model.OperationAuditPage
 import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
 import com.buyeong.umji.api.operation.catalog.adapter.`in`.web.OperationCatalogController
 import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
+import com.buyeong.umji.api.operation.payment.adapter.`in`.web.OperationPaymentController
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
 import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.OperationShipmentController
 import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
+import com.buyeong.umji.api.order.adapter.`in`.web.OperationShippingHolidayController
+import com.buyeong.umji.api.order.adapter.`in`.web.OrderCancellationController
+import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
+import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
 import com.buyeong.umji.api.payment.application.model.PaymentQueuePage
 import com.buyeong.umji.api.shipment.application.model.ShipmentChange
 import org.junit.jupiter.api.Test
@@ -46,7 +50,11 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
 @WebMvcTest(
-    controllers = [OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class, OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class],
+    controllers = [
+        OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class,
+        OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
+        OrderCancellationController::class, OperationShippingHolidayController::class,
+    ],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
 @AutoConfigureMockMvc
@@ -71,6 +79,12 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var shipments: TransactionalShipmentUseCase
+
+    @MockitoBean
+    private lateinit var cancellations: TransactionalOrderCancellationUseCase
+
+    @MockitoBean
+    private lateinit var holidays: ShippingHolidayUseCase
 
     @MockitoBean
     private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
@@ -188,27 +202,6 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
-    fun `shipment dispatch rejects non order write permission`() {
-        mockMvc.perform(
-            post("/api/operation/orders/${UUID.randomUUID()}/shipment/dispatch")
-                .with(authorities("INVENTORY_WRITE")),
-        ).andExpect(status().isForbidden)
-    }
-
-    @Test
-    fun `shipment dispatch accepts order write permission`() {
-        val orderId = UUID.randomUUID()
-        val operatorId = UUID.randomUUID()
-        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
-        Mockito.`when`(shipments.beginDispatch(orderId, operatorId)).thenReturn(
-            ShipmentChange(orderId, "PREPARING", null, null, true),
-        )
-
-        mockMvc.perform(post("/api/operation/orders/$orderId/shipment/dispatch").with(authorities("ORDER_WRITE")))
-            .andExpect(status().isOk)
-    }
-
-    @Test
     fun `shipment tracking rejects non order write permission`() {
         mockMvc.perform(
             put(
@@ -237,6 +230,25 @@ class OperationEndpointAuthorizationTest(
                 .contentType("application/json")
                 .content("""{"carrierCode":"CJ","trackingNumber":"1234567890"}"""),
         ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `cancellation queue requires order write permission`() {
+        mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("PRODUCT_WRITE")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `holiday calendar requires order write permission`() {
+        mockMvc.perform(get("/api/operation/shipping-holidays").with(authorities("INVENTORY_WRITE")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `holiday calendar accepts order write permission`() {
+        Mockito.`when`(holidays.list()).thenReturn(emptyList())
+        mockMvc.perform(get("/api/operation/shipping-holidays").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
     }
 
     private fun authorities(vararg permissions: String): RequestPostProcessor =

@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V15가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V16가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -291,7 +291,7 @@ erDiagram
         BIGINT id PK "Payment ID"
         BIGINT order_id FK,UK "One payment per order"
         VARCHAR payment_method "Extensible payment method code"
-        VARCHAR status "Payment status"
+        VARCHAR status "입금 및 환불 상태 코드"
         DATETIME updated_at "Last status change"
     }
     ORDER_PAYMENT_STATUS_HISTORY {
@@ -311,6 +311,21 @@ erDiagram
         BIGINT processed_by FK "최근 처리 운영자 ID, nullable"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
+    }
+    ORDER_CANCELLATION_HISTORY {
+        BIGINT id PK "취소 요청 및 처리 이력 ID"
+        BIGINT order_id FK "대상 주문 ID"
+        BIGINT requested_by FK "요청 계정 ID"
+        VARCHAR request_status "CANCELLED, PENDING, APPROVED, REJECTED"
+        BIGINT processed_by FK "처리 운영자 ID, nullable"
+        DATETIME requested_at "요청 시각"
+        DATETIME processed_at "처리 시각, nullable"
+    }
+    SHIPPING_HOLIDAY {
+        DATE holiday_date PK "배송 휴무일"
+        VARCHAR description "휴무 설명, nullable"
+        BIGINT created_by FK "등록 운영자 ID, nullable"
+        DATETIME created_at "생성 시각"
     }
     OPERATION_AUDIT_LOG {
         BIGINT id PK "운영 감사 로그 ID"
@@ -354,6 +369,10 @@ erDiagram
     ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
     PURCHASE_ORDER ||--o| ORDER_SHIPMENT : shipment
     ACCOUNT ||--o{ ORDER_SHIPMENT : processes
+    PURCHASE_ORDER ||--o{ ORDER_CANCELLATION_HISTORY : records
+    ACCOUNT ||--o{ ORDER_CANCELLATION_HISTORY : requests
+    ACCOUNT ||--o{ ORDER_CANCELLATION_HISTORY : processes
+    ACCOUNT ||--o{ SHIPPING_HOLIDAY : registers
 ```
 
 ## 관계 및 유의사항
@@ -391,7 +410,8 @@ erDiagram
 | V13 | 계정 세금계산서 발행 기본값, 주문별 발행 여부와 입금 계좌 스냅샷 |
 | V14 | `order_shipment`, 기존 주문 배송 준비 상태 초기화 |
 | V15 | 결제 이슈 검토 상태 제약 추가 |
+| V16 | 공휴일 일정·취소 이력 테이블, 환불 상태 제약 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
-취소/환불·SMS 본인 확인·파일·알림 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>
+부분 취소·SMS 본인 확인·파일·알림 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>

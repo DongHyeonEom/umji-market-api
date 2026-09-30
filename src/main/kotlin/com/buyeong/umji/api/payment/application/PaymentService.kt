@@ -20,9 +20,17 @@ class PaymentService(
     override fun updateStatus(orderId: UUID, status: String, operatorId: UUID): PaymentStatusChange {
         require(status in PAYMENT_STATUSES) { "유효하지 않은 결제 상태입니다." }
         val current = payments.lock(orderId) ?: throw ItemNotFoundException("결제를 찾을 수 없습니다.")
-        require(current.paymentStatus != PAYMENT_CONFIRMED || status == PAYMENT_CONFIRMED) {
-            "입금 확인 완료 상태는 되돌릴 수 없습니다."
+        require(status !in setOf(REFUND_PENDING, REFUNDED) || current.orderStatus == ORDER_CANCELLED) {
+            "취소된 주문만 환불 상태로 변경할 수 있습니다."
         }
+        require(
+            when (current.paymentStatus) {
+                PAYMENT_CONFIRMED -> status in setOf(PAYMENT_CONFIRMED, REFUND_PENDING)
+                REFUND_PENDING -> status in setOf(REFUND_PENDING, REFUNDED)
+                REFUNDED -> status == REFUNDED
+                else -> status !in setOf(REFUND_PENDING, REFUNDED)
+            },
+        ) { "허용되지 않는 결제·환불 상태 변경입니다." }
         if (current.paymentStatus == status) {
             return PaymentStatusChange(current.orderId, current.orderStatus, current.paymentStatus, false)
         }
@@ -32,11 +40,16 @@ class PaymentService(
 
     private companion object {
         const val PAYMENT_CONFIRMED = "PAYMENT_CONFIRMED"
+        const val REFUND_PENDING = "REFUND_PENDING"
+        const val REFUNDED = "REFUNDED"
+        const val ORDER_CANCELLED = "CANCELLED"
         val PAYMENT_STATUSES = setOf(
             "WAITING_FOR_DEPOSIT",
             "PARTIAL_PAYMENT_REVIEW_REQUIRED",
             "PAYMENT_ISSUE_REVIEW_REQUIRED",
             PAYMENT_CONFIRMED,
+            REFUND_PENDING,
+            REFUNDED,
         )
     }
 }

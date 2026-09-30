@@ -9,6 +9,7 @@ import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationHistoryRepository
 import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderNumberSequenceEntity
@@ -30,6 +31,7 @@ class JpaOrderStoreAdapter(
     private val orders: OrderJpaEntityService,
     private val payments: OrderPaymentJpaEntityService,
     private val shipments: OrderShipmentJpaEntityService,
+    private val cancellationHistory: OrderCancellationHistoryRepository,
 ) : OrderStorePort {
     override fun defaultTaxInvoiceRequested(accountId: UUID): Boolean =
         account(accountId).defaultTaxInvoiceRequested
@@ -124,6 +126,7 @@ class JpaOrderStoreAdapter(
         shippingStatus = shipment.status,
         carrierCode = shipment.carrierCode,
         trackingNumber = shipment.trackingNumber,
+        cancellationRequestStatus = cancellationHistory.findLatestStatus(requireNotNull(publicId), PageRequest.of(0, 1)).firstOrNull(),
     )
 
     private companion object {

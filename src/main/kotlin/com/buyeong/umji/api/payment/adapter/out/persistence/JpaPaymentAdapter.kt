@@ -15,7 +15,7 @@ import java.util.UUID
 @Component
 class JpaPaymentAdapter(private val payments: OrderPaymentJpaEntityService) : PaymentStorePort {
     override fun queue(status: String?, page: Int, size: Int): PaymentQueuePage {
-        val statuses = status?.let(::setOf) ?: setOf(WAITING_FOR_DEPOSIT, PARTIAL_PAYMENT_REVIEW_REQUIRED, PAYMENT_ISSUE_REVIEW_REQUIRED)
+        val statuses = status?.let(::setOf) ?: setOf(WAITING_FOR_DEPOSIT, PARTIAL_PAYMENT_REVIEW_REQUIRED, PAYMENT_ISSUE_REVIEW_REQUIRED, REFUND_PENDING)
         val result = payments.findAllForOperation(statuses, PageRequest.of(page, size, Sort.by("updatedAt").ascending()))
         return PaymentQueuePage(
             result.content.map { it.toQueueItem() },
@@ -60,6 +60,7 @@ class JpaPaymentAdapter(private val payments: OrderPaymentJpaEntityService) : Pa
         const val WAITING_FOR_DEPOSIT = "WAITING_FOR_DEPOSIT"
         const val PARTIAL_PAYMENT_REVIEW_REQUIRED = "PARTIAL_PAYMENT_REVIEW_REQUIRED"
         const val PAYMENT_ISSUE_REVIEW_REQUIRED = "PAYMENT_ISSUE_REVIEW_REQUIRED"
+        const val REFUND_PENDING = "REFUND_PENDING"
         const val PAYMENT_CONFIRMED = "PAYMENT_CONFIRMED"
     }
 }

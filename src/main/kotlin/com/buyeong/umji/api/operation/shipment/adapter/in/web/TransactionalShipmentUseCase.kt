@@ -9,9 +9,12 @@ import java.util.UUID
 @Service
 class TransactionalShipmentUseCase(private val shipments: ShipmentUseCase) {
     @Transactional
-    fun beginDispatch(orderId: UUID, operatorId: UUID): ShipmentChange = shipments.beginDispatch(orderId, operatorId)
-
-    @Transactional
     fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChange =
         shipments.registerTracking(orderId, carrierCode, trackingNumber, operatorId)
+
+    @Transactional
+    fun prepareReadyOrders(): Int = shipments.prepareReadyOrders()
+
+    @Transactional
+    fun prepareOrder(orderId: UUID): ShipmentChange = shipments.prepareOrder(orderId)
 }

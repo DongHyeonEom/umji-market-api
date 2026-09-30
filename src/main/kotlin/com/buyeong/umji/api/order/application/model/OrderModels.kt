@@ -67,6 +67,7 @@ data class OrderView(
     val shippingStatus: String = "READY_TO_SHIP",
     val carrierCode: String? = null,
     val trackingNumber: String? = null,
+    val cancellationRequestStatus: String? = null,
 )
 
 data class OrderItemView(

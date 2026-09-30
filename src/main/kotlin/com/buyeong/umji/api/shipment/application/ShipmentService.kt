@@ -11,13 +11,6 @@ class ShipmentService(
     private val shipments: ShipmentStorePort,
     private val inventory: ShipmentInventoryPort,
 ) : ShipmentUseCase {
-    override fun beginDispatch(orderId: UUID, operatorId: UUID): ShipmentChange {
-        val current = shipments.lock(orderId) ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
-        if (current.status == PREPARING) return current.toChange(false)
-        require(current.status == READY_TO_SHIP) { "발송 준비 상태의 주문만 발송 처리를 시작할 수 있습니다." }
-        return shipments.update(current, PREPARING, null, null, operatorId).toChange(true)
-    }
-
     override fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChange {
         val carrier = carrierCode.trim()
         val tracking = trackingNumber.trim()
@@ -28,11 +21,24 @@ class ShipmentService(
             return current.toChange(false)
         }
         require(current.status == PREPARING || current.status == IN_TRANSIT) { "발송 처리 중인 주문만 송장 정보를 등록할 수 있습니다." }
-        if (current.status != IN_TRANSIT) {
-            current.reservationKeys.forEach { reservationKey -> inventory.confirm(reservationKey) }
-        }
         val changed = shipments.update(current, IN_TRANSIT, carrier, tracking, operatorId)
         return changed.toChange(true)
+    }
+
+    override fun prepareReadyOrders(): Int {
+        var prepared = 0
+        shipments.readyOrderIds().forEach { orderId ->
+            if (prepareOrder(orderId).changed) prepared++
+        }
+        return prepared
+    }
+
+    override fun prepareOrder(orderId: UUID): ShipmentChange {
+        val current = shipments.lock(orderId) ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
+        if (current.status == PREPARING) return current.toChange(false)
+        require(current.status == READY_TO_SHIP) { "배송 준비 가능한 주문 상태가 아닙니다." }
+        current.reservationKeys.forEach(inventory::confirm)
+        return shipments.update(current, PREPARING, null, null, null).toChange(true)
     }
 
     private fun com.buyeong.umji.api.shipment.application.model.ShipmentRecord.toChange(changed: Boolean) =

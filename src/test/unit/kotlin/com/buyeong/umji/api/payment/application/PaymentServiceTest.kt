@@ -52,8 +52,14 @@ class PaymentServiceTest : DescribeSpec({
         it("지원하지 않는 결제 상태를 거절한다") {
             clearMocks(payments)
             shouldThrow<IllegalArgumentException> {
-                service.updateStatus(orderId, "REFUNDED", operatorId)
+                service.updateStatus(orderId, "NOT_A_STATUS", operatorId)
             }
+        }
+
+        it("취소되지 않은 주문은 환불 상태로 변경할 수 없다") {
+            clearMocks(payments)
+            every { payments.lock(orderId) } returns PaymentRecord(orderId, "PAID", "REFUND_PENDING")
+            shouldThrow<IllegalArgumentException> { service.updateStatus(orderId, "REFUNDED", operatorId) }
         }
     }
 })

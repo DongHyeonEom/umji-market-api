@@ -3,7 +3,7 @@
 ## 구현 상태
 
 수동 계좌이체 결제 상태와 운영자 확인 API를 구현함.<br>
-PG 연동과 환불은 아직 구현되지 않았음.<br>
+PG 연동은 아직 구현되지 않았음.<br>
 입금 만료는 두지 않으며 자동 만료·예약 해제 작업은 없음.<br>
 
 ## 알고리즘 흐름
@@ -27,19 +27,25 @@ stateDiagram-v2
     PAYMENT_ISSUE_REVIEW_REQUIRED --> PARTIAL_PAYMENT_REVIEW_REQUIRED: 운영자가 부분 입금으로 변경
     PAYMENT_ISSUE_REVIEW_REQUIRED --> PAYMENT_CONFIRMED: 운영자가 전액 입금으로 변경
     PAYMENT_CONFIRMED --> PAYMENT_CONFIRMED: 중복 확인 요청은 변경 없음
+    PAYMENT_CONFIRMED --> REFUND_PENDING: 취소 주문의 관리 대상 환불
+    PARTIAL_PAYMENT_REVIEW_REQUIRED --> REFUND_PENDING: 취소 주문의 관리 대상 환불
+    PAYMENT_ISSUE_REVIEW_REQUIRED --> REFUND_PENDING: 취소 주문의 관리 대상 환불
+    REFUND_PENDING --> REFUNDED: 운영자가 계좌 환불 완료 처리
+    REFUND_PENDING --> REFUND_PENDING: 중복 요청은 변경 없음
+    REFUNDED --> REFUNDED: 중복 요청은 변경 없음
 ```
 
 `WAITING_FOR_DEPOSIT`, `PARTIAL_PAYMENT_REVIEW_REQUIRED`, `PAYMENT_ISSUE_REVIEW_REQUIRED`는 입금 확인 축의 상태.<br>
 입금 확인 상태 변경은 배송 상태를 자동 변경하지 않는 것이 확정된 정책.<br>
 `PAYMENT_CONFIRMED` 전이는 주문을 `PAID`로 변경.<br>
-재고 예약 확정과 배송 상태 변경은 송장 등록에서 별도로 처리.<br>
-입금 확인 완료 이후 되돌리는 전이는 거부.<br>
+재고 예약은 공휴일 제외 평일 15:00 배송 준비 전환 배치에서 확정.<br>
+입금 확인 완료 이후 일반 입금 상태로 되돌리는 전이는 거부. 취소된 주문은 `REFUND_PENDING`으로 변경하고 운영자가 실제 계좌 환불 후 `REFUNDED`로 처리.<br>
 `PAYMENT_ISSUE_REVIEW_REQUIRED`는 세부 내용 없이 표시하는 공통 이슈 상태.<br>
 부분 입금 외 발생 내용은 현재 기록하거나 사용자에게 표시하지 않음.<br>
 이슈 상태에서 운영자는 시스템 밖에서 계좌·주문 확인과 후속 처리를 진행.<br>
 처리 후 `WAITING_FOR_DEPOSIT`, `PARTIAL_PAYMENT_REVIEW_REQUIRED`, `PAYMENT_CONFIRMED` 중 확인 결과에 맞는 상태로 변경.<br>
 미해결 이슈는 기존 상태를 유지하며, 상태 변경 처리자·시각은 기존 결제 이력에 저장.<br>
-입금 만료·실패·취소 전이는 제공하지 않음.<br>
+입금 만료·실패 전이는 제공하지 않음. 주문 취소와 환불 상태는 주문 정책 흐름을 따름.<br>
 
 ## 초기 결제 방식
 
@@ -58,14 +64,16 @@ stateDiagram-v2
 
 | 결제 상태 | 의미 | 주문·재고 처리 |
 | --- | --- | --- |
-| `WAITING_FOR_DEPOSIT` | 운영자의 입금 확인 전 | 주문 `PENDING_PAYMENT`, 송장 등록 전까지 재고 예약 유지 |
+| `WAITING_FOR_DEPOSIT` | 운영자의 입금 확인 전 | 주문 `PENDING_PAYMENT`, 배송 준비 전까지 재고 예약 유지 |
 | `PARTIAL_PAYMENT_REVIEW_REQUIRED` | 운영자가 부분 입금으로 표시 | 주문 `PENDING_PAYMENT`, 배송과 재고 상태 유지, 운영자가 전화로 후속 처리 |
 | `PAYMENT_ISSUE_REVIEW_REQUIRED` | 운영자가 세부 내용 없이 일반 이슈로 표시 | 주문 결제 상태와 배송·재고 상태 유지 |
 | `PAYMENT_CONFIRMED` | 운영자가 전액 입금 확인 완료로 표시 | 주문 `PAID`, 배송 상태는 유지 |
+| `REFUND_PENDING` | 취소 주문의 계좌 환불 대기 | 실제 환불은 운영자가 수행 |
+| `REFUNDED` | 운영자가 계좌 환불 완료로 표시 | 환불 완료 기록 |
 
 상태 변경은 처리자·시각과 함께 별도 이력으로 남기고 운영 변경 감사 로그도 기록.<br>
 초기 범위에서는 실제 입금액 세부내역이나 입금자명을 입력·저장하지 않음.<br>
-부분·초과 입금 상세 조정 및 환불은 운영자가 별도 연락으로 처리.<br>
+부분·초과 입금 상세 조정은 운영자가 별도 연락으로 처리.<br>
 
 주문 생성 시 재고를 예약하는 현재 동작을 유지하며, 미입금 예약 자동 만료·해제는 초기 범위에서 수행하지 않음.<br>
 입금 계좌는 환경변수로 세금계산서 미발행 계좌와 발행 계좌를 각각 관리.<br>
@@ -75,13 +83,13 @@ stateDiagram-v2
 기존 주문은 migration에서 세금계산서 미발행으로 초기화되며, 과거 안내 계좌 스냅샷은 없음.<br>
 
 주문 결제 상태 변경은 입금 확인 트랜잭션에서 수행.<br>
-재고 예약 확정은 배송 송장 등록 트랜잭션에서 수행.<br>
+재고 예약 확정은 배송 준비 전환 트랜잭션에서 수행.<br>
 PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.<br>
 
 ## Endpoint
 
-- `GET /api/operation/payments?status=&page=&size=`: 입금 대기·부분 입금·일반 이슈 대상 목록.<br>
-  상태 생략 시 세 상태를 반환.<br>
+- `GET /api/operation/payments?status=&page=&size=`: 입금 대기·부분 입금·일반 이슈·환불 대기 대상 목록.<br>
+  상태 생략 시 미처리 입금 상태와 환불 대기 상태를 반환.<br>
 - `PATCH /api/operation/payments/{orderId}/status`: 운영자 입금 상태 변경.<br>
 - `GET /api/orders/checkout-options`: 계정 기본 발행 여부와 두 계좌 안내 정보 반환.<br>
 - `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정.<br>

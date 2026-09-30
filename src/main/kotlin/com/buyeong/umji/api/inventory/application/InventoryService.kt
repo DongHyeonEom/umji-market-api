@@ -66,6 +66,18 @@ class InventoryService(private val store: InventoryStorePort) {
         return updated.toView()
     }
 
+    fun restoreConfirmed(reservationKey: UUID): StockView {
+        val reservation = reservation(reservationKey)
+        if (reservation.status == RESTORED) return store.stock(reservation.sku.id)?.toView() ?: error("재고를 찾을 수 없습니다.")
+        require(reservation.status == CONFIRMED) { "확정된 재고만 복구할 수 있습니다." }
+        val stock = store.lockStock(reservation.sku.id)
+        val updated = stock.copy(onHand = stock.onHand + reservation.quantity)
+        store.saveStock(updated)
+        store.saveReservation(reservation.copy(status = RESTORED, releasedAt = Instant.now()))
+        store.saveMovement(reservation.sku, RESTOCK, reservation.quantity, "ORDER_CANCELLATION", reservationKey, null)
+        return updated.toView()
+    }
+
     private fun sku(id: UUID) = store.sku(id) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
     private fun reservation(key: UUID) = store.reservation(key) ?: throw ItemNotFoundException("재고 예약을 찾을 수 없습니다.")
     private fun StockState.toView() = StockView(sku.id, sku.code, onHand, reserved, available, safety)
@@ -78,5 +90,7 @@ class InventoryService(private val store: InventoryStorePort) {
         const val RESERVED = "RESERVED"
         const val RELEASED = "RELEASED"
         const val CONFIRMED = "CONFIRMED"
+        const val RESTORED = "RESTORED"
+        const val RESTOCK = "RESTOCK"
     }
 }

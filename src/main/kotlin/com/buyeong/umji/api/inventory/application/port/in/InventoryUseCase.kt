@@ -12,4 +12,5 @@ interface InventoryUseCase {
     fun reserve(skuId: UUID, quantity: Int, reservationKey: UUID, expiresAt: Instant?): StockView
     fun release(reservationKey: UUID): StockView
     fun confirm(reservationKey: UUID): StockView
+    fun restoreConfirmed(reservationKey: UUID): StockView
 }

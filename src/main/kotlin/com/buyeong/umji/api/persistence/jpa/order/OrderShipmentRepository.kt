@@ -8,6 +8,9 @@ import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface OrderShipmentRepository : JpaRepository<OrderShipmentEntity, Long> {
+    @Query("select shipment.order.publicId from OrderShipmentEntity shipment where shipment.status = 'READY_TO_SHIP' order by shipment.createdAt")
+    fun findReadyOrderIds(): List<UUID>
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select shipment from OrderShipmentEntity shipment join fetch shipment.order purchaseOrder where purchaseOrder.publicId = :orderId")
     fun findForUpdateByOrderId(@Param("orderId") orderId: UUID): OrderShipmentEntity?

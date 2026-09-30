@@ -73,6 +73,7 @@ class OrderController(
         shippingStatus,
         carrierCode,
         trackingNumber,
+        cancellationRequestStatus,
     )
 
     private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(

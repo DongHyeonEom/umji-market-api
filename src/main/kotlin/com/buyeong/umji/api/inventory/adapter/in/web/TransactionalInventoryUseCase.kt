@@ -26,4 +26,6 @@ class TransactionalInventoryUseCase(private val inventory: InventoryService) : I
     @Transactional override fun release(reservationKey: UUID): StockView = inventory.release(reservationKey)
 
     @Transactional override fun confirm(reservationKey: UUID): StockView = inventory.confirm(reservationKey)
+
+    @Transactional override fun restoreConfirmed(reservationKey: UUID): StockView = inventory.restoreConfirmed(reservationKey)
 }

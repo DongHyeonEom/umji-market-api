@@ -25,18 +25,20 @@ class OrderShipmentJpaEntityService(
     @Transactional
     fun findForUpdate(orderId: UUID): OrderShipmentEntity? = shipments.findForUpdateByOrderId(orderId)
 
+    fun readyOrderIds(): List<UUID> = shipments.findReadyOrderIds()
+
     @Transactional
     fun update(
         shipment: OrderShipmentEntity,
         status: String,
         carrierCode: String?,
         trackingNumber: String?,
-        operatorId: UUID,
+        operatorId: UUID?,
     ): OrderShipmentEntity {
         shipment.status = status
         shipment.carrierCode = carrierCode
         shipment.trackingNumber = trackingNumber
-        shipment.processedBy = accounts.findByPublicId(operatorId) ?: error("처리자 계정을 찾을 수 없습니다.")
+        shipment.processedBy = operatorId?.let { accounts.findByPublicId(it) ?: error("처리자 계정을 찾을 수 없습니다.") }
         shipment.updatedAt = Instant.now()
         return shipments.saveAndFlush(shipment)
     }

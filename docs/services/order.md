@@ -3,10 +3,12 @@
 ## 주문·입금·배송 정책 흐름
 
 입금 확인과 물건 발송은 독립된 운영 작업.<br>
-입금 상태 변경만으로 발송 상태가 바뀌지 않으며, 발송 처리도 입금 확인을 선행 조건으로 요구하지 않음.<br>
+입금 상태 변경만으로 발송 상태가 바뀌지 않으며, 배송 준비 전환도 입금 확인을 선행 조건으로 요구하지 않음.<br>
 아래 흐름은 확정된 정책과 이번 구현 범위.<br>
 입금 확정은 결제 상태와 주문 결제 상태만 변경하며, 배송 상태는 별도 관리.<br>
-재고는 주문에서 예약하고 송장 등록 시 확정.<br>
+재고는 주문 시 예약하고, 운영자가 등록한 휴무일과 주말을 제외한 평일 15:00(KST)에 배송 준비 상태로 전환하며 확정.<br>
+`READY_TO_SHIP` 상태에서 사용자는 주문 전체를 즉시 취소 가능. `PREPARING` 이후 송장 등록 전에는 취소 요청을 생성하고 운영자가 배송 담당자 확인 후 승인 또는 거절.<br>
+배송 준비 후 취소 승인 시 확정된 재고를 복구. 송장 등록으로 배송 중 상태가 된 주문은 취소 불가.<br>
 
 ```mermaid
 flowchart TD
@@ -27,17 +29,40 @@ flowchart TD
     end
 
     subgraph SHIPPING[배송 운영]
-        M --> N[배송 상태 READY_TO_SHIP]
-        N --> O[운영자가 발송 처리 시작]
-        O --> P[배송 상태 PREPARING]
+        M --> N[배송 상태 READY_TO_SHIP 및 재고 예약]
+        N --> CUTOFF{주말·등록 휴무일이 아닌 평일 15시 도달}
+        CUTOFF -- 아니오 --> N
+        CUTOFF -- 예 --> CONFIRM[예약 재고 확정 및 PREPARING 전환]
+        CONFIRM --> P[배송 담당자가 출고 준비]
         P --> Q[배송 담당자가 택배사·송장번호 입력]
         Q --> R{주문 및 배송 정보 유효}
         R -- 아니오 --> ERR[요청 거부]
         R -- 예 --> DUP{이미 IN_TRANSIT이며 같은 송장 정보}
         DUP -- 예 --> U[변경 없이 기존 배송 정보 반환]
-        DUP -- 아니오 --> S[재고 예약 확정 (이미 확정된 예약은 변경 없음)]
-        S --> T[배송 정보 저장 및 IN_TRANSIT 반영]
+        DUP -- 아니오 --> T[배송 정보 저장 및 IN_TRANSIT 반영]
         T --> U[사용자 주문 화면에 배송중·배송 조회 정보 제공]
+    end
+
+    subgraph CANCELLATION[취소 및 환불]
+        N --> C1{사용자 취소}
+        C1 -- 평일 15시 전 또는 배송 준비 전 --> C2[전체 주문 즉시 취소 및 예약 재고 해제]
+        C1 -- PREPARING, 송장 등록 전 --> C3[취소 요청 생성]
+        C3 --> C4[ORDER_WRITE 운영자가 배송 담당자 확인]
+        C4 --> C5{운영자 결정}
+        C5 -- 승인 --> C6[주문 취소 및 확정 재고 복구]
+        C5 -- 거절 --> C7[취소 요청 거절 이력 저장]
+        T --> C8[배송 중 주문 취소 불가]
+        C2 --> C9{입금 확인 여부}
+        C6 --> C9
+        C9 -- 미입금 --> C10[환불 불필요]
+        C9 -- 입금 일부 또는 전액 확인 --> C11[결제 상태 REFUND_PENDING]
+        C11 --> C12[관리자가 실제 계좌 환불]
+        C12 --> C13[관리자가 REFUNDED 상태로 변경]
+    end
+
+    subgraph HOLIDAYS[공휴일 관리]
+        H1[ORDER_WRITE 운영자 공휴일 등록/삭제] --> H2[(공휴일 날짜 저장)]
+        H2 --> CUTOFF
     end
 
     subgraph PAYMENT[입금 확인]
@@ -62,8 +87,8 @@ flowchart TD
 ```
 
 입금 및 배송 상태는 각 운영 작업에서 별도로 갱신.<br>
-송장 등록 트랜잭션에서 재고 예약을 먼저 확정한 뒤 배송 정보와 `IN_TRANSIT`을 저장.<br>
-이미 확정된 재고 예약은 멱등 처리하며, 같은 송장 정보의 중복 등록은 상태 변경 없이 기존 배송 정보를 반환.<br>
+주말과 운영자 등록 휴무일을 제외한 평일 15:00(KST)에 `READY_TO_SHIP` 주문을 `PREPARING`으로 변경하고 재고 예약을 확정.<br>
+송장 등록 시 배송 정보와 `IN_TRANSIT`을 저장. 같은 송장 정보의 중복 등록은 상태 변경 없이 기존 배송 정보를 반환.<br>
 배송 처리에는 입금 확인을 요구하지 않음.<br>
 배송 완료와 일반 이슈의 세부 분류는 추가 설계 필요.<br>
 입금 만료는 두지 않으며, 미입금 주문도 운영자가 별도 입금 상태로 관리.<br>
@@ -74,8 +99,13 @@ flowchart TD
 - `POST /api/orders`
 - `GET /api/orders?page=&size=`
 - `GET /api/orders/{orderId}`
-- `POST /api/operation/orders/{orderId}/shipment/dispatch`
 - `PUT /api/operation/orders/{orderId}/shipment/tracking`
+- `POST /api/orders/{orderId}/cancellation`
+- `GET /api/operation/order-cancellations?page=&size=`
+- `PATCH /api/operation/order-cancellations/{orderId}`
+- `GET /api/operation/shipping-holidays`
+- `POST /api/operation/shipping-holidays`
+- `DELETE /api/operation/shipping-holidays/{date}`
 
 ## 주문 조회 흐름
 
@@ -103,8 +133,10 @@ flowchart TD
 주문 생성 요청은 `taxInvoiceRequested` 값을 받아 주문에 저장하며, `updateDefaultTaxInvoicePreference=true`가 함께 전달된 경우 선택값을 계정 기본값에도 반영.<br>
 주문 상세에는 주문 당시 세금계산서 발행 선택과 안내 계좌 정보가 포함됨.<br>
 
-주문 조회는 토큰 subject의 계정으로 제한함.<br>
-주문 취소·환불 API 및 상태 전이는 아직 구현되지 않았음.<br>
+주문 조회는 토큰 subject의 계정으로 제한하며 최신 취소 요청 상태도 포함함.<br>
+주문 취소는 전체 주문 단위. `READY_TO_SHIP`에서 주문자는 즉시 취소 가능하고 예약 재고 해제. `PREPARING` 이후 송장 등록 전에는 취소 요청 상태(`PENDING`)를 주문 조회에 제공하며, 운영자 승인(`APPROVED`) 시 주문 취소·확정 재고 복구, 거절(`REJECTED`) 시 주문·재고 유지.<br>
+운영자 공휴일 등록은 평일 15:00 배송 준비·재고 확정 배치에서 제외할 날짜를 관리.<br>
+입금이 확인된 취소 주문의 실제 계좌 환불은 운영자가 수행하고 시스템에서 환불 상태를 직접 갱신.<br>
 application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br>
 
 ## 입금 확인 운영 흐름
@@ -114,7 +146,7 @@ application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br
 운영자가 주문을 실제 계좌 입금 내역과 대조한 뒤 수동으로 입금 확인 처리.<br>
 부분 입금으로 표시하면 사용자 주문 조회에 `PARTIAL_PAYMENT_REVIEW_REQUIRED` 상태를 보여주고, 운영자가 전화로 후속 처리.<br>
 전액 확인 완료 시 주문 상태를 `PAID`로 변경.<br>
-재고 예약은 배송 정보 등록 시 확정.<br>
+재고 예약은 평일 15:00 배송 준비 전환 시 확정.<br>
 계좌 내역 자동 조회·자동 매칭은 현재 범위에 포함하지 않음.<br>
 
 운영자 입금 목록·상태 변경 API와 상태 이력은 구현됨.<br>
