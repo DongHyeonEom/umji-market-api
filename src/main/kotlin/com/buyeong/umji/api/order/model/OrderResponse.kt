@@ -20,6 +20,7 @@ data class OrderResponse(
     val shippingStatus: String,
     val carrierCode: String?,
     val trackingNumber: String?,
+    val trackingUrl: String?,
     val cancellationRequestStatus: String?,
 )
 

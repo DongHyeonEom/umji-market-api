@@ -7,6 +7,7 @@ import com.buyeong.umji.api.shipment.model.toResponse
 import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -28,6 +29,13 @@ class OperationShipmentController(
         orderId,
         request.carrierCode,
         request.trackingNumber,
+        currentAccounts.activeAccountPublicId(),
+    ).toResponse()
+
+    @PostMapping("/delivered")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
+    fun markDelivered(@PathVariable orderId: UUID): ShipmentResponse = shipments.markDelivered(
+        orderId,
         currentAccounts.activeAccountPublicId(),
     ).toResponse()
 }

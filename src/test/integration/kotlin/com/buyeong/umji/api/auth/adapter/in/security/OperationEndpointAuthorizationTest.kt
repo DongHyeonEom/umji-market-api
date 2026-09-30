@@ -233,6 +233,29 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
+    fun `shipment delivery completion requires order write permission`() {
+        mockMvc.perform(
+            post("/api/operation/orders/${UUID.randomUUID()}/shipment/delivered")
+                .with(authorities("PRODUCT_WRITE")),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `shipment delivery completion accepts order write permission`() {
+        val orderId = UUID.randomUUID()
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(shipments.markDelivered(orderId, operatorId)).thenReturn(
+            ShipmentChange(orderId, "DELIVERED", "DAESIN", "1501602023302", true),
+        )
+
+        mockMvc.perform(
+            post("/api/operation/orders/$orderId/shipment/delivered")
+                .with(authorities("ORDER_WRITE")),
+        ).andExpect(status().isOk)
+    }
+
+    @Test
     fun `cancellation queue requires order write permission`() {
         mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("PRODUCT_WRITE")))
             .andExpect(status().isForbidden)

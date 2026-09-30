@@ -73,6 +73,7 @@ class OrderController(
         shippingStatus,
         carrierCode,
         trackingNumber,
+        CarrierTrackingLink.create(carrierCode, trackingNumber),
         cancellationRequestStatus,
     )
 

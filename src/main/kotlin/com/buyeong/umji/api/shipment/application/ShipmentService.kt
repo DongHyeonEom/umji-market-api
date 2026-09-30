@@ -25,6 +25,13 @@ class ShipmentService(
         return changed.toChange(true)
     }
 
+    override fun markDelivered(orderId: UUID, operatorId: UUID): ShipmentChange {
+        val current = shipments.lock(orderId) ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
+        if (current.status == DELIVERED) return current.toChange(false)
+        require(current.status == IN_TRANSIT) { "배송 중인 주문만 배송 완료 처리할 수 있습니다." }
+        return shipments.update(current, DELIVERED, current.carrierCode, current.trackingNumber, operatorId).toChange(true)
+    }
+
     override fun prepareReadyOrders(): Int {
         var prepared = 0
         shipments.readyOrderIds().forEach { orderId ->
@@ -48,6 +55,7 @@ class ShipmentService(
         const val READY_TO_SHIP = "READY_TO_SHIP"
         const val PREPARING = "PREPARING"
         const val IN_TRANSIT = "IN_TRANSIT"
+        const val DELIVERED = "DELIVERED"
         const val MAX_CARRIER_LENGTH = 80
         const val MAX_TRACKING_LENGTH = 100
     }

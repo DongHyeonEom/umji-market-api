@@ -9,6 +9,9 @@
 재고는 주문 시 예약하고, 운영자가 등록한 휴무일과 주말을 제외한 평일 15:00(KST)에 배송 준비 상태로 전환하며 확정.<br>
 `READY_TO_SHIP` 상태에서 사용자는 주문 전체를 즉시 취소 가능. `PREPARING` 이후 송장 등록 전에는 취소 요청을 생성하고 운영자가 배송 담당자 확인 후 승인 또는 거절.<br>
 배송 준비 후 취소 승인 시 확정된 재고를 복구. 송장 등록으로 배송 중 상태가 된 주문은 취소 불가.<br>
+배송 추적은 주문 API 안의 확장 가능한 택배사 연동 경계를 통해 처리. 배송 중 주문은 스케줄러가 주기 조회하고, 사용자 요청 조회도 지원 가능한 구조로 설계.<br>
+조회 결과는 동일한 멱등 상태 갱신 흐름으로 저장. 배송 완료 후에도 택배사 공식 조회 화면과 송장번호 제공.<br>
+택배사 서버 API를 사용할 수 없는 경우 중계 API adapter를 연결하며, 운영자 수동 상태 보정 유지.<br>
 
 ```mermaid
 flowchart TD
@@ -41,6 +44,21 @@ flowchart TD
         DUP -- 예 --> U[변경 없이 기존 배송 정보 반환]
         DUP -- 아니오 --> T[배송 정보 저장 및 IN_TRANSIT 반영]
         T --> U[사용자 주문 화면에 배송중·배송 조회 정보 제공]
+        U -. 배송 추적 자동화 계획 .-> TRACKSYNC
+    end
+
+    subgraph TRACKING_SYNC[배송 추적 자동화 계획 - 미구현]
+        TRACKSYNC{추적 조회 실행}
+        TRACKSYNC -- 스케줄러 주기 조회 --> TRACKER[택배사 또는 중계 API adapter]
+        TRACKSYNC -- 사용자의 새로고침 요청 --> TRACKER
+        TRACKER --> TRACKRESULT{조회 결과 상태}
+        TRACKRESULT -- 배송중 --> TRACKSAVE[최신 배송 상태 저장]
+        TRACKRESULT -- 배송완료 --> DONE[DELIVERED 상태 저장]
+        TRACKRESULT -- 연동 불가/조회 실패 --> TRACKREVIEW[상태 유지 및 운영자 확인 대상]
+        TRACKSAVE --> U
+        DONE --> D1[주문 조회에 배송완료·송장·공식 조회 링크 제공]
+        TRACKREVIEW --> OPFIX[ORDER_WRITE 운영자가 배송완료 보정 가능]
+        OPFIX --> DONE
     end
 
     subgraph CANCELLATION[취소 및 환불]
@@ -90,7 +108,10 @@ flowchart TD
 주말과 운영자 등록 휴무일을 제외한 평일 15:00(KST)에 `READY_TO_SHIP` 주문을 `PREPARING`으로 변경하고 재고 예약을 확정.<br>
 송장 등록 시 배송 정보와 `IN_TRANSIT`을 저장. 같은 송장 정보의 중복 등록은 상태 변경 없이 기존 배송 정보를 반환.<br>
 배송 처리에는 입금 확인을 요구하지 않음.<br>
-배송 완료와 일반 이슈의 세부 분류는 추가 설계 필요.<br>
+대신택배·경동택배·천일택배를 우선 지원 대상으로 하며, 택배사 코드별 공식 배송 조회 화면을 주문 응답의 WebView 링크로 제공.<br>
+배송 중 상태는 스케줄러의 주기 조회를 기본으로 하고 사용자 요청에 따른 즉시 조회도 허용. 두 경로는 동일한 상태 갱신 규칙을 사용.<br>
+택배사 API 또는 중계 API의 조회 결과가 배송완료이면 `DELIVERED`로 전환. 중복 완료 결과는 멱등 처리하고, 연동 실패는 기존 상태를 유지.<br>
+`ORDER_WRITE` 운영자는 배송 완료 상태를 수동 보정 가능. 배송 상태 전이 이력 및 외부 연동 실패 재처리 정책은 별도 범위.<br>
 입금 만료는 두지 않으며, 미입금 주문도 운영자가 별도 입금 상태로 관리.<br>
 주문 생성·결제 확인의 현재 구현과 target 변경사항은 각각 아래 동작 설명과 [payment.md](payment.md)를 기준으로 함.<br>
 
@@ -100,6 +121,7 @@ flowchart TD
 - `GET /api/orders?page=&size=`
 - `GET /api/orders/{orderId}`
 - `PUT /api/operation/orders/{orderId}/shipment/tracking`
+- `POST /api/operation/orders/{orderId}/shipment/delivered`
 - `POST /api/orders/{orderId}/cancellation`
 - `GET /api/operation/order-cancellations?page=&size=`
 - `PATCH /api/operation/order-cancellations/{orderId}`
@@ -153,10 +175,13 @@ application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br
 
 ## 배송 및 송장 조회 흐름
 
-배송 상태는 `READY_TO_SHIP`, `PREPARING`, `IN_TRANSIT`으로 결제 상태와 분리해 관리함.<br>
+배송 상태는 `READY_TO_SHIP`, `PREPARING`, `IN_TRANSIT`, `DELIVERED`로 결제 상태와 분리해 관리함.<br>
 `ORDER_WRITE` 운영자가 발송 처리를 시작하고, 배송 담당자가 택배사와 송장번호를 등록하면 `IN_TRANSIT`으로 변경.<br>
 고객은 주문 목록·상세 조회에서 배송 상태와 송장 정보를 확인함.<br>
-배송사 추적 API 직접 연동 여부는 확정되지 않았으며, 우선 택배사의 배송 조회 화면을 WebView로 여는 방식으로 계획함.<br>
-
-배송 완료 처리 및 택배사 배송 현황 WebView 연결은 아직 구현되지 않았음.<br>
+대신택배·경동택배·천일택배의 공식 조회 URL과 송장번호를 사용자 주문 응답에서 제공.<br>
+확인한 조회 URL은 대신택배 `https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=`, 경동택배 `https://kdexp.com/newDeliverySearch.kd?barcode=`, 천일택배 `http://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=`.<br>
+대신택배·천일택배의 예시 송장 조회 결과에서 HTML 본문에 `배송완료` 상태 확인. 두 사이트의 공식 응답은 조회 페이지 HTML이며, 정식 서버 API 계약은 확인되지 않음. HTML 구조 변경 또는 자동화 접근 차단에 대비한 adapter와 실패 처리가 필요.<br>
+경동택배 조회 링크는 제공하나 현재 실행 환경에서 조회 요청은 `403`을 반환해 상태 응답 확인 미완료. 실제 추적번호를 사용한 결과 확인 후 adapter 범위 확정.<br>
+배송 조회 스케줄러·사용자 즉시 조회는 택배사별 outbound adapter를 통해 같은 상태 갱신 유스케이스를 호출하는 목표 흐름. 완료 자동 반영 adapter는 미구현.<br>
+`POST /api/operation/orders/{orderId}/shipment/delivered`는 `ORDER_WRITE` 운영자의 수동 배송완료 보정 endpoint.<br>
 운영 배송 API는 `ORDER_WRITE` 권한을 요구.<br>

@@ -118,6 +118,15 @@ class OrderShipmentMySqlIntegrationTest {
         assertThat(order.shippingStatus).isEqualTo("IN_TRANSIT")
         assertThat(order.carrierCode).isEqualTo("CJ")
         assertThat(order.trackingNumber).isEqualTo("1234567890")
+
+        val delivered = shipments.markDelivered(orderId, operatorId)
+        assertThat(delivered.status).isEqualTo("DELIVERED")
+        assertThat(delivered.changed).isTrue()
+        val repeatedDelivery = shipments.markDelivered(orderId, operatorId)
+        assertThat(repeatedDelivery.changed).isFalse()
+        val deliveredOrder = orders.detail(customerId, orderId)
+        assertThat(deliveredOrder.shippingStatus).isEqualTo("DELIVERED")
+        assertThat(deliveredOrder.trackingNumber).isEqualTo("1234567890")
     }
 
     @Test

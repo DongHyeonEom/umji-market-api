@@ -13,6 +13,9 @@ class TransactionalShipmentUseCase(private val shipments: ShipmentUseCase) {
         shipments.registerTracking(orderId, carrierCode, trackingNumber, operatorId)
 
     @Transactional
+    fun markDelivered(orderId: UUID, operatorId: UUID): ShipmentChange = shipments.markDelivered(orderId, operatorId)
+
+    @Transactional
     fun prepareReadyOrders(): Int = shipments.prepareReadyOrders()
 
     @Transactional
