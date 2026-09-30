@@ -7,7 +7,6 @@ import com.buyeong.umji.api.shipment.model.toResponse
 import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -20,11 +19,6 @@ class OperationShipmentController(
     private val currentAccounts: CurrentAccountPort,
     private val shipments: TransactionalShipmentUseCase,
 ) {
-    @PostMapping("/dispatch")
-    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
-    fun beginDispatch(@PathVariable orderId: UUID): ShipmentResponse =
-        shipments.beginDispatch(orderId, currentAccounts.activeAccountPublicId()).toResponse()
-
     @PutMapping("/tracking")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
     fun registerTracking(

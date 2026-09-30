@@ -5,7 +5,8 @@ import java.util.UUID
 
 interface ShipmentStorePort {
     fun lock(orderId: UUID): ShipmentRecord?
-    fun update(record: ShipmentRecord, status: String, carrierCode: String?, trackingNumber: String?, operatorId: UUID): ShipmentRecord
+    fun readyOrderIds(): List<UUID>
+    fun update(record: ShipmentRecord, status: String, carrierCode: String?, trackingNumber: String?, operatorId: UUID?): ShipmentRecord
 }
 
 interface ShipmentInventoryPort {

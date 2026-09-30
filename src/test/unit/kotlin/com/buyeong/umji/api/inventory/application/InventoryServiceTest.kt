@@ -42,5 +42,20 @@ class InventoryServiceTest : DescribeSpec({
             every { store.lockStock(skuId) } returns StockState(sku, 5, 2, 0)
             shouldThrow<IllegalArgumentException> { service.reserve(skuId, 4, key, null) }
         }
+
+        it("확정된 주문 취소 시 차감된 실재고를 복구하고 중복 복구는 멱등 처리한다") {
+            val key = UUID.randomUUID()
+            every { store.reservation(key) } returnsMany listOf(
+                com.buyeong.umji.api.inventory.application.model.ReservationState(key, sku, 2, "CONFIRMED", null),
+                com.buyeong.umji.api.inventory.application.model.ReservationState(key, sku, 2, "RESTORED", null),
+            )
+            every { store.lockStock(skuId) } returns StockState(sku, 8, 0, 0)
+            every { store.stock(skuId) } returns StockState(sku, 10, 0, 0)
+            every { store.saveStock(any()) } answers { firstArg() }
+
+            service.restoreConfirmed(key).onHand shouldBe 10
+            service.restoreConfirmed(key).onHand shouldBe 10
+            verify(exactly = 1) { store.saveMovement(sku, "RESTOCK", 2, "ORDER_CANCELLATION", key, null) }
+        }
     }
 })

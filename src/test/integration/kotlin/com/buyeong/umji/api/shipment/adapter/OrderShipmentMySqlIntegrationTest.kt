@@ -1,7 +1,10 @@
 package com.buyeong.umji.api.shipment.adapter
 
+import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
 import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
+import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
+import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -28,6 +31,15 @@ class OrderShipmentMySqlIntegrationTest {
 
     @Autowired
     private lateinit var orders: OrderUseCase
+
+    @Autowired
+    private lateinit var cancellations: TransactionalOrderCancellationUseCase
+
+    @Autowired
+    private lateinit var holidays: ShippingHolidayUseCase
+
+    @Autowired
+    private lateinit var payments: TransactionalPaymentUseCase
 
     @Test
     fun `flyway v14 creates shipment rows for existing orders`() {
@@ -65,16 +77,16 @@ class OrderShipmentMySqlIntegrationTest {
         assertThat(readyOrder.carrierCode).isNull()
         assertThat(readyOrder.trackingNumber).isNull()
 
-        val dispatch = shipments.beginDispatch(orderId, operatorId)
+        val dispatch = shipments.prepareOrder(orderId)
         assertThat(dispatch.status).isEqualTo("PREPARING")
         assertThat(dispatch.changed).isTrue()
-        assertReservation(reservationKey, "RESERVED", 10, 1)
+        assertReservation(reservationKey, "CONFIRMED", 9, 0)
         val preparingOrder = orders.detail(customerId, orderId)
         assertThat(preparingOrder.shippingStatus).isEqualTo("PREPARING")
         assertThat(preparingOrder.carrierCode).isNull()
         assertThat(preparingOrder.trackingNumber).isNull()
 
-        val repeatedDispatch = shipments.beginDispatch(orderId, operatorId)
+        val repeatedDispatch = shipments.prepareOrder(orderId)
         assertThat(repeatedDispatch.status).isEqualTo("PREPARING")
         assertThat(repeatedDispatch.changed).isFalse()
 
@@ -106,6 +118,83 @@ class OrderShipmentMySqlIntegrationTest {
         assertThat(order.shippingStatus).isEqualTo("IN_TRANSIT")
         assertThat(order.carrierCode).isEqualTo("CJ")
         assertThat(order.trackingNumber).isEqualTo("1234567890")
+    }
+
+    @Test
+    fun `ready order cancellation releases reserved inventory and schedules manual refund`() {
+        val customerId = createAccount("cancel-ready")
+        val operatorId = createAccount("cancel-operator")
+        val skuId = createSku(createProduct(createCategory()))
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customerId, skuId, reservationKey)
+        createShipment(orderId)
+        jdbc.update("UPDATE purchase_order SET status = 'PAID' WHERE public_id = ?", orderId.toBytes())
+        jdbc.update("UPDATE order_payment SET status = 'PAYMENT_CONFIRMED' WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)", orderId.toBytes())
+
+        val result = cancellations.request(customerId, orderId)
+
+        assertThat(result.requestStatus).isEqualTo("CANCELLED")
+        assertThat(orders.detail(customerId, orderId).cancellationRequestStatus).isEqualTo("CANCELLED")
+        assertThat(jdbc.queryForObject("SELECT status FROM purchase_order WHERE public_id = ?", String::class.java, orderId.toBytes())).isEqualTo("CANCELLED")
+        assertThat(paymentStatus(orderId)).isEqualTo("REFUND_PENDING")
+        assertReservation(reservationKey, "RELEASED", 10, 0)
+        val completedCancellation = jdbc.queryForMap(
+            "SELECT request_status, processed_at FROM order_cancellation_history WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+            orderId.toBytes(),
+        )
+        assertThat(completedCancellation["request_status"]).isEqualTo("CANCELLED")
+        assertThat(completedCancellation["processed_at"]).isNotNull()
+        assertThat(payments.updateStatus(orderId, "REFUNDED", operatorId).paymentStatus).isEqualTo("REFUNDED")
+        assertThat(paymentStatus(orderId)).isEqualTo("REFUNDED")
+    }
+
+    @Test
+    fun `preparing order cancellation needs operator approval and restores confirmed inventory`() {
+        val customerId = createAccount("cancel-preparing")
+        val operatorId = createAccount("cancel-reviewer")
+        val skuId = createSku(createProduct(createCategory()))
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customerId, skuId, reservationKey)
+        createShipment(orderId)
+        shipments.prepareOrder(orderId)
+
+        assertThat(cancellations.request(customerId, orderId).requestStatus).isEqualTo("PENDING")
+        assertThat(orders.detail(customerId, orderId).cancellationRequestStatus).isEqualTo("PENDING")
+        val pendingCancellation = jdbc.queryForMap(
+            "SELECT request_status, processed_at FROM order_cancellation_history WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+            orderId.toBytes(),
+        )
+        assertThat(pendingCancellation["request_status"]).isEqualTo("PENDING")
+        assertThat(pendingCancellation["processed_at"]).isNull()
+        assertThat(cancellations.queue(0, 20).items.map { it.orderId }).contains(orderId)
+        assertThat(cancellations.resolve(orderId, true, operatorId).orderStatus).isEqualTo("CANCELLED")
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT request_status FROM order_cancellation_history WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+                String::class.java,
+                orderId.toBytes(),
+            ),
+        ).isEqualTo("APPROVED")
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT processed_at FROM order_cancellation_history WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+                Timestamp::class.java,
+                orderId.toBytes(),
+            ),
+        ).isNotNull()
+        assertReservation(reservationKey, "RESTORED", 10, 0)
+    }
+
+    @Test
+    fun `registered holiday is excluded from shipping preparation calendar`() {
+        val operatorId = createAccount("holiday-operator")
+        val date = java.time.LocalDate.of(2026, 12, 25)
+        holidays.register(date, "Holiday test", operatorId)
+        assertThat(holidays.isHoliday(date)).isTrue()
+        holidays.remove(date)
+        assertThat(holidays.isHoliday(date)).isFalse()
     }
 
     private fun createAccount(suffix: String): UUID {
