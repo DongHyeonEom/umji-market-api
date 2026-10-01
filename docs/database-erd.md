@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V17가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V18가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -91,6 +91,37 @@ erDiagram
         VARCHAR address1 "기본 주소, nullable"
         VARCHAR address2 "상세 주소, nullable"
         VARCHAR status "업체 프로필 상태"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    BUYER_GROUP {
+        BIGINT id PK "구매자 그룹 내부 ID"
+        BINARY public_id UK "API 공개 UUID"
+        VARCHAR group_type "BUSINESS 또는 INDIVIDUAL"
+        VARCHAR display_name "그룹 표시명"
+        VARCHAR status "그룹 상태"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    BUYER_GROUP_MEMBER {
+        BIGINT id PK "그룹 구성원 내부 ID"
+        BIGINT buyer_group_id FK "구매자 그룹 ID"
+        BIGINT account_id FK "구성원 계정 ID"
+        VARCHAR status "구성원 상태"
+        DATETIME joined_at "가입 시각"
+        DATETIME created_at "생성 시각"
+    }
+    BUYER_GROUP_BUSINESS_PROFILE {
+        BIGINT id PK "사업자 프로필 내부 ID"
+        BIGINT buyer_group_id FK,UK "사업자 그룹 ID"
+        VARCHAR business_name "업체명"
+        VARCHAR business_registration_number "사업자등록번호, nullable"
+        VARCHAR representative_name "대표자명, nullable"
+        VARCHAR business_phone "업체 연락처, nullable"
+        VARCHAR postal_code "우편번호, nullable"
+        VARCHAR address1 "기본 주소, nullable"
+        VARCHAR address2 "상세 주소, nullable"
+        VARCHAR status "사업자 프로필 상태"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
@@ -245,7 +276,8 @@ erDiagram
         BIGINT id PK "주문 내부 ID"
         BINARY public_id UK "API 공개 UUID"
         VARCHAR order_number UK "표시용 고유 주문번호"
-        BIGINT account_id FK "주문자 계정 ID"
+        BIGINT account_id FK "실제 주문 계정 ID"
+        BIGINT buyer_group_id FK "주문 귀속 구매자 그룹 ID, nullable during transition"
         VARCHAR status "주문 상태"
         BIGINT subtotal_amount "상품 소계"
         BIGINT total_amount "주문 총액"
@@ -344,6 +376,9 @@ erDiagram
     ACCOUNT ||--o{ REFRESH_TOKEN : owns
     ACCOUNT ||--o{ ACCOUNT_ADDRESS : has
     ACCOUNT ||--o| BUSINESS_PROFILE : has
+    ACCOUNT ||--o{ BUYER_GROUP_MEMBER : joins
+    BUYER_GROUP ||--o{ BUYER_GROUP_MEMBER : includes
+    BUYER_GROUP ||--o| BUYER_GROUP_BUSINESS_PROFILE : describes
     ACCOUNT ||--o{ CONSENT_HISTORY : records
     CATEGORY ||--o{ CATEGORY : parent
     CATEGORY ||--o{ PRODUCT : classifies
@@ -361,6 +396,7 @@ erDiagram
     CART ||--o{ CART_ITEM : contains
     PRODUCT_SKU ||--o{ CART_ITEM : selected
     ACCOUNT ||--o{ PURCHASE_ORDER : places
+    BUYER_GROUP ||--o{ PURCHASE_ORDER : owns
     PURCHASE_ORDER ||--|{ ORDER_ITEM : contains
     PRODUCT_SKU ||--o{ ORDER_ITEM : snapshots
     PURCHASE_ORDER ||--o{ ORDER_STATUS_HISTORY : tracks
@@ -383,6 +419,12 @@ erDiagram
   이름과 변경 전·후 값은 저장하지 않으며 V11 감사 정책에 따라 730일 후 삭제.<br>
 - `refresh_token.expires_at`은 V6 이후 nullable임.<br>
   `account.phone_normalized`는 V6에서 추가된 unique 정규화 번호임.<br>
+- 구매자 그룹은 법적 사업자번호와 독립적인 주문 소유 범위임.<br>
+  `buyer_group_member`는 같은 계정의 여러 그룹 참여를 허용하고 `(buyer_group_id, account_id)` 조합만 unique임.<br>
+  `buyer_group_business_profile.business_registration_number`는 nullable이며 unique가 아님.<br>
+- `purchase_order.account_id`는 실제 주문한 계정, `purchase_order.buyer_group_id`는 주문의 그룹 소유 범위임.<br>
+  V18은 기존 계정마다 그룹 하나를 생성해 기존 주문을 backfill했으며, 신규 주문 저장은 애플리케이션 연동 전까지 `buyer_group_id`가 nullable임.<br>
+  기존 `business_profile`은 유지하면서 그룹 프로필로 데이터를 복사함.<br>
 - 카테고리는 자기 참조 트리임.<br>
   상품은 카테고리를 반드시 가지며 브랜드는 선택임.<br>
   상품의 이미지·옵션·SKU는 상품에 속함.<br>
@@ -412,6 +454,7 @@ erDiagram
 | V15 | 결제 이슈 검토 상태 제약 추가 |
 | V16 | 공휴일 일정·취소 이력 테이블, 환불 상태 제약 추가 |
 | V17 | 배송 상태 `DELIVERED` 허용 |
+| V18 | 구매자 그룹·구성원·그룹 사업자 프로필 생성, 주문 그룹 귀속 및 기존 데이터 backfill |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
