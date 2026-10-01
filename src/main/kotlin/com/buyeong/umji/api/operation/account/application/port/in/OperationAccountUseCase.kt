@@ -13,6 +13,7 @@ interface OperationAccountUseCase {
     fun detail(id: UUID): AccountData
     fun status(id: UUID, status: String): AccountData
     fun profile(id: UUID, profile: BusinessProfileData): AccountData
+    fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData
     fun consent(id: UUID, consent: ConsentCommand): AccountData
     fun approve(id: UUID): AccountData
     fun managedRoles(): List<ManagedRole>

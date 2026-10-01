@@ -10,6 +10,7 @@ import com.buyeong.umji.api.operation.account.application.port.out.OperationAcco
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.ConsentHistoryEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -21,7 +22,11 @@ import java.util.UUID
 
 @Component
 @Transactional
-class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService, private val jdbc: JdbcTemplate) : OperationAccountPort {
+class JpaOperationAccountAdapter(
+    private val accounts: AccountJpaEntityService,
+    private val jdbc: JdbcTemplate,
+    private val buyerGroups: BuyerGroupJpaEntityService,
+) : OperationAccountPort {
     override fun create(command: NewAccount): AccountData {
         val entity = accounts.save(
             AccountEntity().apply {
@@ -33,6 +38,7 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService, 
             },
         )
         command.profile?.let { saveProfile(entity, it) }
+        buyerGroups.ensureForAccount(requireNotNull(entity.publicId))
         return data(entity)
     }
 
@@ -57,6 +63,11 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService, 
         saveProfile(entity, profile)
         entity.status = nextStatus
         data(entity)
+    }
+
+    override fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+        buyerGroups.assignAccountToBusinessGroup(id, buyerGroupId)
+        data(entity, true)
     }
 
     override fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
@@ -158,6 +169,7 @@ class JpaOperationAccountAdapter(private val accounts: AccountJpaEntityService, 
         } else {
             emptyList()
         }
-        return AccountData(requireNotNull(entity.publicId), entity.name, entity.phone, entity.email, entity.status, entity.tokenVersion, profile, consents)
+        val buyerGroupId = buyerGroups.activeForAccount(requireNotNull(entity.id))?.publicId
+        return AccountData(requireNotNull(entity.publicId), entity.name, entity.phone, entity.email, entity.status, entity.tokenVersion, profile, consents, buyerGroupId)
     }
 }

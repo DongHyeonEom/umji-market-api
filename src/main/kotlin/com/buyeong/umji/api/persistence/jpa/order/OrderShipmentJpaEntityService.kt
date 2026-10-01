@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.order
 
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -12,6 +13,7 @@ import java.util.UUID
 class OrderShipmentJpaEntityService(
     private val shipments: OrderShipmentRepository,
     private val accounts: AccountJpaEntityService,
+    private val buyerGroups: BuyerGroupJpaEntityService,
 ) {
     @Transactional
     fun initialize(order: PurchaseOrderEntity): OrderShipmentEntity = shipments.saveAndFlush(
@@ -28,7 +30,12 @@ class OrderShipmentJpaEntityService(
 
     fun readyOrderIds(): List<UUID> = shipments.findReadyOrderIds()
 
-    fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> = shipments.findTrackingCandidatesForCustomer(customerId)
+    fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> {
+        val buyerGroupId = requireNotNull(buyerGroups.activeForAccountPublicId(customerId)?.id) {
+            "계정의 활성 구매자 그룹을 찾을 수 없습니다."
+        }
+        return shipments.findTrackingCandidatesForBuyerGroup(buyerGroupId)
+    }
 
     @Transactional
     fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean {

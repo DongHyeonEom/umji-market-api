@@ -30,6 +30,7 @@ data class AccountData(
     val tokenVersion: Long,
     val profile: BusinessProfileData? = null,
     val consents: List<ConsentData> = emptyList(),
+    val buyerGroupId: UUID? = null,
 )
 data class NewAccount(val name: String, val phone: String, val normalizedPhone: String, val email: String?, val profile: BusinessProfileData?)
 data class ConsentCommand(

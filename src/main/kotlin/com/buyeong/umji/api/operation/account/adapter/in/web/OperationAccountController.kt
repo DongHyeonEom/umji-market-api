@@ -7,6 +7,7 @@ import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
+import com.buyeong.umji.api.operation.model.AssignBuyerGroupRequest
 import com.buyeong.umji.api.operation.model.BusinessProfileRequest
 import com.buyeong.umji.api.operation.model.CreateConsentRequest
 import com.buyeong.umji.api.operation.model.CreateOperationAccountRequest
@@ -93,6 +94,11 @@ class OperationAccountController(private val useCase: OperationAccountUseCase, p
         @Valid @RequestBody request: BusinessProfileRequest,
     ) = useCase.profile(id, request.toData()).toResponse()
 
+    @PutMapping("/{id}/buyer-group")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
+    fun assignBuyerGroup(@PathVariable id: UUID, @Valid @RequestBody request: AssignBuyerGroupRequest) =
+        useCase.assignBuyerGroup(id, request.buyerGroupId).toResponse()
+
     @PostMapping("/{id}/consents")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun consent(
@@ -146,6 +152,7 @@ class OperationAccountController(private val useCase: OperationAccountUseCase, p
         consents.map {
             OperationConsentResponse(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.processedBy, it.consentedAt)
         },
+        buyerGroupId,
     )
     private fun String?.clean() = this?.trim()?.ifBlank { null }
 }

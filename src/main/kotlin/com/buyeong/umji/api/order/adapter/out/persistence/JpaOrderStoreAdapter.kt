@@ -8,6 +8,7 @@ import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationHistoryRepository
 import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
@@ -27,6 +28,7 @@ import java.util.UUID
 @Component
 class JpaOrderStoreAdapter(
     private val accounts: AccountJpaEntityService,
+    private val buyerGroups: BuyerGroupJpaEntityService,
     private val catalog: CatalogJpaEntityService,
     private val orders: OrderJpaEntityService,
     private val payments: OrderPaymentJpaEntityService,
@@ -44,8 +46,10 @@ class JpaOrderStoreAdapter(
 
     override fun save(draft: OrderDraft): OrderView {
         val account = account(draft.accountId)
+        val buyerGroup = buyerGroups.ensureForAccount(draft.accountId)
         val order = PurchaseOrderEntity().apply {
             this.account = account
+            this.buyerGroup = buyerGroup
             orderNumber = nextOrderNumber(draft.orderedAt)
             status = draft.status
             orderedAt = draft.orderedAt
@@ -70,15 +74,15 @@ class JpaOrderStoreAdapter(
     }
 
     override fun findAll(accountId: UUID, page: Int, size: Int): OrderPage {
-        val result = orders.findAll(accountInternalId(accountId), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
+        val result = orders.findAll(buyerGroupInternalId(accountId), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
         return OrderPage(result.content.map { it.toView() }, result.number, result.size, result.totalElements, result.totalPages)
     }
 
     override fun find(accountId: UUID, orderId: UUID): OrderView? =
-        orders.findWithItems(orderId, accountInternalId(accountId))?.toView()
+        orders.findWithItems(orderId, buyerGroupInternalId(accountId))?.toView()
 
-    private fun accountInternalId(publicId: UUID): Long =
-        requireNotNull(accounts.findByPublicId(publicId)?.id) { "계정을 찾을 수 없습니다." }
+    private fun buyerGroupInternalId(accountPublicId: UUID): Long =
+        requireNotNull(buyerGroups.activeForAccountPublicId(accountPublicId)?.id) { "계정의 활성 구매자 그룹을 찾을 수 없습니다." }
 
     private fun account(publicId: UUID) = accounts.findByPublicId(publicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
 
@@ -127,6 +131,8 @@ class JpaOrderStoreAdapter(
         carrierCode = shipment.carrierCode,
         trackingNumber = shipment.trackingNumber,
         cancellationRequestStatus = cancellationHistory.findLatestStatus(requireNotNull(publicId), PageRequest.of(0, 1)).firstOrNull(),
+        orderedByName = account.name,
+        orderedByPhoneSuffix = account.phone?.filter(Char::isDigit)?.takeLast(4)?.takeIf(String::isNotEmpty),
     )
 
     private companion object {

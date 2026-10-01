@@ -13,6 +13,11 @@ flowchart TD
     E -- 계정 동의 --> G[동의 방식·계정 조회]
     G --> H[동의 이력 추가 및 상태 전이]
     E -- 계정 프로필 --> I[계정·프로필 검증 및 저장]
+    E -- 구매자 그룹 지정 --> BG[계정 및 사업자 그룹 검증]
+    BG --> BGTYPE{활성 BUSINESS 그룹인가}
+    BGTYPE -- 아니오 --> BGERR[그룹 지정 거부]
+    BGTYPE -- 예 --> BGMEMBER[계정의 단일 그룹 소속을 대상 그룹으로 변경]
+    BGMEMBER --> BGRESULT[새 그룹 ID와 계정 정보 반환]
     E -- 계정 승인 --> J{개인정보 동의 이력 존재}
     J -- 아니오 --> K[승인 거부]
     J -- 예 --> L[계정 활성화 및 token version 증가]
@@ -27,6 +32,7 @@ flowchart TD
     F --> T[업무 변경 트랜잭션]
     H --> T
     I --> T
+    BGMEMBER --> T
     L --> T
     O --> T
     Q --> T
@@ -129,6 +135,18 @@ COMMIT;
 모든 endpoint는 `ADMIN_ACCOUNT_MANAGE` 권한 필요.<br>
 부여 시 `granted_by`에는 요청자 계정이 기록됨.<br>
 
+### 구매자 그룹 지정
+
+`ADMIN_ACCOUNT_MANAGE` 운영자가 계정 상세의 `buyerGroupId`를 확인한 뒤 사업자 그룹에 계정을 명시적으로 연결.<br>
+같은 사업자번호를 가진 계정도 자동 병합하지 않으며, 대상은 활성 `BUSINESS` 그룹으로 제한.<br>
+계정은 기존 그룹 소속 행 하나를 대상 그룹으로 변경. 과거 주문은 원래의 구매자 그룹에 유지하고 자동 이전하지 않음.<br>
+
+| Method | Endpoint | 동작 |
+| --- | --- | --- |
+| `PUT` | `/api/operation/accounts/{id}/buyer-group` | 요청 본문의 `buyerGroupId`로 계정을 사업자 그룹에 명시적으로 연결 |
+
+성공 응답의 `buyerGroupId`는 새 그룹 공개 UUID.<br>
+
 ### 운영 변경 감사 로그
 
 운영자 계정·role, 카테고리·브랜드·상품 및 SKU, 관리자 재고 조정의 성공한 변경 요청을 기록함.<br>
@@ -163,6 +181,7 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 - `GET /api/operation/accounts/{id}`
 - `PATCH /api/operation/accounts/{id}/status`
 - `PUT /api/operation/accounts/{id}/business-profile`
+- `PUT /api/operation/accounts/{id}/buyer-group`
 - `POST /api/operation/accounts/{id}/consents`
 - `POST /api/operation/accounts/{id}/approve`
 

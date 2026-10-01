@@ -34,6 +34,10 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 
 - 신규 기능은 `codex/feature/<기능명>` 브랜치에서 작업하고, 구현·검토 가능한 상태가 되면 PR을 생성함.
   PR 전까지 해당 기능의 수정은 같은 feature 브랜치에서 진행함.
+- PR 제목은 변경의 주 목적에 맞춰 `feat: <영문 요약>`, `fix: <영문 요약>`, `test: <영문 요약>`, `docs: <영문 요약>` 등 Conventional Commit 형식으로 작성함.
+  GitHub가 자동 생성한 `Merge pull request ...` 문구를 PR 제목으로 사용하지 않음.
+- `dev` 병합은 기존 이력처럼 GitHub merge commit 방식을 사용함.
+  PR 제목 규칙과 자동 생성되는 merge commit 제목 규칙은 구분함.
 - 기능 브랜치 push 시 해당 브랜치를 `origin`에도 push하고 upstream을 설정함. push 전 `docs/todo.md`를 갱신해 완료된 수용 기준만 `[x]`로 체크하며, 미완료·부분 완료·검증되지 않은 항목은 `[ ]`로 유지함.
 - PR 생성과 병합은 사용자가 진행함.
   PR 병합 후 다음 feature를 시작할 때 `origin/dev`를 fetch하고 로컬 `dev`를 최신 상태로 fast-forward한 뒤, 해당 기준점에서 새 `codex/feature/<기능명>` 브랜치를 생성함.

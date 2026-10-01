@@ -80,6 +80,8 @@ class OrderController(
         trackingNumber,
         CarrierTrackingLink.create(carrierCode, trackingNumber),
         cancellationRequestStatus,
+        orderedByName,
+        orderedByPhoneSuffix,
     )
 
     private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(

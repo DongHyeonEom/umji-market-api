@@ -14,8 +14,8 @@ class OrderJpaEntityService(
     private val histories: OrderStatusHistoryRepository,
     private val sequences: OrderNumberSequenceRepository,
 ) {
-    fun findWithItems(id: UUID, accountId: Long): PurchaseOrderEntity? = orders.findWithItemsByPublicIdAndAccountId(id, accountId)
-    fun findAll(accountId: Long, pageable: Pageable): Page<PurchaseOrderEntity> = orders.findAllByAccountId(accountId, pageable)
+    fun findWithItems(id: UUID, buyerGroupId: Long): PurchaseOrderEntity? = orders.findWithItemsByPublicIdAndBuyerGroupId(id, buyerGroupId)
+    fun findAll(buyerGroupId: Long, pageable: Pageable): Page<PurchaseOrderEntity> = orders.findAllByBuyerGroup_Id(buyerGroupId, pageable)
 
     @Transactional fun saveAndFlush(order: PurchaseOrderEntity): PurchaseOrderEntity = orders.saveAndFlush(order)
 

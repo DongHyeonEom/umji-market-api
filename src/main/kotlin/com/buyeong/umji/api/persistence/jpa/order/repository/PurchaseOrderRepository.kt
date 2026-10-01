@@ -3,6 +3,7 @@ package com.buyeong.umji.api.persistence.jpa.order
 import jakarta.persistence.LockModeType
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
@@ -17,9 +18,13 @@ interface PurchaseOrderRepository : JpaRepository<PurchaseOrderEntity, Long> {
     fun findForCancellation(@Param("publicId") publicId: UUID): PurchaseOrderEntity?
 
     @Query(
-        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId and purchaseOrder.account.id = :accountId",
+        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder join fetch purchaseOrder.account left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId and purchaseOrder.buyerGroup.id = :buyerGroupId",
     )
-    fun findWithItemsByPublicIdAndAccountId(@Param("publicId") publicId: UUID, @Param("accountId") accountId: Long): PurchaseOrderEntity?
+    fun findWithItemsByPublicIdAndBuyerGroupId(
+        @Param("publicId") publicId: UUID,
+        @Param("buyerGroupId") buyerGroupId: Long,
+    ): PurchaseOrderEntity?
 
-    fun findAllByAccountId(accountId: Long, pageable: Pageable): Page<PurchaseOrderEntity>
+    @EntityGraph(attributePaths = ["account", "payment", "shipment"])
+    fun findAllByBuyerGroup_Id(buyerGroupId: Long, pageable: Pageable): Page<PurchaseOrderEntity>
 }
