@@ -22,6 +22,8 @@ data class OrderResponse(
     val trackingNumber: String?,
     val trackingUrl: String?,
     val cancellationRequestStatus: String?,
+    val orderedByName: String?,
+    val orderedByPhoneSuffix: String?,
 )
 
 data class BankAccountInstructionsResponse(

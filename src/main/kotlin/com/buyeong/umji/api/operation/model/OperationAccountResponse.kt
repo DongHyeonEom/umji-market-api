@@ -12,6 +12,7 @@ data class OperationAccountResponse(
     val tokenVersion: Long,
     val businessProfile: OperationBusinessProfileResponse?,
     val consents: List<OperationConsentResponse> = emptyList(),
+    val buyerGroupId: UUID? = null,
 )
 data class OperationBusinessProfileResponse(
     val businessName: String,

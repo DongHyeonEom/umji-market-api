@@ -68,6 +68,8 @@ data class OrderView(
     val carrierCode: String? = null,
     val trackingNumber: String? = null,
     val cancellationRequestStatus: String? = null,
+    val orderedByName: String? = null,
+    val orderedByPhoneSuffix: String? = null,
 )
 
 data class OrderItemView(

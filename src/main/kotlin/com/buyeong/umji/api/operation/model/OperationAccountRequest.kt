@@ -2,7 +2,9 @@ package com.buyeong.umji.api.operation.model
 
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import java.util.UUID
 
 data class BusinessProfileRequest(
     @field:NotBlank @field:Size(
@@ -30,6 +32,7 @@ data class CreateOperationAccountRequest(
     @field:Valid val businessProfile: BusinessProfileRequest? = null,
 )
 data class UpdateAccountStatusRequest(@field:NotBlank val status: String)
+data class AssignBuyerGroupRequest(@field:NotNull val buyerGroupId: UUID)
 data class CreateConsentRequest(
     @field:NotBlank @field:Size(max = 100) val consentType: String,
     @field:NotBlank @field:Size(max = 100) val documentVersion: String,

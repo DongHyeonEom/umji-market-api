@@ -17,10 +17,10 @@ interface OrderShipmentRepository : JpaRepository<OrderShipmentEntity, Long> {
             "purchaseOrder.publicId, shipment.status, shipment.carrierCode, shipment.trackingNumber) " +
             "from OrderShipmentEntity shipment join shipment.order purchaseOrder " +
             "where shipment.status = 'IN_TRANSIT' and shipment.carrierCode is not null and shipment.trackingNumber is not null " +
-            "and purchaseOrder.account.publicId = :customerId " +
+            "and purchaseOrder.buyerGroup.id = :buyerGroupId " +
             "order by shipment.updatedAt",
     )
-    fun findTrackingCandidatesForCustomer(@Param("customerId") customerId: UUID): List<ShipmentTrackingCandidate>
+    fun findTrackingCandidatesForBuyerGroup(@Param("buyerGroupId") buyerGroupId: Long): List<ShipmentTrackingCandidate>
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select shipment from OrderShipmentEntity shipment join fetch shipment.order purchaseOrder where purchaseOrder.publicId = :orderId")
