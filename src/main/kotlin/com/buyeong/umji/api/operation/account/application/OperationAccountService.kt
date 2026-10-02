@@ -59,6 +59,6 @@ class OperationAccountService(private val accounts: OperationAccountPort) : Oper
         const val ACTIVE = "ACTIVE"
         val STATUSES = setOf(PENDING_CONSENT, PENDING_PROFILE, PENDING_REVIEW, "ACTIVE", "SUSPENDED", "WITHDRAWN")
         val METHODS = setOf("ONLINE", "WRITTEN")
-        val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER")
+        val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER", "SHIPPING_MANAGER")
     }
 }

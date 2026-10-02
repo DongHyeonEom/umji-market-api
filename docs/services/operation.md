@@ -29,6 +29,8 @@ flowchart TD
     P --> Q[카탈로그 변경 저장]
     E -- 재고 조정 --> R[재고 검증·조정·이동 이력]
     E -- 입금 확인 --> S[결제 상태 변경·주문/재고 처리]
+    E -- 배송 변경 --> SHIPAUTH[SHIPMENT_WRITE 권한 검사]
+    SHIPAUTH --> SHIP[송장 등록 또는 배송완료 상태 보정]
 
     F --> T[업무 변경 트랜잭션]
     H --> T
@@ -40,6 +42,7 @@ flowchart TD
     Q --> T
     R --> T
     S --> T
+    SHIP --> T
     T --> U[운영 변경 감사 이벤트 기록]
     U --> V{감사 이벤트 기록 성공}
     V -- 아니오 --> W[업무 트랜잭션 rollback]
@@ -68,17 +71,18 @@ endpoint별 권한, 실제 감사 대상, 개인정보 제외, role bootstrap과
 | `PRODUCT_MANAGER` | `PRODUCT_READ`, `PRODUCT_WRITE` |
 | `ORDER_MANAGER` | `ORDER_READ`, `ORDER_WRITE` |
 | `INVENTORY_MANAGER` | `INVENTORY_READ`, `INVENTORY_WRITE` |
+| `SHIPPING_MANAGER` | `SHIPMENT_WRITE` |
 
 ## 운영자 화면·업무영역 권한 설계
 
-아래는 운영자 role을 전체 관리자·배송 관리자·영업 관리자로 구분하는 목표 설계이며, 현재 구현과 구분되는 미구현 범위.<br>
-현재는 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`가 존재하고 배송·영업 전용 role 및 permission은 아직 없음.<br>
+배송 role과 인가 범위는 현재 구현이며, 화면별 접근 설정과 영업 role·permission은 미구현 설계 범위.<br>
+현재는 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`가 존재함. `SHIPPING_MANAGER`는 배송 변경 권한만 보유하며, 영업 전용 role·permission은 미구현.<br>
 
 | 운영 role | 책임 화면·업무 | 목표 permission |
 | --- | --- | --- |
 | `ADMIN` | 전체 운영 화면과 업무 관리. 감사 로그 조회는 제외 | 기존 전체 운영 permission |
 | `SUPER_ADMIN` | 전체 운영 화면, role bootstrap 및 감사 로그 조회 | 전체 permission |
-| `SHIPPING_MANAGER` | 주문 배송 정보 조회, 출고·송장 등록, 배송 상태 보정 | `SHIPMENT_READ`, `SHIPMENT_WRITE` |
+| `SHIPPING_MANAGER` | 송장 등록, 배송 상태 보정 | `SHIPMENT_WRITE` |
 | `SALES_MANAGER` | 그룹 등록, 본인 담당 그룹 조회, 본인 인센티브 조회 | `SALES_GROUP_CREATE`, `SALES_GROUP_READ`, `SALES_COMMISSION_READ` |
 
 | screen code 예시 | audience | 화면 조회 permission | 화면 action permission |
@@ -88,7 +92,7 @@ endpoint별 권한, 실제 감사 대상, 개인정보 제외, role bootstrap과
 | `ADMIN_SALES_COMMISSION_LIST` | `ADMIN` | `SALES_COMMISSION_READ` | 지급 확정에 `SALES_COMMISSION_SETTLE` |
 | `ADMIN_ACCOUNT_ROLE_SETTINGS` | `ADMIN` | `ADMIN_ACCOUNT_MANAGE` | role 부여·회수에 `ADMIN_ACCOUNT_MANAGE` |
 
-상품·주문·재고 전용 기존 role은 호환을 위해 유지. 배송 업무 권한은 현재 `ORDER_WRITE`에서 분리해 결제·취소 업무까지 배송 담당자에게 열리지 않도록 구성.<br>
+상품·주문·재고 전용 기존 role은 호환을 위해 유지. 배송 정보 변경 endpoint는 `SHIPMENT_WRITE`만 요구하고 결제·취소·휴무일 endpoint는 계속 `ORDER_WRITE`를 요구해 배송 담당자에게 결제·취소 권한이 열리지 않도록 구성.<br>
 영업 인센티브 확정·지급 처리는 별도 permission으로 제한하고, 담당 영업자 본인은 자신에게 귀속된 내역만 조회.<br>
 
 화면별 조회 권한을 명시적으로 설정할 수 있도록 화면 리소스와 permission 연결을 DB에 둠. 화면 구성·route 구현은 React에 두고, DB는 안정적인 `screen_code`와 필요한 permission 연결을 관리.<br>
@@ -132,6 +136,9 @@ flowchart TD
     VERIFY -->|거부| DENY[403 응답]
     CHANGE[운영자가 role 부여·회수] --> VERSION[token version 증가]
     VERSION --> RELOGIN[기존 token 거부·갱신 후 새 permission 적용]
+    SHIPPING[배송 관리자 role 부여] --> SHIPPER[SHIPMENT_WRITE 권한 포함]
+    SHIPPER --> SHIPENDPOINT[송장·배송 상태 API 허용]
+    SHIPPER -. 권한 없음 .-> PAYMENTCANCEL[결제·취소 API 거부]
 ```
 
 ## 영업 담당 그룹 및 인센티브 DB 설계안

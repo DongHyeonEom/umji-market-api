@@ -235,7 +235,7 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
-    fun `shipment tracking accepts order write permission`() {
+    fun `shipment tracking accepts shipment write permission`() {
         val orderId = UUID.randomUUID()
         val operatorId = UUID.randomUUID()
         Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
@@ -247,14 +247,14 @@ class OperationEndpointAuthorizationTest(
             put(
                 "/api/operation/orders/$orderId/shipment/tracking",
             )
-                .with(authorities("ORDER_WRITE"))
+                .with(authorities("SHIPMENT_WRITE"))
                 .contentType("application/json")
                 .content("""{"carrierCode":"CJ","trackingNumber":"1234567890"}"""),
         ).andExpect(status().isOk)
     }
 
     @Test
-    fun `shipment delivery completion requires order write permission`() {
+    fun `shipment delivery completion requires shipment write permission`() {
         mockMvc.perform(
             post("/api/operation/orders/${UUID.randomUUID()}/shipment/delivered")
                 .with(authorities("PRODUCT_WRITE")),
@@ -262,7 +262,7 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
-    fun `shipment delivery completion accepts order write permission`() {
+    fun `shipment delivery completion accepts shipment write permission`() {
         val orderId = UUID.randomUUID()
         val operatorId = UUID.randomUUID()
         Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
@@ -272,7 +272,7 @@ class OperationEndpointAuthorizationTest(
 
         mockMvc.perform(
             post("/api/operation/orders/$orderId/shipment/delivered")
-                .with(authorities("ORDER_WRITE")),
+                .with(authorities("SHIPMENT_WRITE")),
         ).andExpect(status().isOk)
     }
 

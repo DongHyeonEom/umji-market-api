@@ -41,7 +41,8 @@ flowchart TD
         CUTOFF -- 예 --> CONFIRM[예약 재고 확정 및 PREPARING 전환]
         CONFIRM --> P[배송 담당자가 출고 준비]
         P --> Q[배송 담당자가 택배사·송장번호 입력]
-        Q --> R{주문 및 배송 정보 유효}
+        Q --> AUTHSHIP[SHIPMENT_WRITE 권한 검사]
+        AUTHSHIP --> R{주문 및 배송 정보 유효}
         R -- 아니오 --> ERR[요청 거부]
         R -- 예 --> DUP{이미 IN_TRANSIT이며 같은 송장 정보}
         DUP -- 예 --> U[변경 없이 기존 배송 정보 반환]
@@ -68,7 +69,7 @@ flowchart TD
         DONE --> D1
         TRACKREVIEW --> D1
         D1 --> WEBVIEW[고객이 링크 선택 시 공식 조회 페이지를 WebView로 표시]
-        U --> OPFIX[ORDER_WRITE 운영자가 배송완료 보정 가능]
+        U --> OPFIX[SHIPMENT_WRITE 배송 관리자가 배송완료 보정 가능]
         OPFIX --> DONE
     end
 
@@ -123,7 +124,7 @@ flowchart TD
 별도 배송 조회 중계 서버가 없는 현재 구조에서는 `GET /api/orders`가 고객의 `IN_TRANSIT` 송장을 먼저 조회하고, 상태 반영 후 주문 목록 반환.<br>
 고객이 주문 목록의 송장 조회 링크를 선택하면 택배사 공식 조회 페이지를 WebView로 표시. 상태 조회는 목록 진입 시 서버가 수행하고, 링크는 택배사 상세 조회 화면 제공에 사용.<br>
 택배사 조회 결과가 배송완료이면 `DELIVERED`로 전환. 중복 완료 결과는 멱등 처리하고, 연동 실패는 기존 상태를 유지.<br>
-`ORDER_WRITE` 운영자는 배송 완료 상태를 수동 보정 가능. 배송 상태 전이 이력 및 외부 연동 실패 재처리 정책은 별도 범위.<br>
+`SHIPMENT_WRITE` 권한 운영자는 배송 완료 상태를 수동 보정 가능. 결제·취소·휴무일 관리는 기존 `ORDER_WRITE` 권한을 유지. 배송 상태 전이 이력 및 외부 연동 실패 재처리 정책은 별도 범위.<br>
 입금 만료는 두지 않으며, 미입금 주문도 운영자가 별도 입금 상태로 관리.<br>
 주문 생성·결제 확인의 현재 구현과 target 변경사항은 각각 아래 동작 설명과 [payment.md](payment.md)를 기준으로 함.<br>
 주문에는 요청 계정과 구매자 그룹이 함께 기록되므로 영업 인센티브는 그룹·주문 시점 담당 배정과 선택 요율을 기준으로 제안. 요율 미설정 주문은 미지급 상태로 snapshot하고, 설정 주문은 상품 판매액을 기준으로 계산하는 방향. 배송비·세금 포함 여부와 인센티브 확정 시점은 미확정이며 세부 설계는 [operation.md](operation.md)를 기준으로 함.<br>
@@ -215,7 +216,7 @@ application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br
 ## 배송 및 송장 조회 흐름
 
 배송 상태는 `READY_TO_SHIP`, `PREPARING`, `IN_TRANSIT`, `DELIVERED`로 결제 상태와 분리해 관리함.<br>
-`ORDER_WRITE` 운영자가 발송 처리를 시작하고, 배송 담당자가 택배사와 송장번호를 등록하면 `IN_TRANSIT`으로 변경.<br>
+평일 15시 배송 준비 배치가 재고를 확정하고 `PREPARING`으로 변경. 배송 관리자가 택배사와 송장번호를 등록하면 `IN_TRANSIT`으로 변경.<br>
 고객은 주문 목록·상세 조회에서 배송 상태와 송장 정보를 확인함.<br>
 대신택배·경동택배·천일택배의 공식 조회 URL과 송장번호를 사용자 주문 응답에서 제공.<br>
 확인한 조회 URL은 대신택배 `https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=`, 경동택배 `https://kdexp.com/service/delivery/etc/delivery.do?barcode=`, 천일택배 `https://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=`.<br>
@@ -224,5 +225,5 @@ application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br
 경동택배 서버 상태 조회는 신규 공식 화면의 JSON 조회 경로 `/service/delivery/new/ajax_basic.do?barcode={운송장번호}`를 사용. `result=suc` 응답의 `data.scanList`는 오래된 이력부터 최신 이력 순이며 마지막 `scanTypeNm`이 정확히 `배송완료`이면 완료로 전환하고, 진행 이력이 있으면 배송중으로 유지.<br>
 임의 번호와 다른 택배사 예시 번호는 경동택배 경로에서 `result=fail`을 반환하므로 유효 송장 실조회 결과로 간주하지 않음. 조회 불가·실패는 기존 배송 상태 유지.<br>
 목록 조회는 택배사별 상태를 먼저 갱신한 뒤 최신 상태와 공식 조회 링크를 반환. 고객이 링크를 선택하면 WebView에서 택배사 공식 조회 화면 표시.<br>
-`POST /api/operation/orders/{orderId}/shipment/delivered`는 `ORDER_WRITE` 운영자의 수동 배송완료 보정 endpoint.<br>
-운영 배송 API는 `ORDER_WRITE` 권한을 요구.<br>
+`PUT /api/operation/orders/{orderId}/shipment/tracking` 및 `POST /api/operation/orders/{orderId}/shipment/delivered`는 `SHIPMENT_WRITE` 권한 운영자만 호출 가능.<br>
+입금·취소·휴무일 운영 API는 `ORDER_WRITE` 권한을 요구. 송장·배송 상태 변경은 `SHIPMENT_WRITE` 권한을 요구.<br>

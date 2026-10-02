@@ -175,7 +175,9 @@
 - [x] 영업 담당 이력·주문 인센티브 원장 후보 table과 미확정 산정 정책을 문서화
 - [x] 직원·업체 배정별 선택 요율 및 요율 미설정(인센티브 없음), 상품 판매액 기준 설계 반영
 - [ ] 운영자 role을 전체 관리자·배송 관리자·영업 관리자로 정리하고 기존 permission과 업무 경계를 재설계
-- [ ] 배송 관리자에게 결제·취소 권한이 섞이지 않도록 배송 전용 permission과 endpoint 인가 적용
+- [x] 배송 관리자에게 결제·취소 권한이 섞이지 않도록 배송 전용 permission과 endpoint 인가 적용
+- [x] `SHIPPING_MANAGER` role과 `SHIPMENT_WRITE` permission을 추가하고 운영자 role 부여 API에서 관리
+- [x] 송장 등록·배송완료 보정 endpoint만 `SHIPMENT_WRITE`를 요구하고 결제·취소 API 접근 차단
 - [ ] 화면별 audience·screen code·필수 permission 테이블 및 permission context 응답 설계·구현
 - [ ] 구매자 대표자·일반구성원 역할별 화면 permission을 활성 그룹·대표자 관계에서 계산
 - [ ] 그룹별 영업 담당·인센티브율의 유효기간 배정 이력 설계·구현
