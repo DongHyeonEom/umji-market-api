@@ -8,7 +8,7 @@ internal object CarrierTrackingLink {
         if (carrierCode == null || trackingNumber.isNullOrBlank()) return null
         val baseUrl = when (carrierCode.trim().uppercase()) {
             "DAESIN", "대신택배" -> "https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno="
-            "KDEXP", "KD", "경동택배" -> "https://kdexp.com/newDeliverySearch.kd?barcode="
+            "KDEXP", "KD", "경동택배" -> "https://kdexp.com/service/delivery/etc/delivery.do?barcode="
             "CHUNIL", "천일택배" -> "https://www.chunil.co.kr/HTrace/HTrace.jsp?transNo="
             else -> return null
         }

@@ -9,7 +9,7 @@ class CarrierTrackingLinkTest {
         assertThat(CarrierTrackingLink.create("DAESIN", "1501602023302"))
             .isEqualTo("https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=1501602023302")
         assertThat(CarrierTrackingLink.create("경동택배", "1234567890123"))
-            .isEqualTo("https://kdexp.com/newDeliverySearch.kd?barcode=1234567890123")
+            .isEqualTo("https://kdexp.com/service/delivery/etc/delivery.do?barcode=1234567890123")
         assertThat(CarrierTrackingLink.create("CHUNIL", "72601701177"))
             .isEqualTo("https://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=72601701177")
     }
