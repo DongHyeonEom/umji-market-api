@@ -53,6 +53,7 @@ class SecurityConfig {
                 .authorizeHttpRequests {
                     it.requestMatchers("/actuator/health", "/actuator/info", "/swagger-ui/**", "/v3/api-docs/**", "/api/auth/**").permitAll()
                         .requestMatchers("/api/operation/accounts/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
+                        .requestMatchers("/api/operation/buyer-groups/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
                         .requestMatchers(HttpMethod.GET, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")
                         .requestMatchers(HttpMethod.HEAD, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")
                         .requestMatchers(HttpMethod.POST, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_WRITE")

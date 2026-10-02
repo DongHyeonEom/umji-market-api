@@ -25,6 +25,7 @@ class OperationAccountService(private val accounts: OperationAccountPort) : Oper
         return accounts.updateProfile(id, profile, nextStatus) ?: missing()
     }
     override fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData = accounts.assignBuyerGroup(id, buyerGroupId) ?: missing()
+    override fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = accounts.setBuyerGroupRepresentative(groupId, accountId)
     override fun consent(id: UUID, consent: ConsentCommand): AccountData {
         require(consent.consentMethod in METHODS) { "유효하지 않은 동의 방식입니다." }
         val account = accounts.find(id) ?: missing()

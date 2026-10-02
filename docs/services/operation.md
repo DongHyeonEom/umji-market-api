@@ -16,8 +16,9 @@ flowchart TD
     E -- 구매자 그룹 지정 --> BG[계정 및 사업자 그룹 검증]
     BG --> BGTYPE{활성 BUSINESS 그룹인가}
     BGTYPE -- 아니오 --> BGERR[그룹 지정 거부]
-    BGTYPE -- 예 --> BGMEMBER[계정의 단일 그룹 소속을 대상 그룹으로 변경]
+    BGTYPE -- 예 --> BGMEMBER[기존 소속을 LEFT로 보존하고 대상 그룹 활성 연결]
     BGMEMBER --> BGRESULT[새 그룹 ID와 계정 정보 반환]
+    E -- 대표자 지정 --> BGREP[활성 그룹·대상 구성원 검증 후 대표 계정 변경]
     E -- 계정 승인 --> J{개인정보 동의 이력 존재}
     J -- 아니오 --> K[승인 거부]
     J -- 예 --> L[계정 활성화 및 token version 증가]
@@ -33,6 +34,7 @@ flowchart TD
     H --> T
     I --> T
     BGMEMBER --> T
+    BGREP --> T
     L --> T
     O --> T
     Q --> T
@@ -140,10 +142,12 @@ COMMIT;
 `ADMIN_ACCOUNT_MANAGE` 운영자가 계정 상세의 `buyerGroupId`를 확인한 뒤 사업자 그룹에 계정을 명시적으로 연결.<br>
 같은 사업자번호를 가진 계정도 자동 병합하지 않으며, 대상은 활성 `BUSINESS` 그룹으로 제한.<br>
 계정은 기존 그룹 소속 행 하나를 대상 그룹으로 변경. 과거 주문은 원래의 구매자 그룹에 유지하고 자동 이전하지 않음.<br>
+계정의 기존 구성원 이력은 `LEFT` 상태로 보존하고 새 그룹에 활성 구성원으로 연결.<br>
 
 | Method | Endpoint | 동작 |
 | --- | --- | --- |
 | `PUT` | `/api/operation/accounts/{id}/buyer-group` | 요청 본문의 `buyerGroupId`로 계정을 사업자 그룹에 명시적으로 연결 |
+| `PUT` | `/api/operation/buyer-groups/{groupId}/representative` | 활성 구성원 중 대표자를 지정·변경 |
 
 성공 응답의 `buyerGroupId`는 새 그룹 공개 UUID.<br>
 
@@ -182,6 +186,7 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 - `PATCH /api/operation/accounts/{id}/status`
 - `PUT /api/operation/accounts/{id}/business-profile`
 - `PUT /api/operation/accounts/{id}/buyer-group`
+- `PUT /api/operation/buyer-groups/{groupId}/representative`
 - `POST /api/operation/accounts/{id}/consents`
 - `POST /api/operation/accounts/{id}/approve`
 

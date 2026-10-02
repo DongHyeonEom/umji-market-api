@@ -7,7 +7,10 @@
 첫 공용 배송지는 자동 기본 배송지로 지정. 기본 배송지를 삭제하면 남은 주소 중 가장 오래된 주소를 기본값으로 승격.<br>
 주문 생성 시 현재 그룹 공용 주소를 선택하고 수령 정보를 주문에 snapshot으로 저장. 이후 주소 변경·삭제는 기존 주문 정보에 영향을 주지 않음.<br>
 기존 계정별 배송지는 V20에서 현재 계정의 구매자 그룹 공용 주소로 이관. 한 그룹에 여러 기본 배송지가 있으면 기존 기본 주소 중 하나만 승격.<br>
-구성원 초대·그룹별 권한 차등과 세금계산서 정보 공유 정책은 별도 미구현 범위.<br>
+대표자는 전화번호 초대와 가입 요청 처리를 수행. 대표자 지정·변경은 운영자 권한으로 제한.<br>
+최초 가입 계정은 그룹 onboarding 조회에서 현재 그룹과 전화번호가 일치하는 대기 초대를 확인하고, 초대 수락 후에만 그룹에 연결.<br>
+그룹이 없는 계정은 개인 그룹을 만들거나 휴대폰 번호로 그룹을 찾아 가입 요청 가능. 그룹 이동 전 주문의 귀속은 유지.<br>
+그룹 세금계산서 정보 관리 정책은 별도 미구현 범위.<br>
 
 ## 사용자 계정·공용 배송지 흐름
 
@@ -41,6 +44,17 @@ flowchart TD
 - `PUT /api/account/addresses/{addressId}`
 - `PUT /api/account/addresses/{addressId}/default`
 - `DELETE /api/account/addresses/{addressId}`
+- `GET /api/account/groups/onboarding`
+- `GET /api/account/groups/current`
+- `POST /api/account/groups/individual`
+- `GET /api/account/groups/search?phone=`
+- `POST /api/account/groups/invitations`
+- `GET /api/account/groups/invitations`
+- `POST /api/account/groups/invitations/{invitationId}/response`
+- `POST /api/account/groups/join-requests`
+- `GET /api/account/groups/join-requests`
+- `POST /api/account/groups/join-requests/{requestId}/response`
+- `PUT /api/operation/buyer-groups/{groupId}/representative`
 
 모든 endpoint는 Access Token의 subject가 가리키는 활성 계정을 사용. 계정 ID를 요청에서 받지 않음.<br>
 배송지 목록·수정 범위는 인증 계정이 속한 활성 구매자 그룹으로 제한.<br>
@@ -56,3 +70,37 @@ flowchart TD
 운영자는 계정을 사업자 그룹에 명시적으로 연결하며 사업자번호만으로 그룹을 자동 병합하지 않음.<br>
 구성원 초대·가입 요청·역할과 그룹 프로필 관리 흐름은 이 문서의 단일 기준. 주문 소유권, 실제 주문자와 주문 조회 범위는 [주문 문서](order.md)를 기준으로 함.<br>
 현재 DB 테이블과 관계는 [database-erd.md](../database-erd.md)를 기준으로 함.<br>
+
+## 그룹 구성원 가입 흐름
+
+구현 흐름.<br>
+대표자는 일반 구성원 초대와 가입 요청 처리를 담당. 대표자 변경은 운영자만 수행.<br>
+운영자는 사업자 프로필을 포함한 계정을 생성해 사업자 그룹을 초기화하고, 기존 계정 연결 기능으로 초기 구성원을 지정. 최초 계정은 초기 대표자로 연결되며 운영자가 대표자를 지정·변경 가능.<br>
+그룹 검색은 입력한 휴대폰 번호와 정확히 일치하는 일반 계정 번호 또는 사업자 대표 계정 번호로 수행. 결과에는 그룹 식별에 필요한 이름·유형만 노출.<br>
+일반 구성원은 검색 결과 그룹에 가입 요청 가능. 대표자가 승인하면 기존 개인 그룹 소속을 종료하고 대상 그룹에 이동. 기존 주문의 그룹 귀속은 변경하지 않음.<br>
+대표자의 사전 등록 초대는 계정 onboarding 조회에서 확인. 여러 그룹의 미처리 초대가 있으면 사용자가 대상을 선택하고, 수락 전에 자동으로 그룹을 이동하지 않음.<br>
+그룹이 없는 최초 계정은 개인 그룹 생성 또는 대표자 번호 검색 후 가입 요청을 선택. 개인 그룹 생성자는 최초 대표자로 지정.<br>
+
+```mermaid
+flowchart TD
+    START[인증 계정의 그룹 상태 확인] --> EXISTS{활성 그룹이 있는가}
+    EXISTS -- 예 --> INVITE[휴대폰 번호 대상 미처리 초대 확인]
+    INVITE --> ONE{미처리 초대 존재}
+    ONE -- 예 --> CHOOSE[초대별 대상 그룹·번호 확인 후 사용자 선택]
+    CHOOSE --> ACCEPT{초대 수락}
+    ACCEPT -- 예 --> MOVEINV[기존 소속 종료 후 초대 그룹 연결]
+    ACCEPT -- 아니오 --> KEEPINV[기존 소속 유지]
+    ONE -- 아니오 --> CHOOSEOPT[현재 그룹 유지 또는 그룹 변경 요청]
+    EXISTS -- 아니오 --> OPTIONS{그룹 연결 방식}
+    OPTIONS -- 개인 그룹 생성 --> CREATE[개인 그룹 생성 및 생성자를 대표자로 지정]
+    OPTIONS -- 대표자 번호 검색 --> SEARCH[일반·사업자 대표 휴대폰 번호 정확히 검색]
+    SEARCH --> REQUEST[대상 그룹 가입 요청]
+    REQUEST --> REP{그룹 대표자 결정}
+    REP -- 승인 --> MOVE[기존 소속 종료 후 대상 그룹 연결]
+    REP -- 거절 --> KEEP[기존 소속 유지 또는 그룹 미지정 유지]
+    OP[운영자 계정·사업자 프로필 등록 및 구성원 그룹 연결] --> INITIAL[최초 계정을 대표자로 한 그룹 초기화]
+    ADMIN[운영자 대표자 변경] --> ROLE[대표자 계정 변경]
+    REPCHG[대표자 변경] --> ROLE{운영자 권한인가}
+    ROLE -- 예 --> CHANGE[활성 구성원 중 새 대표자 지정]
+    ROLE -- 아니오 --> DENY[변경 거부]
+```

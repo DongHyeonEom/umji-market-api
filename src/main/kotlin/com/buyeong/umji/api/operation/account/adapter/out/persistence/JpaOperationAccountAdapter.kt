@@ -70,6 +70,8 @@ class JpaOperationAccountAdapter(
         data(entity, true)
     }
 
+    override fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = buyerGroups.setRepresentative(groupId, accountId)
+
     override fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
         val processor = accounts.findByPublicId(consent.processedBy)
             ?: throw IllegalStateException("동의 처리자 계정을 찾을 수 없습니다.")

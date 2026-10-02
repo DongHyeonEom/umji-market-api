@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V20으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V22로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -44,6 +44,8 @@
 | V18 | `buyer_group`, `buyer_group_member`, `buyer_group_business_profile`; 주문 구매자 그룹 귀속 및 기존 데이터 backfill |
 | V19 | 계정당 그룹 한 곳으로 제한, 그룹 UUID 저장 형식 정규화, 주문 그룹 귀속 필수화 |
 | V20 | 계정별 배송지를 그룹 공용 배송지로 이관, 주문 배송지 snapshot 컬럼 추가 |
+| V21 | 그룹 대표자, 활성 구성원 재가입 이력, 전화번호 초대 및 가입 요청 테이블 추가 |
+| V22 | 복수 구성원 그룹의 초기 대표자를 가장 먼저 생성된 계정으로 고정 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -65,8 +67,15 @@
   V19에서 `buyer_group_id`를 필수화하며 신규 주문 생성 시 활성 계정의 그룹 ID를 저장해야 함.<br>
 - `buyer_group.group_type`은 `BUSINESS` 또는 `INDIVIDUAL`이며, 사업자번호는 선택 정보임.<br>
   사업자 그룹 식별자나 그룹 병합 키로 사용하지 않음.<br>
-- `buyer_group_member`는 한 그룹에 여러 계정을 연결하며 한 계정은 한 그룹에만 연결함.<br>
-  사업자 그룹에 구성원을 추가하는 애플리케이션 기능은 아직 미구현.<br>
+- `buyer_group_member`는 구성원 소속 이력을 보존하며, 계정당 동시 활성 그룹 소속은 하나로 제한함.<br>
+  V21의 generated `active_account_id` unique 제약으로 동시 활성 소속을 하나로 제한.<br>
+  그룹 이동 시 이전 소속은 `LEFT`로 종료하고 새 활성 소속을 추가. 주문의 과거 그룹 귀속은 변경하지 않음.<br>
+- `buyer_group.representative_account_id`는 현재 대표 계정이며 반드시 활성 구성원이어야 함.<br>
+  대표자 지정·변경은 운영자 권한으로만 수행. 개인 그룹 최초 생성자는 대표자로 지정됨.<br>
+- `buyer_group_invitation`은 대표자가 전화번호로 보낸 초대 이력이며, 초대 대상 계정이 수락해야 그룹 소속 변경.<br>
+  초대 수락은 기존 그룹 대표자 계정에 대해 허용하지 않음.<br>
+- `buyer_group_join_request`는 일반 구성원의 가입 요청 및 대표자의 처리 이력.<br>
+  대표자만 그룹 가입 요청을 승인·거절할 수 있음.<br>
 - `buyer_group_address`는 구매자 그룹 공용 배송지임.<br>
   그룹 구성원은 주소를 공동 조회·관리하고 기본 배송지는 그룹당 최대 하나로 유지함.<br>
   생성 계정은 이력 식별용이며 주소 접근 범위는 구매자 그룹 기준.<br>

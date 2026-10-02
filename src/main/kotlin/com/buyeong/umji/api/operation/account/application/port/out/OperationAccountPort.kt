@@ -14,6 +14,7 @@ interface OperationAccountPort {
     fun updateStatus(id: UUID, status: String): AccountData?
     fun updateProfile(id: UUID, profile: BusinessProfileData, nextStatus: String): AccountData?
     fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData?
+    fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID)
     fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData?
     fun hasConsent(id: UUID, consentType: String): Boolean
     fun approve(id: UUID): AccountData?

@@ -1,8 +1,10 @@
 package com.buyeong.umji.api.order.adapter
 
 import com.buyeong.umji.api.account.application.model.SharedAddressCommand
+import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
 import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import org.assertj.core.api.Assertions.assertThat
@@ -44,6 +46,12 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     @Autowired
     private lateinit var buyerGroups: BuyerGroupJpaEntityService
+
+    @Autowired
+    private lateinit var groupMembership: BuyerGroupMembershipUseCase
+
+    @Autowired
+    private lateinit var operationAccounts: OperationAccountUseCase
 
     @Test
     fun `flyway v13 persists invoice preference and order-specific bank account snapshots`() {
@@ -152,6 +160,67 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         }.isInstanceOf(ItemNotFoundException::class.java)
     }
 
+    @Test
+    fun `group invitations and join requests require recipient acceptance and representative approval`() {
+        val representativeId = createAccount()
+        val invitedId = createAccount()
+        val requestedId = createAccount()
+        val businessGroupId = createBusinessGroup(representativeId)
+        buyerGroups.ensureForAccount(invitedId)
+        buyerGroups.ensureForAccount(requestedId)
+
+        groupMembership.invite(representativeId, accountPhone(invitedId))
+        assertThat(groupMembership.invitations(invitedId)).hasSize(1)
+        groupMembership.respondInvitation(invitedId, groupMembership.invitations(invitedId).single().id, true)
+        assertThat(groupMembership.current(invitedId)?.id).isEqualTo(businessGroupId)
+        assertThat(jdbc.queryForObject("SELECT status FROM buyer_group WHERE public_id = ?", String::class.java, personalGroupId(invitedId).toBytes()))
+            .isEqualTo("INACTIVE")
+
+        groupMembership.requestToJoin(requestedId, businessGroupId)
+        val pending = groupMembership.pendingJoinRequests(representativeId).single()
+        assertThat(pending.requesterPhone).endsWith(accountPhone(requestedId).takeLast(4))
+        groupMembership.respondJoinRequest(representativeId, pending.id, true)
+        assertThat(groupMembership.current(requestedId)?.id).isEqualTo(businessGroupId)
+        assertThat(groupMembership.search("010-9000-0000").map { it.id }).contains(businessGroupId)
+        assertThat(groupMembership.search(accountPhone(requestedId)).map { it.id }).contains(businessGroupId)
+    }
+
+    @Test
+    fun `only the configured representative can invite members and review join requests`() {
+        val formerRepresentative = createAccount()
+        val memberId = createAccount()
+        val applicantId = createAccount()
+        val businessGroupId = createBusinessGroup(formerRepresentative)
+        buyerGroups.ensureForAccount(memberId)
+        buyerGroups.assignAccountToBusinessGroup(memberId, businessGroupId)
+        buyerGroups.ensureForAccount(applicantId)
+
+        operationAccounts.setBuyerGroupRepresentative(businessGroupId, memberId)
+        assertThat(groupMembership.pendingJoinRequests(formerRepresentative)).isEmpty()
+        assertThatThrownBy { groupMembership.invite(formerRepresentative, accountPhone(applicantId)) }
+            .isInstanceOf(ItemNotFoundException::class.java)
+
+        groupMembership.requestToJoin(applicantId, businessGroupId)
+        val pending = groupMembership.pendingJoinRequests(memberId).single()
+        assertThatThrownBy { groupMembership.respondJoinRequest(formerRepresentative, pending.id, true) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        groupMembership.respondJoinRequest(memberId, pending.id, false)
+        assertThat(groupMembership.pendingJoinRequests(memberId)).isEmpty()
+        assertThat(groupMembership.current(applicantId)?.id).isNotEqualTo(businessGroupId)
+    }
+
+    @Test
+    fun `ungrouped first-time account can create an individual group and becomes its representative`() {
+        val accountId = createAccount()
+
+        assertThat(groupMembership.current(accountId)).isNull()
+        val group = groupMembership.createIndividualGroup(accountId, "Personal wholesale")
+
+        assertThat(group.type).isEqualTo("INDIVIDUAL")
+        assertThat(group.representative).isTrue()
+        assertThat(groupMembership.current(accountId)?.id).isEqualTo(group.id)
+    }
+
     private fun assertPersistedOrderSnapshot(
         orderId: UUID,
         taxInvoiceRequested: Boolean,
@@ -185,7 +254,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     private fun createBusinessGroup(accountId: UUID): UUID {
         val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, accountId.toBytes())!!
         jdbc.update(
-            "INSERT INTO business_profile (account_id, business_name, status) VALUES (?, 'Group test business', 'ACTIVE')",
+            "INSERT INTO business_profile (account_id, business_name, business_phone, status) VALUES (?, 'Group test business', '010-9000-0000', 'ACTIVE')",
             accountInternalId,
         )
         return requireNotNull(buyerGroups.ensureForAccount(accountId).publicId)
@@ -193,13 +262,27 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     private fun createAccount(): UUID {
         val publicId = UUID.randomUUID()
+        val phone = "010${UUID.randomUUID().toString().filter(Char::isDigit).padEnd(8, '0').take(8)}"
         jdbc.update(
-            "INSERT INTO account (public_id, login_id, password_hash, name, phone, status) VALUES (?, ?, 'test-hash', 'Checkout test', ?, 'ACTIVE')",
+            "INSERT INTO account (public_id, login_id, password_hash, name, phone, phone_normalized, status) VALUES (?, ?, 'test-hash', 'Checkout test', ?, ?, 'ACTIVE')",
             publicId.toBytes(),
             "checkout-${UUID.randomUUID()}",
-            "555${UUID.randomUUID().toString().take(7)}",
+            phone,
+            phone,
         )
         return publicId
+    }
+
+    private fun accountPhone(accountId: UUID): String =
+        jdbc.queryForObject("SELECT phone_normalized FROM account WHERE public_id = ?", String::class.java, accountId.toBytes())!!
+
+    private fun personalGroupId(accountId: UUID): UUID {
+        val groupBytes = jdbc.queryForObject(
+            "SELECT buyer_group.public_id FROM buyer_group JOIN buyer_group_member ON buyer_group_member.buyer_group_id = buyer_group.id WHERE buyer_group_member.account_id = (SELECT id FROM account WHERE public_id = ?) AND buyer_group.group_type = 'INDIVIDUAL'",
+            ByteArray::class.java,
+            accountId.toBytes(),
+        )!!
+        return ByteBuffer.wrap(groupBytes).let { UUID(it.long, it.long) }
     }
 
     private fun createCategory(): Long {

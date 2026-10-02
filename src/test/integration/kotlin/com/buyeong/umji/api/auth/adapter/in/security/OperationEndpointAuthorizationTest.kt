@@ -9,6 +9,7 @@ import com.buyeong.umji.api.inventory.adapter.`in`.web.OperationInventoryControl
 import com.buyeong.umji.api.inventory.application.model.StockView
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationAccountController
+import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationBuyerGroupController
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.operation.audit.adapter.`in`.web.OperationAuditController
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditPage
@@ -51,7 +52,7 @@ import java.util.UUID
 
 @WebMvcTest(
     controllers = [
-        OperationAccountController::class, OperationAuditController::class, OperationCatalogController::class,
+        OperationAccountController::class, OperationBuyerGroupController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class,
     ],
@@ -111,6 +112,26 @@ class OperationEndpointAuthorizationTest(
     fun `unmapped operation endpoint is denied by default`() {
         mockMvc.perform(get("/api/operation/unmapped").with(authorities("PRODUCT_READ")))
             .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `buyer group representative change requires account management permission`() {
+        val groupId = UUID.randomUUID()
+        mockMvc.perform(
+            put("/api/operation/buyer-groups/$groupId/representative")
+                .with(authorities("ORDER_READ"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"accountId":"${UUID.randomUUID()}"}"""),
+        ).andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            put("/api/operation/buyer-groups/$groupId/representative")
+                .with(authorities("ADMIN_ACCOUNT_MANAGE"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"accountId":"${UUID.randomUUID()}"}"""),
+        ).andExpect(status().isOk)
     }
 
     @Test
