@@ -21,7 +21,7 @@ class OperationShipmentController(
     private val shipments: TransactionalShipmentUseCase,
 ) {
     @PutMapping("/tracking")
-    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_WRITE')")
     fun registerTracking(
         @PathVariable orderId: UUID,
         @Valid @RequestBody request: ShipmentTrackingRequest,
@@ -33,7 +33,7 @@ class OperationShipmentController(
     ).toResponse()
 
     @PostMapping("/delivered")
-    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_WRITE')")
     fun markDelivered(@PathVariable orderId: UUID): ShipmentResponse = shipments.markDelivered(
         orderId,
         currentAccounts.activeAccountPublicId(),
