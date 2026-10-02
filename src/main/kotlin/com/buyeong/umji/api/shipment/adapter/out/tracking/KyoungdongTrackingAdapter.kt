@@ -34,7 +34,7 @@ class KyoungdongTrackingAdapter(
         val scans = root.path("data").path("scanList")
         if (!scans.isArray || scans.isEmpty) return CarrierTrackingStatus.UNAVAILABLE
 
-        val latestStatus = scans.first().path("scanTypeNm").asText().trim()
+        val latestStatus = scans.last().path("scanTypeNm").asText().trim()
         if (latestStatus.isEmpty()) return CarrierTrackingStatus.UNAVAILABLE
 
         return if (latestStatus == DELIVERED_LABEL) CarrierTrackingStatus.DELIVERED else CarrierTrackingStatus.IN_TRANSIT

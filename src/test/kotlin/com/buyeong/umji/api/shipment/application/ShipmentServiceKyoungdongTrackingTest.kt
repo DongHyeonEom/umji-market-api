@@ -47,7 +47,7 @@ class ShipmentServiceKyoungdongTrackingTest {
         val tracking = object : ShipmentTrackingPort {
             override fun lookup(carrierCode: String, trackingNumber: String): CarrierTrackingStatus =
                 adapter.parse(
-                    """{"result":"suc","data":{"scanList":[{"scanTypeNm":"배송완료"}]}}""",
+                    """{"result":"suc","data":{"scanList":[{"scanTypeNm":"발송"},{"scanTypeNm":"도착"},{"scanTypeNm":"배송중"},{"scanTypeNm":"배송완료"}]}}""",
                 )
         }
         val service = ShipmentService(

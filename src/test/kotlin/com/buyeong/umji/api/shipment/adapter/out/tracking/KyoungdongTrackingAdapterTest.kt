@@ -22,8 +22,10 @@ class KyoungdongTrackingAdapterTest {
               "result": "suc",
               "data": {
                 "scanList": [
-                  { "scanTypeNm": "배송완료" },
-                  { "scanTypeNm": "배달차량상차" }
+                  { "scanTypeNm": "발송" },
+                  { "scanTypeNm": "도착" },
+                  { "scanTypeNm": "배송중" },
+                  { "scanTypeNm": "배송완료" }
                 ]
               }
             }
