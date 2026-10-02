@@ -59,6 +59,11 @@ class JpaOrderStoreAdapter(
             depositBankName = draft.depositBankName
             depositAccountNumber = draft.depositAccountNumber
             depositAccountHolder = draft.depositAccountHolder
+            shippingRecipientName = draft.shippingAddress.recipientName
+            shippingRecipientPhone = draft.shippingAddress.recipientPhone
+            shippingPostalCode = draft.shippingAddress.postalCode
+            shippingAddress1 = draft.shippingAddress.address1
+            shippingAddress2 = draft.shippingAddress.address2
         }
         draft.items.forEach { item -> order.add(item.toEntity()) }
         val saved = orders.saveAndFlush(order)
@@ -133,6 +138,11 @@ class JpaOrderStoreAdapter(
         cancellationRequestStatus = cancellationHistory.findLatestStatus(requireNotNull(publicId), PageRequest.of(0, 1)).firstOrNull(),
         orderedByName = account.name,
         orderedByPhoneSuffix = account.phone?.filter(Char::isDigit)?.takeLast(4)?.takeIf(String::isNotEmpty),
+        shippingRecipientName = shippingRecipientName,
+        shippingRecipientPhone = shippingRecipientPhone,
+        shippingPostalCode = shippingPostalCode,
+        shippingAddress1 = shippingAddress1,
+        shippingAddress2 = shippingAddress2,
     )
 
     private companion object {

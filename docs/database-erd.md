@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V19가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V20이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -10,6 +10,9 @@
   `BINARY` 공개 ID는 UUID를 16바이트로 저장함.<br>
 - 관계도 각 필드 뒤의 따옴표 안 문구가 해당 필드의 설명임.<br>
   타입은 읽기 편하게 기본 타입명으로 표시하며, 길이·default·check 제약은 migration 파일을 기준으로 확인함.<br>
+- `buyer_group_address`의 공개 UUID 및 그룹 단위 기본값 단일화 제약은 V20에 정의됨.<br>
+- V20은 V2의 `account_address` 데이터를 현재 계정의 구매자 그룹에 연결해 `buyer_group_address`로 이관함.<br>
+  기본값 단일화는 구매자 그룹 행 잠금과 애플리케이션 트랜잭션으로 유지함.<br>
 - Nullable 필드는 설명에 표시했음.<br>
   `created_at`은 생성 시각, `updated_at`은 마지막 수정 시각이며 UTC `DATETIME(3)`임.<br>
 
@@ -68,9 +71,11 @@ erDiagram
         DATETIME created_at "발급 시각"
         DATETIME last_used_at "최근 사용 시각, nullable"
     }
-    ACCOUNT_ADDRESS {
+    BUYER_GROUP_ADDRESS {
         BIGINT id PK "배송지 내부 ID"
-        BIGINT account_id FK "소유 계정 ID"
+        BINARY public_id UK "배송지 공개 UUID"
+        BIGINT buyer_group_id FK "소유 구매자 그룹 ID"
+        BIGINT created_by_account_id FK "생성 계정 ID"
         VARCHAR recipient_name "수령인 이름"
         VARCHAR recipient_phone "수령인 연락처"
         VARCHAR postal_code "우편번호"
@@ -285,6 +290,11 @@ erDiagram
         VARCHAR deposit_bank_name "입금 은행 스냅샷, nullable"
         VARCHAR deposit_account_number "입금 계좌번호 스냅샷, nullable"
         VARCHAR deposit_account_holder "입금 예금주 스냅샷, nullable"
+        VARCHAR shipping_recipient_name "수령인 스냅샷, nullable"
+        VARCHAR shipping_recipient_phone "수령인 연락처 스냅샷, nullable"
+        VARCHAR shipping_postal_code "우편번호 스냅샷, nullable"
+        VARCHAR shipping_address1 "기본 주소 스냅샷, nullable"
+        VARCHAR shipping_address2 "상세 주소 스냅샷, nullable"
         DATETIME ordered_at "주문 시각"
         BIGINT version "낙관적 잠금 버전"
         DATETIME created_at "생성 시각"
@@ -374,7 +384,8 @@ erDiagram
     ROLE ||--o{ ROLE_PERMISSION : grants
     PERMISSION ||--o{ ROLE_PERMISSION : includes
     ACCOUNT ||--o{ REFRESH_TOKEN : owns
-    ACCOUNT ||--o{ ACCOUNT_ADDRESS : has
+    BUYER_GROUP ||--o{ BUYER_GROUP_ADDRESS : shares
+    ACCOUNT ||--o{ BUYER_GROUP_ADDRESS : creates
     ACCOUNT ||--o| BUSINESS_PROFILE : has
     ACCOUNT ||--o| BUYER_GROUP_MEMBER : joins
     BUYER_GROUP ||--o{ BUYER_GROUP_MEMBER : includes
@@ -456,6 +467,7 @@ erDiagram
 | V17 | 배송 상태 `DELIVERED` 허용 |
 | V18 | 구매자 그룹·구성원·그룹 사업자 프로필 생성, 주문 그룹 귀속 및 기존 데이터 backfill |
 | V19 | 계정당 단일 구매자 그룹 제약, 그룹 공개 UUID 정규화, 주문의 그룹 귀속 필수화 |
+| V20 | 계정별 배송지를 그룹 공용 배송지로 이관, 주문 배송지 snapshot 컬럼 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

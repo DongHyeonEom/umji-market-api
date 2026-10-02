@@ -24,6 +24,11 @@ data class OrderResponse(
     val cancellationRequestStatus: String?,
     val orderedByName: String?,
     val orderedByPhoneSuffix: String?,
+    val shippingRecipientName: String?,
+    val shippingRecipientPhone: String?,
+    val shippingPostalCode: String?,
+    val shippingAddress1: String?,
+    val shippingAddress2: String?,
 )
 
 data class BankAccountInstructionsResponse(
@@ -39,6 +44,7 @@ data class OrderCheckoutOptionsResponse(
 )
 
 data class CreateOrderRequest(
+    val shippingAddressId: UUID,
     val taxInvoiceRequested: Boolean? = null,
     val updateDefaultTaxInvoicePreference: Boolean = false,
 )

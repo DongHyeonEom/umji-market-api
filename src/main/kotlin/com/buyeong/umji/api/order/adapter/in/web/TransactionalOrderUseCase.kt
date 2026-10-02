@@ -15,8 +15,12 @@ class TransactionalOrderUseCase(private val orders: OrderService) : OrderUseCase
     override fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions = orders.checkoutOptions(accountPublicId)
 
     @Transactional
-    override fun create(accountPublicId: UUID, taxInvoiceRequested: Boolean?, updateDefaultTaxInvoicePreference: Boolean): OrderView =
-        orders.create(accountPublicId, taxInvoiceRequested, updateDefaultTaxInvoicePreference)
+    override fun create(
+        accountPublicId: UUID,
+        shippingAddressPublicId: UUID,
+        taxInvoiceRequested: Boolean?,
+        updateDefaultTaxInvoicePreference: Boolean,
+    ): OrderView = orders.create(accountPublicId, shippingAddressPublicId, taxInvoiceRequested, updateDefaultTaxInvoicePreference)
 
     @Transactional(readOnly = true)
     override fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage = orders.list(accountPublicId, page, size)

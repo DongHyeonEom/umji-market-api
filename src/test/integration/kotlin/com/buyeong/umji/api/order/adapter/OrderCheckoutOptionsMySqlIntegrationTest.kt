@@ -1,7 +1,12 @@
 package com.buyeong.umji.api.order.adapter
 
+import com.buyeong.umji.api.account.application.model.SharedAddressCommand
+import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
+import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -34,6 +39,12 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     @Autowired
     private lateinit var orders: OrderUseCase
 
+    @Autowired
+    private lateinit var customerAccounts: CustomerAccountUseCase
+
+    @Autowired
+    private lateinit var buyerGroups: BuyerGroupJpaEntityService
+
     @Test
     fun `flyway v13 persists invoice preference and order-specific bank account snapshots`() {
         val migrationCount = jdbc.queryForObject(
@@ -43,6 +54,8 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(migrationCount).isEqualTo(1)
 
         val accountId = createAccount()
+        val addressId = createAddress(accountId)
+        assertThat(customerAccounts.profile(accountId).id).isEqualTo(accountId)
         val categoryId = createCategory()
         val productId = createProduct(categoryId)
         val skuId = createSku(productId)
@@ -61,12 +74,20 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             ),
         ).isFalse()
 
-        val invoiceOrder = orders.create(accountId, true, true)
+        val invoiceOrder = orders.create(accountId, addressId, true, true)
         assertThat(invoiceOrder.taxInvoiceRequested).isTrue()
         assertThat(invoiceOrder.depositBankName).isEqualTo("Tax Bank")
         assertThat(invoiceOrder.depositAccountNumber).isEqualTo("333-444")
         assertThat(invoiceOrder.depositAccountHolder).isEqualTo("Tax Holder")
+        assertThat(invoiceOrder.shippingRecipientName).isEqualTo("Recipient")
+        assertThat(invoiceOrder.shippingAddress1).isEqualTo("Seoul address")
         assertPersistedOrderSnapshot(invoiceOrder.id, true, "Tax Bank", "333-444", "Tax Holder")
+        customerAccounts.updateAddress(
+            accountId,
+            addressId,
+            SharedAddressCommand("Changed recipient", "01087654321", "54321", "Changed address", null, true),
+        )
+        assertThat(orders.detail(accountId, invoiceOrder.id).shippingAddress1).isEqualTo("Seoul address")
         assertThat(orders.checkoutOptions(accountId).defaultTaxInvoiceRequested).isTrue()
 
         val standardAccountId = createAccount()
@@ -74,14 +95,61 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             "UPDATE account SET default_tax_invoice_requested = TRUE WHERE public_id = ?",
             standardAccountId.toBytes(),
         )
+        val standardAddressId = createAddress(standardAccountId)
         createCartWithItem(standardAccountId, skuId)
-        val standardOrder = orders.create(standardAccountId, false, false)
+        val standardOrder = orders.create(standardAccountId, standardAddressId, false, false)
         assertThat(standardOrder.taxInvoiceRequested).isFalse()
         assertThat(standardOrder.depositBankName).isEqualTo("Standard Bank")
         assertThat(standardOrder.depositAccountNumber).isEqualTo("111-222")
         assertThat(standardOrder.depositAccountHolder).isEqualTo("Standard Holder")
         assertPersistedOrderSnapshot(standardOrder.id, false, "Standard Bank", "111-222", "Standard Holder")
         assertThat(orders.checkoutOptions(standardAccountId).defaultTaxInvoiceRequested).isTrue()
+    }
+
+    @Test
+    fun `business group members share addresses while other groups cannot access them`() {
+        val ownerId = createAccount()
+        val memberId = createAccount()
+        val otherId = createAccount()
+        val businessGroupId = createBusinessGroup(ownerId)
+        buyerGroups.ensureForAccount(memberId)
+        buyerGroups.assignAccountToBusinessGroup(memberId, businessGroupId)
+        buyerGroups.ensureForAccount(otherId)
+
+        val sharedAddress = customerAccounts.createAddress(
+            ownerId,
+            SharedAddressCommand("Group recipient", "01012345678", "12345", "Shared address", null, false),
+        )
+
+        assertThat(sharedAddress.isDefault).isTrue()
+        assertThat(customerAccounts.addresses(memberId)).hasSize(1)
+        assertThat(customerAccounts.addresses(memberId).single().id).isEqualTo(sharedAddress.id)
+        assertThat(customerAccounts.addresses(otherId)).isEmpty()
+        assertThatThrownBy { orders.create(otherId, sharedAddress.id, false, false) }
+            .isInstanceOf(ItemNotFoundException::class.java)
+
+        val secondAddress = customerAccounts.createAddress(
+            memberId,
+            SharedAddressCommand("Second recipient", "01087654321", "54321", "Second address", null, false),
+        )
+        customerAccounts.updateAddress(
+            memberId,
+            sharedAddress.id,
+            SharedAddressCommand("Updated recipient", "01012345678", "12345", "Updated shared address", null, false),
+        )
+        assertThat(customerAccounts.addresses(ownerId).first { it.id == sharedAddress.id }.recipientName).isEqualTo("Updated recipient")
+
+        customerAccounts.deleteAddress(memberId, sharedAddress.id)
+        val remainingAddress = customerAccounts.addresses(ownerId).single()
+        assertThat(remainingAddress.id).isEqualTo(secondAddress.id)
+        assertThat(remainingAddress.isDefault).isTrue()
+        assertThatThrownBy {
+            customerAccounts.updateAddress(
+                otherId,
+                secondAddress.id,
+                SharedAddressCommand("No access", "01011112222", "10000", "Hidden", null, false),
+            )
+        }.isInstanceOf(ItemNotFoundException::class.java)
     }
 
     private fun assertPersistedOrderSnapshot(
@@ -92,13 +160,35 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         accountHolder: String,
     ) {
         val row = jdbc.queryForMap(
-            "SELECT tax_invoice_requested, deposit_bank_name, deposit_account_number, deposit_account_holder FROM purchase_order WHERE public_id = ?",
+            "SELECT tax_invoice_requested, deposit_bank_name, deposit_account_number, deposit_account_holder, shipping_recipient_name, shipping_recipient_phone, shipping_postal_code, shipping_address1, shipping_address2 FROM purchase_order WHERE public_id = ?",
             orderId.toBytes(),
         )
         assertThat(row["tax_invoice_requested"]).isEqualTo(taxInvoiceRequested)
         assertThat(row["deposit_bank_name"]).isEqualTo(bankName)
         assertThat(row["deposit_account_number"]).isEqualTo(accountNumber)
         assertThat(row["deposit_account_holder"]).isEqualTo(accountHolder)
+        assertThat(row["shipping_recipient_name"]).isEqualTo("Recipient")
+        assertThat(row["shipping_recipient_phone"]).isEqualTo("01012345678")
+        assertThat(row["shipping_postal_code"]).isEqualTo("12345")
+        assertThat(row["shipping_address1"]).isEqualTo("Seoul address")
+        assertThat(row["shipping_address2"]).isEqualTo("Details")
+    }
+
+    private fun createAddress(accountId: UUID): UUID {
+        buyerGroups.ensureForAccount(accountId)
+        return customerAccounts.createAddress(
+            accountId,
+            SharedAddressCommand("Recipient", "01012345678", "12345", "Seoul address", "Details", false),
+        ).id
+    }
+
+    private fun createBusinessGroup(accountId: UUID): UUID {
+        val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, accountId.toBytes())!!
+        jdbc.update(
+            "INSERT INTO business_profile (account_id, business_name, status) VALUES (?, 'Group test business', 'ACTIVE')",
+            accountInternalId,
+        )
+        return requireNotNull(buyerGroups.ensureForAccount(accountId).publicId)
     }
 
     private fun createAccount(): UUID {

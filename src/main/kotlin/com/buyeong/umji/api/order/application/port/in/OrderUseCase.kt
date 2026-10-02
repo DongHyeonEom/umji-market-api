@@ -7,8 +7,12 @@ import java.util.UUID
 
 interface OrderUseCase {
     fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions
-    fun create(accountPublicId: UUID, taxInvoiceRequested: Boolean?, updateDefaultTaxInvoicePreference: Boolean): OrderView
-    fun create(accountPublicId: UUID): OrderView = create(accountPublicId, null, false)
+    fun create(
+        accountPublicId: UUID,
+        shippingAddressPublicId: UUID,
+        taxInvoiceRequested: Boolean?,
+        updateDefaultTaxInvoicePreference: Boolean,
+    ): OrderView
     fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage
     fun detail(accountPublicId: UUID, orderId: UUID): OrderView
 }

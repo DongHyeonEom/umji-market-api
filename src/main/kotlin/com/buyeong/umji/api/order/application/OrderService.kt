@@ -9,6 +9,7 @@ import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.port.out.BankAccountInstructionsPort
 import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
 import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
+import com.buyeong.umji.api.order.application.port.out.OrderShippingAddressPort
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import java.time.Instant
 import java.util.UUID
@@ -17,6 +18,7 @@ class OrderService(
     private val checkoutCart: CheckoutCartPort,
     private val inventory: InventoryReservationPort,
     private val orders: OrderStorePort,
+    private val shippingAddresses: OrderShippingAddressPort,
     private val bankAccounts: BankAccountInstructionsPort = object : BankAccountInstructionsPort {
         override fun standard() = com.buyeong.umji.api.order.application.model.BankAccountInstructions("", "", "")
         override fun taxInvoice() = standard()
@@ -28,7 +30,14 @@ class OrderService(
         taxInvoiceBankAccount = bankAccounts.taxInvoice(),
     )
 
-    fun create(accountPublicId: UUID, taxInvoiceRequested: Boolean?, updateDefaultTaxInvoicePreference: Boolean): OrderView {
+    fun create(
+        accountPublicId: UUID,
+        shippingAddressPublicId: UUID,
+        taxInvoiceRequested: Boolean?,
+        updateDefaultTaxInvoicePreference: Boolean,
+    ): OrderView {
+        val shippingAddress = shippingAddresses.findForAccount(accountPublicId, shippingAddressPublicId)
+            ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
         val defaultPreference = if (taxInvoiceRequested == null || updateDefaultTaxInvoicePreference) {
             orders.defaultTaxInvoiceRequested(accountPublicId)
         } else {
@@ -59,7 +68,12 @@ class OrderService(
         val saved = orders.save(
             OrderDraft(
                 accountPublicId, PENDING_PAYMENT, orderedAt, subtotal, subtotal,
-                selectedPreference, bankAccount.bankName, bankAccount.accountNumber, bankAccount.accountHolder, items,
+                selectedPreference,
+                bankAccount.bankName,
+                bankAccount.accountNumber,
+                bankAccount.accountHolder,
+                shippingAddress,
+                items,
             ),
         )
         if (updateDefaultTaxInvoicePreference && selectedPreference != defaultPreference) {
@@ -70,7 +84,8 @@ class OrderService(
         return saved
     }
 
-    fun create(accountPublicId: UUID): OrderView = create(accountPublicId, false, false)
+    fun create(accountPublicId: UUID, shippingAddressPublicId: UUID): OrderView =
+        create(accountPublicId, shippingAddressPublicId, false, false)
 
     fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage = orders.findAll(accountPublicId, page, size)
 

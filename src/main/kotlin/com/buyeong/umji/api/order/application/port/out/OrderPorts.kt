@@ -5,6 +5,7 @@ import com.buyeong.umji.api.order.application.model.CheckoutLine
 import com.buyeong.umji.api.order.application.model.OrderDraft
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
+import com.buyeong.umji.api.order.application.model.ShippingAddressSnapshot
 import java.time.Instant
 import java.util.UUID
 
@@ -23,6 +24,10 @@ interface OrderStorePort {
     fun save(draft: OrderDraft): OrderView
     fun findAll(accountId: UUID, page: Int, size: Int): OrderPage
     fun find(accountId: UUID, orderId: UUID): OrderView?
+}
+
+interface OrderShippingAddressPort {
+    fun findForAccount(accountPublicId: UUID, addressPublicId: UUID): ShippingAddressSnapshot?
 }
 
 interface BankAccountInstructionsPort {
