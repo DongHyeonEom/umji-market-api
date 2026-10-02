@@ -20,6 +20,14 @@ class BuyerGroupJpaEntityService(
         accounts.findByPublicId(accountPublicId)?.id?.let(::activeForAccount)
 
     @Transactional
+    fun lockActiveForAccountPublicId(accountPublicId: UUID): BuyerGroupEntity {
+        val active = activeForAccountPublicId(accountPublicId)
+            ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
+        return groups.findLockedById(requireNotNull(active.id))
+            ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
+    }
+
+    @Transactional
     fun ensureForAccount(accountPublicId: UUID): BuyerGroupEntity {
         val account = accounts.findByPublicId(accountPublicId)
             ?: throw IllegalArgumentException("계정을 찾을 수 없습니다.")

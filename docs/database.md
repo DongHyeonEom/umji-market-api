@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V19으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V20으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -43,6 +43,7 @@
 | V17 | 배송 상태 `DELIVERED` 허용 |
 | V18 | `buyer_group`, `buyer_group_member`, `buyer_group_business_profile`; 주문 구매자 그룹 귀속 및 기존 데이터 backfill |
 | V19 | 계정당 그룹 한 곳으로 제한, 그룹 UUID 저장 형식 정규화, 주문 그룹 귀속 필수화 |
+| V20 | 계정별 배송지를 그룹 공용 배송지로 이관, 주문 배송지 snapshot 컬럼 추가 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -66,6 +67,11 @@
   사업자 그룹 식별자나 그룹 병합 키로 사용하지 않음.<br>
 - `buyer_group_member`는 한 그룹에 여러 계정을 연결하며 한 계정은 한 그룹에만 연결함.<br>
   사업자 그룹에 구성원을 추가하는 애플리케이션 기능은 아직 미구현.<br>
+- `buyer_group_address`는 구매자 그룹 공용 배송지임.<br>
+  그룹 구성원은 주소를 공동 조회·관리하고 기본 배송지는 그룹당 최대 하나로 유지함.<br>
+  생성 계정은 이력 식별용이며 주소 접근 범위는 구매자 그룹 기준.<br>
+- `purchase_order`의 배송지 snapshot은 주문 당시 수령인·연락처·주소를 보존함.<br>
+  주소 원본과 외래 키를 두지 않아 그룹 주소 변경·삭제가 기존 주문에 영향을 주지 않음.<br>
 - `business_profile`은 기존 계정 기능의 호환을 위해 유지하고, V18 시점의 사업자 프로필은 `buyer_group_business_profile`로 복사함.<br>
 
 ## 아직 없는 스키마

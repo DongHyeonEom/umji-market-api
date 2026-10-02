@@ -40,11 +40,12 @@ class OrderController(
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun create(@RequestBody(required = false) request: CreateOrderRequest?): OrderResponse =
+    fun create(@RequestBody request: CreateOrderRequest): OrderResponse =
         orders.create(
             currentAccounts.activeAccountPublicId(),
-            request?.taxInvoiceRequested,
-            request?.updateDefaultTaxInvoicePreference ?: false,
+            request.shippingAddressId,
+            request.taxInvoiceRequested,
+            request.updateDefaultTaxInvoicePreference,
         ).toResponse()
 
     @GetMapping
@@ -82,6 +83,11 @@ class OrderController(
         cancellationRequestStatus,
         orderedByName,
         orderedByPhoneSuffix,
+        shippingRecipientName,
+        shippingRecipientPhone,
+        shippingPostalCode,
+        shippingAddress1,
+        shippingAddress2,
     )
 
     private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(

@@ -23,7 +23,16 @@ data class OrderDraft(
     val depositBankName: String,
     val depositAccountNumber: String,
     val depositAccountHolder: String,
+    val shippingAddress: ShippingAddressSnapshot,
     val items: List<OrderItemDraft>,
+)
+
+data class ShippingAddressSnapshot(
+    val recipientName: String,
+    val recipientPhone: String,
+    val postalCode: String,
+    val address1: String,
+    val address2: String?,
 )
 
 data class BankAccountInstructions(
@@ -70,6 +79,11 @@ data class OrderView(
     val cancellationRequestStatus: String? = null,
     val orderedByName: String? = null,
     val orderedByPhoneSuffix: String? = null,
+    val shippingRecipientName: String? = null,
+    val shippingRecipientPhone: String? = null,
+    val shippingPostalCode: String? = null,
+    val shippingAddress1: String? = null,
+    val shippingAddress2: String? = null,
 )
 
 data class OrderItemView(

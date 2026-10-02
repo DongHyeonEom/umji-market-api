@@ -50,6 +50,21 @@ class PurchaseOrderEntity : DomainPublicEntity() {
     @Column(name = "deposit_account_holder")
     var depositAccountHolder: String? = null
 
+    @Column(name = "shipping_recipient_name", length = 100)
+    var shippingRecipientName: String? = null
+
+    @Column(name = "shipping_recipient_phone", length = 30)
+    var shippingRecipientPhone: String? = null
+
+    @Column(name = "shipping_postal_code", length = 20)
+    var shippingPostalCode: String? = null
+
+    @Column(name = "shipping_address1", length = 255)
+    var shippingAddress1: String? = null
+
+    @Column(name = "shipping_address2", length = 255)
+    var shippingAddress2: String? = null
+
     @Column(name = "ordered_at", nullable = false)
     var orderedAt: Instant = Instant.now()
 

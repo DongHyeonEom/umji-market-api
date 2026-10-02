@@ -11,6 +11,7 @@ import com.buyeong.umji.api.order.application.port.out.BankAccountInstructionsPo
 import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
 import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
 import com.buyeong.umji.api.order.application.port.out.OrderCancellationPort
+import com.buyeong.umji.api.order.application.port.out.OrderShippingAddressPort
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import com.buyeong.umji.api.order.application.port.out.ShippingHolidayPort
 import com.buyeong.umji.api.shipment.application.port.`in`.ShipmentUseCase
@@ -31,8 +32,9 @@ class OrderApplicationConfiguration {
         checkoutCart: CheckoutCartPort,
         inventory: InventoryReservationPort,
         orders: OrderStorePort,
+        shippingAddresses: OrderShippingAddressPort,
         bankAccounts: BankAccountInstructionsPort,
-    ) = OrderService(checkoutCart, inventory, orders, bankAccounts)
+    ) = OrderService(checkoutCart, inventory, orders, shippingAddresses, bankAccounts)
 
     @Bean
     fun customerOrderListingUseCase(orders: OrderUseCase, shipments: ShipmentUseCase): CustomerOrderListingUseCase =
