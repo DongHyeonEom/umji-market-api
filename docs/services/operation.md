@@ -141,51 +141,53 @@ flowchart TD
 
 | 설계 테이블 | 주요 데이터 | 규칙 |
 | --- | --- | --- |
-| `buyer_group_sales_assignment` | 구매자 그룹, 영업 계정, 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 그룹당 시점별 담당 영업자 1명. 영업자가 그룹을 생성하면 생성자 본인을 초기 담당자로 같은 트랜잭션에서 배정. 재배정은 기존 행 종료 후 새 행 추가. 과거 주문 배정은 변경하지 않음 |
-| `sales_commission` | 주문·그룹·담당 영업자·배정 ID, 요율·산정 기준·기준액·인센티브액 snapshot, 상태, 확정·지급 시각 | 주문당 정산 원장 한 건. 주문/담당자/요율이 나중에 바뀌어도 과거 계산값 불변. 취소·환불은 원본 행을 덮어쓰기보다 reversal 이력으로 보정 |
-| `sales_commission_event` | 원장 ID, 이벤트 유형, 금액 증감, 처리 계정, 사유, 발생 시각 | 적립·취소·지급·지급취소를 append-only 이벤트로 기록. 중복 주문 이벤트 재처리 방지 key 보유 |
+| `buyer_group_sales_assignment` | 구매자 그룹, 영업 계정, 선택적 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 그룹당 시점별 담당 영업자 1명. 수수료 없는 담당 연결도 허용. 직원·그룹 연결별 요율이 다를 수 있으며 재배정은 기존 행 종료 후 새 행 추가 |
+| `sales_commission` | 주문·그룹·담당 영업자·배정 ID, 적용 요율·상품 판매 기준액·인센티브액 snapshot, 상태(`NOT_APPLICABLE`, `WAITING`, `PAYABLE`, `PAID`, `REVERSED`), 확정·지급 시각 | 주문당 attribution/정산 요약 한 건. 담당자나 요율이 없어도 `NOT_APPLICABLE`로 snapshot해 미지급 근거를 보존. 취소·환불은 event로 보정 |
+| `sales_commission_event` | 원장 ID, `ACCRUED`·`REVERSED`·`PAID` 이벤트, 금액 증감, 처리 계정, 사유, 발생 시각 | 인센티브 상태 변경을 append-only로 기록. 중복 주문 이벤트 재처리 방지 key 보유 |
 
 제안 컬럼·제약:<br>
 
 | Table | 컬럼·타입·제약 |
 | --- | --- |
-| `buyer_group_sales_assignment` | `id BIGINT PK`, `public_id BINARY(16) UK`, `buyer_group_id BIGINT FK`, `sales_account_id BIGINT FK`, `commission_rate_bps INT`, `commission_basis VARCHAR(30)`, `assignment_reason VARCHAR(30)`, `valid_from DATETIME(3)`, `valid_until DATETIME(3) NULL`, `assigned_by_account_id BIGINT FK`, `created_at DATETIME(3)`. 활성 그룹당 담당자 한 명을 generated active key unique로 보장하고, 재배정은 그룹 행 잠금으로 기간 중복 방지 |
-| `sales_commission` | `id BIGINT PK`, `public_id BINARY(16) UK`, `order_id BIGINT FK UK`, `buyer_group_id BIGINT FK`, `assignment_id BIGINT FK`, `sales_account_id BIGINT FK`, `rate_bps_snapshot INT`, `basis_snapshot VARCHAR(30)`, `basis_amount BIGINT`, `commission_amount BIGINT`, `status VARCHAR(30)`, `qualified_at DATETIME(3) NULL`, `created_at DATETIME(3)`, `updated_at DATETIME(3)` |
+| `buyer_group_sales_assignment` | `id BIGINT PK`, `public_id BINARY(16) UK`, `buyer_group_id BIGINT FK`, `sales_account_id BIGINT FK`, `commission_rate_bps INT NULL`, `assignment_reason VARCHAR(30)`, `valid_from DATETIME(3)`, `valid_until DATETIME(3) NULL`, `assigned_by_account_id BIGINT FK`, `created_at DATETIME(3)`. 요율 `NULL`은 수수료 없음, 양수 요율은 해당 그룹 담당자의 판매 인센티브. `CHECK (commission_rate_bps IS NULL OR commission_rate_bps BETWEEN 1 AND 10000)`. 활성 그룹당 담당자 한 명을 generated active key unique로 보장하고, 재배정은 그룹 행 잠금으로 기간 중복 방지 |
+| `sales_commission` | `id BIGINT PK`, `public_id BINARY(16) UK`, `order_id BIGINT FK UK`, `buyer_group_id BIGINT FK`, `assignment_id BIGINT FK NULL`, `sales_account_id BIGINT FK NULL`, `rate_bps_snapshot INT NULL`, `basis_snapshot VARCHAR(30)` (`NET_ITEM_SALES`), `basis_amount BIGINT`, `commission_amount BIGINT`, `status VARCHAR(30)`, `qualified_at DATETIME(3) NULL`, `created_at DATETIME(3)`, `updated_at DATETIME(3)`. 주문 생성 시 담당/요율 부재면 `NOT_APPLICABLE`, 요율이 있으면 `WAITING` |
 | `sales_commission_event` | `id BIGINT PK`, `commission_id BIGINT FK`, `event_type VARCHAR(30)`, `amount_delta BIGINT`, `idempotency_key VARCHAR(150) UK`, `processed_by_account_id BIGINT FK NULL`, `reason_code VARCHAR(50) NULL`, `created_at DATETIME(3)` |
 
-`buyer_group`에는 `created_by_account_id BIGINT FK NULL`을 추가해 그룹 생성 주체를 기록. 영업자가 그룹을 생성하면 그룹·작성자·초기 담당 배정·기본 인센티브율을 한 트랜잭션으로 저장. 등록한 영업 계정이 실제 `SALES_MANAGER` role을 보유하는지 서버에서 확인.<br>
-현재 담당 배정률 기본값은 30 basis points(0.3%)로 제안. 영업자가 등록한 그룹에 본인을 기본 담당자로 자동 연결하되, 다른 계정으로 담당자를 재배정하거나 요율을 변경하는 작업은 `SALES_GROUP_ASSIGN` permission을 가진 운영자에게 제한하는 설계 권고.<br>
-주문 snapshot은 주문 생성 시점에 해당하는 기간 배정을 고정. 주문 한 건당 원장은 한 건이며 `sales_commission_event`가 발생·reversal·지급 이력을 보존.<br>
+`buyer_group`에는 `created_by_account_id BIGINT FK NULL`을 추가해 그룹 생성 주체를 기록. 영업자가 그룹을 생성하면 그룹·작성자·생성자를 초기 담당자로 한 배정 row를 한 트랜잭션으로 저장. 초기 요율은 `NULL`(미지급)이며 `SALES_GROUP_ASSIGN` 권한 운영자가 요율을 설정할 때 별도 유효기간 배정 row를 추가.<br>
+요율은 `commission_rate_bps`에 basis points로 저장. 예를 들어 `30`은 0.3%이며 고정 기본값을 강제하지 않음. 생성 영업자의 본인 담당 연결은 자동화하되, 요율 설정·담당자 재배정은 `SALES_GROUP_ASSIGN` permission에 제한.<br>
+주문 snapshot은 주문 생성 시점의 담당자·선택 요율·상품 판매 기준액을 고정. 주문 한 건당 요약 원장 한 건이며 `sales_commission_event`가 발생·reversal·지급 이력을 보존.<br>
 
 금액 계산은 정수 원화와 basis points 사용. `0.3%`는 `30 / 10,000`으로 저장해 부동소수점 반올림 차이를 방지.<br>
-주문 시점의 담당자·요율을 snapshot하고, 전액 취소·환불은 인센티브를 생성하지 않거나 기존 미지급액을 reversal 처리.<br>
-부분 입금 상태, 미입금 출고 허용 정책과 인센티브 발생 시점은 연결 정책 확정 필요.<br>
-
-**산정 기준 결정 필요:** 현재 `product_sku`와 주문 항목은 매입원가 snapshot을 보유하지 않아 매출 총이익(매출액−원가)의 0.3%를 계산할 수 없음. 진짜 매출 마진 기준이라면 SKU 원가 및 주문 당시 원가 snapshot 설계를 선행해야 함. 원가 데이터를 추가하지 않는 단순 안은 상품 순매출액(취소·환불 제외, 배송비 제외)의 0.3%이며 이는 마진율이 아닌 매출액 기준 인센티브.<br>
+인센티브 기준액은 상품 판매액으로 제안. 주문 상품 금액에서 상품 할인·취소·환불 금액을 차감하고 배송비는 제외. 판매가가 세금 포함 가격인지 별도 가격인지는 결제·세금계산 정책과 함께 확정 필요.<br>
+주문 시점의 담당자·선택 요율을 snapshot. 요율 `NULL` 또는 담당자 미배정 주문은 `NOT_APPLICABLE`이며 정산 대상에 포함하지 않음.<br>
 
 ### 정책 추천안·미확정 사항
 
-- 사용자 표현을 그대로 적용하면 인센티브 기준은 매출 총이익으로 보는 것이 자연스러움. 다만 이 기준은 SKU 매입원가와 주문 당시 원가 snapshot 없이는 구현 불가.<br>
-- 기준액은 `주문 상품 순매출액 snapshot - 주문 수량 × 매입원가 snapshot`으로 산정하고 배송비를 제외. 세금 포함 가격 사용 여부는 가격·세금계산 정책과 함께 확정.<br>
-- 인센티브 발생은 배송완료와 전액 입금 확인이 모두 끝난 시점으로 제안. 미입금 출고 가능 정책을 유지하면서도 미수 주문에 지급액이 확정되지 않도록 대기 원장을 사용.<br>
+- 그룹별 활성 담당자는 한 명으로 제한하는 안을 기준으로 설계. 다수 담당자 동시 배정이 필요하면 주문 인센티브 분배 규칙을 별도 추가.<br>
+- 0.3%는 판매액 기준의 예시 요율이며, 실제 rate는 직원·업체 연결마다 선택적으로 설정. 미지급 그룹은 요율 `NULL`로 구분하고, 영업 관리자가 임의로 본인 요율을 정하지 않도록 별도 운영자 권한으로 설정하는 안을 추천.<br>
+- 기준액은 주문 상품 순판매액으로 제안하고 배송비는 제외. 취소·환불은 상품 판매액에서 차감하거나 기존 인센티브를 reversal.<br>
+- 인센티브 확정은 배송완료와 전액 입금 확인이 모두 끝난 시점으로 제안. 배송 후 미입금 주문은 `WAITING` 상태를 유지. 두 조건 충족 시 `PAYABLE`로 전환하고, 지급 시 `PAID`.<br>
 - 전체 취소·환불은 미지급 인센티브를 무효화하고, 지급 후 환불은 별도 음수 reversal event로 다음 정산에 반영.<br>
 - 영업 관리자는 담당 그룹·본인 인센티브 조회 가능. 지급 확정은 본인과 분리해 전체 관리자 또는 별도 정산 권한자만 수행하도록 제안.<br>
 - 적용 요율 변경은 효력 발생 이후 생성된 주문에만 적용. 주문별 snapshot은 이후 그룹 담당자·요율 변경으로 수정하지 않음.<br>
 
-위 기준액과 발생 시점은 설계 제안이며, schema migration·정산 API 착수 전 확정 필요.<br>
+배송비·세금 포함 여부, 발생 시점 및 지급 권한은 설계 제안이며 schema migration·정산 API 착수 전 확정 필요.<br>
 
 ```mermaid
 flowchart TD
     SALES[SALES_MANAGER] --> CREATE[그룹 생성 요청]
     CREATE --> GROUP[구매자 그룹 저장]
-    GROUP --> ASSIGN[생성자 본인을 초기 담당자로 자동 배정]
+    GROUP --> ASSIGN[생성자 담당 연결 및 선택적 요율 설정]
     ADMIN[ADMIN 또는 지정 권한 운영자] --> REASSIGN[담당자 재배정·요율 변경]
     ASSIGN --> HISTORY[(유효 기간 배정 이력)]
     REASSIGN --> HISTORY
     GROUP --> ORDER[그룹 주문 생성]
     HISTORY --> SNAPSHOT[주문 시점 담당자·요율 snapshot]
     ORDER --> SNAPSHOT
-    SNAPSHOT --> QUALIFY{정산 조건 충족}
+    SNAPSHOT --> RATE{담당자와 요율이 설정됨}
+    RATE -->|아니오| NOCOMMISSION[NOT_APPLICABLE snapshot]
+    RATE -->|예| BASE[상품 판매액 기준액 snapshot]
+    BASE --> QUALIFY{정산 조건 충족}
     QUALIFY -->|대기| PENDING[대기 인센티브 원장]
     QUALIFY -->|취소·환불| REVERSE[미지급 인센티브 미생성·reversal]
     PENDING --> REVIEW[영업자 본인 내역 또는 운영자 전체 내역 조회]
