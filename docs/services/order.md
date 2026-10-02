@@ -13,8 +13,8 @@
 택배사 조회 결과를 배송 상태에 반영한 뒤 주문 목록을 반환. 고객이 송장 조회 링크를 누르면 택배사 공식 페이지를 WebView로 표시.<br>
 매시간 주기 조회는 향후 배송 조회 중계 서버를 신설할 때 적용할 범위. 현재 API 서버에서는 스케줄 조회 미실행.<br>
 조회 결과는 동일한 멱등 상태 갱신 흐름으로 저장. 배송 완료 후에도 택배사 공식 조회 화면과 송장번호 제공.<br>
-대신택배·천일택배는 공식 조회 페이지 HTML의 상태를 adapter로 추출. 공식 서버 API가 확인되기 전까지 HTML 변경·접근 차단을 고려해 미확인 응답에서는 배송 상태를 유지하고 운영자 수동 상태 보정 유지.<br>
-경동택배는 조회 페이지 링크만 제공 중이며 서버 측 응답·상태 adapter는 미확정.<br>
+대신택배·천일택배는 공식 조회 페이지 HTML에서 상태를 추출. 경동택배는 신규 공식 화면의 JSON 조회 경로에서 상태를 추출.<br>
+택배사 응답 형식 변경·접근 차단·조회 실패·미등록 운송장은 배송 상태를 변경하지 않고 운영자 수동 보정 가능.<br>
 
 ```mermaid
 flowchart TD
@@ -52,14 +52,14 @@ flowchart TD
 
     subgraph TRACKING_SYNC[배송 목록 응답 전 상태 확인]
         LIST --> TRACKSYNC[고객 그룹의 미완료 송장 목록 조회]
-        TRACKSYNC --> TRACKER[지원 택배사 HTML adapter]
+        TRACKSYNC --> TRACKER[택배사별 배송 조회 adapter]
         TRACKER --> CARRIER{택배사}
         CARRIER -- 대신택배 --> DAESIN[대신 공식 조회 페이지]
         CARRIER -- 천일택배 --> CHUNIL[천일 공식 조회 페이지]
-        CARRIER -- 경동택배 미지원 --> UNAVAILABLE[수동 보정 가능]
+        CARRIER -- 경동택배 --> KDEXP[경동 공식 JSON 조회 경로]
         DAESIN --> PARSE[배송 상태 추출]
         CHUNIL --> PARSE
-        UNAVAILABLE --> TRACKREVIEW
+        KDEXP --> PARSE
         PARSE --> TRACKRESULT{조회 결과 상태}
         TRACKRESULT -- 배송중 --> TRACKSAVE[최신 배송 상태 저장]
         TRACKRESULT -- 배송완료 --> DONE[DELIVERED 상태 저장]
@@ -222,10 +222,11 @@ application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br
 `ORDER_WRITE` 운영자가 발송 처리를 시작하고, 배송 담당자가 택배사와 송장번호를 등록하면 `IN_TRANSIT`으로 변경.<br>
 고객은 주문 목록·상세 조회에서 배송 상태와 송장 정보를 확인함.<br>
 대신택배·경동택배·천일택배의 공식 조회 URL과 송장번호를 사용자 주문 응답에서 제공.<br>
-확인한 조회 URL은 대신택배 `https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=`, 경동택배 `https://kdexp.com/newDeliverySearch.kd?barcode=`, 천일택배 `https://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=`.<br>
-대신택배·천일택배는 고객이 주문 목록을 조회할 때 본인 구매자 그룹 주문 중 배송완료 전 송장에 대해서만 상태를 확인.<br>
-두 택배사 조회 페이지 HTML에서 배송 상태를 추출하는 outbound adapter 적용. 정식 서버 API 계약은 확인되지 않음. HTML 구조 변경 또는 자동화 접근 차단 시 배송 상태를 유지하고 운영자 보정 가능.<br>
-경동택배 조회 링크는 제공하나 현재 실행 환경에서 조회 요청은 `403`을 반환해 상태 응답 확인 미완료. 실제 추적번호를 사용한 결과 확인 후 adapter 범위 확정.<br>
+확인한 조회 URL은 대신택배 `https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=`, 경동택배 `https://kdexp.com/service/delivery/etc/delivery.do?barcode=`, 천일택배 `https://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=`.<br>
+세 택배사는 고객이 주문 목록을 조회할 때 본인 구매자 그룹 주문 중 배송완료 전 송장에 대해서만 상태를 확인.<br>
+대신택배·천일택배는 공식 조회 HTML에서, 경동택배는 신규 공식 화면의 JSON 조회 경로에서 배송 상태를 추출. 응답 형식 변경·접근 차단·조회 실패 시 상태를 유지하고 운영자 보정 가능.<br>
+경동택배 서버 상태 조회는 신규 공식 화면의 JSON 조회 경로 `/service/delivery/new/ajax_basic.do?barcode={운송장번호}`를 사용. `result=suc` 응답의 최신 `data.scanList[].scanTypeNm`이 정확히 `배송완료`이면 완료로 전환하고, 진행 이력이 있으면 배송중으로 유지.<br>
+임의 번호와 다른 택배사 예시 번호는 경동택배 경로에서 `result=fail`을 반환하므로 유효 송장 실조회 결과로 간주하지 않음. 조회 불가·실패는 기존 배송 상태 유지.<br>
 목록 조회는 택배사별 상태를 먼저 갱신한 뒤 최신 상태와 공식 조회 링크를 반환. 고객이 링크를 선택하면 WebView에서 택배사 공식 조회 화면 표시.<br>
 `POST /api/operation/orders/{orderId}/shipment/delivered`는 `ORDER_WRITE` 운영자의 수동 배송완료 보정 endpoint.<br>
 운영 배송 API는 `ORDER_WRITE` 권한을 요구.<br>
