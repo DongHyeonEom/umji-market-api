@@ -186,7 +186,9 @@ class ManualPaymentMySqlIntegrationTest {
 
         assertThat(partial.orderStatus).isEqualTo("PENDING_PAYMENT")
         assertThat(partial.paymentStatus).isEqualTo("PARTIAL_PAYMENT_REVIEW_REQUIRED")
-        assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes())).isEqualTo(1)
+        assertThat(
+            jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes()),
+        ).isEqualTo(1)
         assertShipmentStatus(orderId, "READY_TO_SHIP")
 
         val confirmed = transactionalPayments.updateStatus(orderId, "PAYMENT_CONFIRMED", actor)
@@ -195,11 +197,27 @@ class ManualPaymentMySqlIntegrationTest {
         assertThat(confirmed.paymentStatus).isEqualTo("PAYMENT_CONFIRMED")
         assertThat(jdbc.queryForObject("SELECT status FROM purchase_order WHERE public_id = ?", String::class.java, orderId.toBytes())).isEqualTo("PAID")
         assertThat(jdbc.queryForObject("SELECT status FROM stock_reservation WHERE reservation_key = ?", String::class.java, reservationKey.toBytes())).isEqualTo("RESERVED")
-        assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes())).isEqualTo(1)
-        assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes())).isEqualTo(10)
-        assertThat(jdbc.queryForObject("SELECT on_hand_quantity - reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes())).isEqualTo(9)
+        assertThat(
+            jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes()),
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)", Int::class.java, skuId.toBytes()),
+        ).isEqualTo(10)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT on_hand_quantity - reserved_quantity FROM inventory_stock WHERE sku_id = (SELECT id FROM product_sku WHERE public_id = ?)",
+                Int::class.java,
+                skuId.toBytes(),
+            ),
+        ).isEqualTo(9)
         assertShipmentStatus(orderId, "READY_TO_SHIP")
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM order_payment_status_history WHERE payment_id = (SELECT id FROM order_payment WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?))", Int::class.java, orderId.toBytes())).isEqualTo(3)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM order_payment_status_history WHERE payment_id = (SELECT id FROM order_payment WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?))",
+                Int::class.java,
+                orderId.toBytes(),
+            ),
+        ).isEqualTo(3)
     }
 
     private fun createAccount(suffix: String): UUID {

@@ -10,7 +10,7 @@
 | 도메인 | 문서 | 구현 상태 |
 | --- | --- | --- |
 | 인증 | [authentication.md](authentication.md) | 휴대폰 로그인·토큰 |
-| 계정 | [account.md](account.md) | 사용자 API 미구현 |
+| 계정 | [account.md](account.md) | 프로필·그룹 공용 배송지 구현, 그룹 구성원 가입 관리 미구현 |
 | 카탈로그 | [catalog.md](catalog.md) | 공개 조회·관리자 관리 |
 | 장바구니 | [cart.md](cart.md) | 구현 |
 | 주문 | [order.md](order.md) | 생성·조회 구현 |

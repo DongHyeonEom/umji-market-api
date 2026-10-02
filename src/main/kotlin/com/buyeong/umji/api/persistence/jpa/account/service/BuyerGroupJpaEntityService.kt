@@ -32,10 +32,8 @@ class BuyerGroupJpaEntityService(
         val account = accounts.findByPublicId(accountPublicId)
             ?: throw IllegalArgumentException("계정을 찾을 수 없습니다.")
         val accountId = requireNotNull(account.id)
-        members.findFirstByAccount_Id(accountId)?.let { membership ->
-            if (membership.status == ACTIVE && membership.buyerGroup.status == ACTIVE) return membership.buyerGroup
-            throw IllegalStateException("계정의 구매자 그룹 소속이 비활성 상태입니다.")
-        }
+        members.findFirstByAccount_IdAndStatusOrderByJoinedAtDesc(accountId, ACTIVE)
+            ?.let { membership -> if (membership.buyerGroup.status == ACTIVE) return membership.buyerGroup }
 
         val businessProfile = accounts.profile(accountId)
         val group = groups.saveAndFlush(
@@ -43,15 +41,23 @@ class BuyerGroupJpaEntityService(
                 groupType = if (businessProfile == null) INDIVIDUAL else BUSINESS
                 displayName = businessProfile?.businessName ?: account.name
                 status = ACTIVE
+                representativeAccount = account
             },
         )
-        members.saveAndFlush(
-            BuyerGroupMemberEntity().apply {
-                buyerGroup = group
-                this.account = account
-                status = ACTIVE
-            },
-        )
+        val targetMembership = members.findFirstByBuyerGroup_IdAndAccount_Id(requireNotNull(group.id), accountId)
+        if (targetMembership == null) {
+            members.saveAndFlush(
+                BuyerGroupMemberEntity().apply {
+                    buyerGroup = group
+                    this.account = account
+                    status = ACTIVE
+                },
+            )
+        } else {
+            targetMembership.status = ACTIVE
+            targetMembership.joinedAt = java.time.Instant.now()
+            members.saveAndFlush(targetMembership)
+        }
         businessProfile?.let { saveBusinessProfile(group, it) }
         return group
     }
@@ -61,14 +67,46 @@ class BuyerGroupJpaEntityService(
         val account = accounts.findByPublicId(accountPublicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = groups.findByPublicId(buyerGroupPublicId) ?: throw ItemNotFoundException("구매자 그룹을 찾을 수 없습니다.")
         require(group.groupType == BUSINESS && group.status == ACTIVE) { "활성 사업자 구매자 그룹만 지정할 수 있습니다." }
+        val lockedGroup = groups.findLockedById(requireNotNull(group.id))
+            ?: throw ItemNotFoundException("구매자 그룹을 찾을 수 없습니다.")
 
         val accountId = requireNotNull(account.id)
-        if (members.findFirstByAccount_Id(accountId) == null) ensureForAccount(accountPublicId)
-        val membership = members.findFirstByAccount_Id(accountId)
-            ?: throw IllegalStateException("계정의 구매자 그룹 소속을 생성하지 못했습니다.")
-        check(membership.status == ACTIVE) { "비활성 구매자 그룹 구성원은 재배정할 수 없습니다." }
-        membership.buyerGroup = group
-        members.saveAndFlush(membership)
+        val membership = members.findFirstByAccount_IdAndStatusOrderByJoinedAtDesc(accountId, ACTIVE)
+        if (membership?.buyerGroup?.id == group.id) return
+        membership?.let {
+            val previousGroup = groups.findLockedById(requireNotNull(it.buyerGroup.id))
+                ?: throw ItemNotFoundException("기존 구매자 그룹을 찾을 수 없습니다.")
+            if (previousGroup.representativeAccount?.id == accountId) {
+                val currentMembers = members.findAllByBuyerGroup_IdAndStatus(requireNotNull(previousGroup.id), ACTIVE)
+                check(currentMembers.size == 1) {
+                    "그룹 대표자를 다른 구성원으로 변경한 뒤 계정을 이동해야 합니다."
+                }
+                previousGroup.representativeAccount = null
+                previousGroup.status = "INACTIVE"
+            }
+            it.status = "LEFT"
+            members.saveAndFlush(it)
+        }
+        members.saveAndFlush(
+            BuyerGroupMemberEntity().apply {
+                buyerGroup = lockedGroup
+                this.account = account
+                status = ACTIVE
+            },
+        )
+    }
+
+    @Transactional
+    fun setRepresentative(groupPublicId: UUID, accountPublicId: UUID) {
+        val group = groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE }
+            ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
+        val lockedGroup = groups.findLockedById(requireNotNull(group.id))?.takeIf { it.status == ACTIVE }
+            ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
+        val account = accounts.findByPublicId(accountPublicId) ?: throw ItemNotFoundException("대표자로 지정할 계정을 찾을 수 없습니다.")
+        require(members.findFirstByAccount_IdAndStatusOrderByJoinedAtDesc(requireNotNull(account.id), ACTIVE)?.buyerGroup?.id == lockedGroup.id) {
+            "대표자는 해당 그룹의 활성 구성원이어야 합니다."
+        }
+        lockedGroup.representativeAccount = account
     }
 
     private fun saveBusinessProfile(group: BuyerGroupEntity, profile: BusinessProfileEntity) {

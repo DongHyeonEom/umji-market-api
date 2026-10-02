@@ -39,7 +39,10 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/operation/accounts")
 @Validated
-class OperationAccountController(private val useCase: OperationAccountUseCase, private val currentAccounts: CurrentAccountPort) {
+class OperationAccountController(
+    private val useCase: OperationAccountUseCase,
+    private val currentAccounts: CurrentAccountPort,
+) {
     @GetMapping("/roles")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun managedRoles() = useCase.managedRoles().map { it.toResponse() }

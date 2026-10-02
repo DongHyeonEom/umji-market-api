@@ -1,0 +1,19 @@
+package com.buyeong.umji.api.account.application.port.out
+
+import com.buyeong.umji.api.account.application.model.BuyerGroupInvitation
+import com.buyeong.umji.api.account.application.model.BuyerGroupJoinRequest
+import com.buyeong.umji.api.account.application.model.BuyerGroupSearchResult
+import com.buyeong.umji.api.account.application.model.BuyerGroupSummary
+import java.util.UUID
+
+interface BuyerGroupMembershipPort {
+    fun current(accountId: UUID): BuyerGroupSummary?
+    fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary
+    fun search(phoneNormalized: String): List<BuyerGroupSearchResult>
+    fun invite(accountId: UUID, phoneNormalized: String): BuyerGroupInvitation
+    fun invitations(accountId: UUID): List<BuyerGroupInvitation>
+    fun respondInvitation(accountId: UUID, invitationId: UUID, accept: Boolean)
+    fun requestToJoin(accountId: UUID, groupId: UUID)
+    fun pendingJoinRequests(accountId: UUID): List<BuyerGroupJoinRequest>
+    fun respondJoinRequest(accountId: UUID, requestId: UUID, approve: Boolean)
+}

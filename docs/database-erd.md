@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V20이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V22가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -104,6 +104,7 @@ erDiagram
         BINARY public_id UK "API 공개 UUID"
         VARCHAR group_type "BUSINESS 또는 INDIVIDUAL"
         VARCHAR display_name "그룹 표시명"
+        BIGINT representative_account_id FK "현재 대표 계정, nullable"
         VARCHAR status "그룹 상태"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
@@ -113,6 +114,7 @@ erDiagram
         BIGINT buyer_group_id FK "구매자 그룹 ID"
         BIGINT account_id FK "구성원 계정 ID"
         VARCHAR status "구성원 상태"
+        BIGINT active_account_id UK "활성 소속 계정, 생성 컬럼"
         DATETIME joined_at "가입 시각"
         DATETIME created_at "생성 시각"
     }
@@ -129,6 +131,29 @@ erDiagram
         VARCHAR status "사업자 프로필 상태"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
+    }
+    BUYER_GROUP_INVITATION {
+        BIGINT id PK "그룹 초대 내부 ID"
+        BINARY public_id UK "초대 공개 UUID"
+        BIGINT buyer_group_id FK "초대 대상 그룹 ID"
+        VARCHAR phone_normalized "초대 휴대폰 번호"
+        BIGINT invited_by_account_id FK "초대한 대표 계정 ID"
+        BIGINT target_account_id FK "가입 계정 ID, nullable"
+        VARCHAR status "PENDING·ACCEPTED·DECLINED"
+        DATETIME created_at "초대 시각"
+        DATETIME responded_at "응답 시각, nullable"
+        VARCHAR pending_phone UK "대기 중 번호, 생성 컬럼"
+    }
+    BUYER_GROUP_JOIN_REQUEST {
+        BIGINT id PK "가입 요청 내부 ID"
+        BINARY public_id UK "가입 요청 공개 UUID"
+        BIGINT buyer_group_id FK "가입 요청 그룹 ID"
+        BIGINT account_id FK "요청 계정 ID"
+        VARCHAR status "PENDING·APPROVED·DECLINED"
+        DATETIME requested_at "요청 시각"
+        DATETIME responded_at "처리 시각, nullable"
+        BIGINT responded_by_account_id FK "처리 대표 계정 ID, nullable"
+        BIGINT pending_account_id UK "대기 중 요청 계정, 생성 컬럼"
     }
     CONSENT_HISTORY {
         BIGINT id PK "동의 이력 ID"
@@ -387,8 +412,15 @@ erDiagram
     BUYER_GROUP ||--o{ BUYER_GROUP_ADDRESS : shares
     ACCOUNT ||--o{ BUYER_GROUP_ADDRESS : creates
     ACCOUNT ||--o| BUSINESS_PROFILE : has
-    ACCOUNT ||--o| BUYER_GROUP_MEMBER : joins
+    ACCOUNT ||--o{ BUYER_GROUP_MEMBER : joins
     BUYER_GROUP ||--o{ BUYER_GROUP_MEMBER : includes
+    ACCOUNT ||--o{ BUYER_GROUP : represents
+    BUYER_GROUP ||--o{ BUYER_GROUP_INVITATION : invites
+    ACCOUNT ||--o{ BUYER_GROUP_INVITATION : invites
+    ACCOUNT ||--o{ BUYER_GROUP_INVITATION : accepts
+    BUYER_GROUP ||--o{ BUYER_GROUP_JOIN_REQUEST : receives
+    ACCOUNT ||--o{ BUYER_GROUP_JOIN_REQUEST : requests
+    ACCOUNT ||--o{ BUYER_GROUP_JOIN_REQUEST : decides
     BUYER_GROUP ||--o| BUYER_GROUP_BUSINESS_PROFILE : describes
     ACCOUNT ||--o{ CONSENT_HISTORY : records
     CATEGORY ||--o{ CATEGORY : parent
@@ -468,6 +500,8 @@ erDiagram
 | V18 | 구매자 그룹·구성원·그룹 사업자 프로필 생성, 주문 그룹 귀속 및 기존 데이터 backfill |
 | V19 | 계정당 단일 구매자 그룹 제약, 그룹 공개 UUID 정규화, 주문의 그룹 귀속 필수화 |
 | V20 | 계정별 배송지를 그룹 공용 배송지로 이관, 주문 배송지 snapshot 컬럼 추가 |
+| V21 | 그룹 대표자, 활성 구성원 재가입 이력, 전화번호 초대 및 가입 요청 테이블 추가 |
+| V22 | 복수 구성원 그룹의 초기 대표자를 가장 먼저 생성된 계정으로 고정 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
