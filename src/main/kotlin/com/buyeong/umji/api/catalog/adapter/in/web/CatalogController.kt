@@ -8,6 +8,9 @@ import com.buyeong.umji.api.catalog.model.ProductDetailResponse
 import com.buyeong.umji.api.catalog.model.ProductPageResponse
 import com.buyeong.umji.api.catalog.model.ProductSkuResponse
 import com.buyeong.umji.api.catalog.model.ProductSummaryResponse
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.validation.annotation.Validated
@@ -21,22 +24,26 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api")
 @Validated
+@Tag(name = "상품 조회", description = "앱 카테고리·상품·SKU 조회 API")
 class CatalogController(
     private val catalogService: CatalogUseCase,
 ) {
+    @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/categories")
     fun categories(): List<CategoryResponse> = catalogService.categories().map {
         CategoryResponse(it.id, it.name, it.path, it.depth)
     }
 
+    @Operation(summary = "상품조회", description = "앱 카테고리·상품·SKU 조회 API. /products 경로에서 상품조회를 수행")
     @GetMapping("/products")
     fun products(
-        @RequestParam(defaultValue = "0") @Min(0) page: Int,
-        @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
+        @Parameter(description = "조회할 페이지 번호(0부터 시작)") @RequestParam(defaultValue = "0") @Min(0) page: Int,
+        @Parameter(description = "페이지당 조회할 항목 수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
     ): ProductPageResponse = catalogService.products(page, size).toResponse()
 
+    @Operation(summary = "상품조회", description = "앱 카테고리·상품·SKU 조회 API. /products/{productId} 경로에서 상품조회를 수행")
     @GetMapping("/products/{productId}")
-    fun product(@PathVariable productId: UUID): ProductDetailResponse = catalogService.product(productId).toResponse()
+    fun product(@Parameter(description = "상품 공개 식별자(UUID)") @PathVariable productId: UUID): ProductDetailResponse = catalogService.product(productId).toResponse()
 
     private fun ProductPageView.toResponse() = ProductPageResponse(
         items.map { ProductSummaryResponse(it.id, it.name, it.brandName) },

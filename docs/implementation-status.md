@@ -11,6 +11,7 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 - 헥사고날/클린 아키텍처의 application Port와 inbound/outbound adapter
 - JWT RS256 인증, Access Token 및 영속 Refresh Token
 - 공통 예외 응답, 요청 추적, Actuator, OpenAPI 설정
+- Swagger controller tag·endpoint summary·request/response 모델 설명 및 필드별 형식·예시 metadata
 
 ## 구현된 기능
 
@@ -38,6 +39,6 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 
 ## Flyway
 
-현재 버전 마이그레이션은 V2부터 V23까지이며, 재실행 seed는 R 스크립트임.<br>
+현재 버전 마이그레이션은 V2부터 V24까지이며, 재실행 seed는 R 스크립트임.<br>
 버전 파일은 적용 후 수정하지 않고 새 변경은 다음 버전 migration으로 추가함.<br>
 정확한 버전별 테이블 목록은 [database.md](database.md)를 참고.<br>

@@ -13,6 +13,9 @@ import com.buyeong.umji.api.order.model.OrderCheckoutOptionsResponse
 import com.buyeong.umji.api.order.model.OrderItemResponse
 import com.buyeong.umji.api.order.model.OrderPageResponse
 import com.buyeong.umji.api.order.model.OrderResponse
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.http.HttpStatus
@@ -30,14 +33,17 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/orders")
 @Validated
+@Tag(name = "주문", description = "구매자 그룹 주문 생성·조회와 결제 정보 API")
 class OrderController(
     private val currentAccounts: CurrentAccountPort,
     private val orders: OrderUseCase,
     private val customerOrders: CustomerOrderListingUseCase,
 ) {
+    @Operation(summary = "주문 결제 정보조회", description = "구매자 그룹 주문 생성·조회와 결제 정보 API. /checkout-options 경로에서 주문 결제 정보조회를 수행")
     @GetMapping("/checkout-options")
     fun checkoutOptions(): OrderCheckoutOptionsResponse = orders.checkoutOptions(currentAccounts.activeAccountPublicId()).toResponse()
 
+    @Operation(summary = "주문 생성", description = "주문 생성 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@RequestBody request: CreateOrderRequest): OrderResponse =
@@ -48,17 +54,21 @@ class OrderController(
             request.updateDefaultTaxInvoicePreference,
         ).toResponse()
 
+    @Operation(summary = "주문 목록 조회", description = "주문 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping
     fun list(
-        @RequestParam(defaultValue = "0") @Min(0) page: Int,
-        @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
+        @Parameter(description = "조회할 페이지 번호(0부터 시작)") @RequestParam(defaultValue = "0") @Min(0) page: Int,
+        @Parameter(description = "페이지당 조회할 항목 수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
     ): OrderPageResponse {
         val customerId = currentAccounts.activeAccountPublicId()
         return customerOrders.list(customerId, page, size).toResponse()
     }
 
+    @Operation(summary = "주문조회", description = "구매자 그룹 주문 생성·조회와 결제 정보 API. /{orderId} 경로에서 주문조회를 수행")
     @GetMapping("/{orderId}")
-    fun detail(@PathVariable orderId: UUID): OrderResponse = orders.detail(currentAccounts.activeAccountPublicId(), orderId).toResponse()
+    fun detail(
+        @Parameter(description = "대상 주문 공개 식별자(UUID)") @PathVariable orderId: UUID,
+    ): OrderResponse = orders.detail(currentAccounts.activeAccountPublicId(), orderId).toResponse()
 
     private fun OrderPage.toResponse() = OrderPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
 
