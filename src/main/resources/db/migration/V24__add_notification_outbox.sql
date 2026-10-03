@@ -1,0 +1,21 @@
+CREATE TABLE notification_outbox (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    public_id BINARY(16) NOT NULL,
+    event_type VARCHAR(80) NOT NULL,
+    event_detail VARCHAR(80) NULL,
+    order_public_id BINARY(16) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    attempt_count INT UNSIGNED NOT NULL DEFAULT 0,
+    next_attempt_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    last_error_code VARCHAR(80) NULL,
+    sent_at DATETIME(3) NULL,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    CONSTRAINT UQ_notification_outbox_public_id UNIQUE (public_id),
+    CONSTRAINT CK_notification_outbox_status CHECK (status IN ('PENDING', 'SENT', 'FAILED')),
+    CONSTRAINT CK_notification_outbox_attempt_count CHECK (attempt_count >= 0),
+    INDEX IX_notification_outbox_pending (status, next_attempt_at, id),
+    INDEX IX_notification_outbox_order (order_public_id, created_at),
+    CONSTRAINT FK_notification_outbox_order_public_id FOREIGN KEY (order_public_id) REFERENCES purchase_order(public_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

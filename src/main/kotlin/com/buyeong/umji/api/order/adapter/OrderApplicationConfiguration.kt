@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.order.adapter
 
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.order.application.CustomerOrderListingService
 import com.buyeong.umji.api.order.application.OrderCancellationService
 import com.buyeong.umji.api.order.application.OrderService
@@ -21,8 +22,11 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class OrderApplicationConfiguration {
     @Bean
-    fun orderCancellationUseCase(cancellations: OrderCancellationPort, inventory: InventoryUseCase) =
-        OrderCancellationService(cancellations, inventory)
+    fun orderCancellationUseCase(
+        cancellations: OrderCancellationPort,
+        inventory: InventoryUseCase,
+        notifications: NotificationEventUseCase,
+    ) = OrderCancellationService(cancellations, inventory, notifications)
 
     @Bean
     fun shippingHolidayUseCase(holidays: ShippingHolidayPort) = ShippingHolidayService(holidays)
@@ -33,8 +37,9 @@ class OrderApplicationConfiguration {
         inventory: InventoryReservationPort,
         orders: OrderStorePort,
         shippingAddresses: OrderShippingAddressPort,
+        notifications: NotificationEventUseCase,
         bankAccounts: BankAccountInstructionsPort,
-    ) = OrderService(checkoutCart, inventory, orders, shippingAddresses, bankAccounts)
+    ) = OrderService(checkoutCart, inventory, orders, shippingAddresses, bankAccounts, notifications)
 
     @Bean
     fun customerOrderListingUseCase(orders: OrderUseCase, shipments: ShipmentUseCase): CustomerOrderListingUseCase =

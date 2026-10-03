@@ -1,6 +1,8 @@
 package com.buyeong.umji.api.shipment.adapter.out.persistence
 
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.notification.application.model.NotificationEventType
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
 import com.buyeong.umji.api.shipment.application.model.ShipmentRecord
@@ -8,19 +10,26 @@ import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentInventoryPort
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentStorePort
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Component
 class JpaShipmentAdapter(
     private val shipments: OrderShipmentJpaEntityService,
     private val inventory: InventoryUseCase,
+    private val notifications: NotificationEventUseCase,
 ) : ShipmentStorePort, ShipmentInventoryPort {
     override fun lock(orderId: UUID): ShipmentRecord? = shipments.findForUpdate(orderId)?.toRecord()
     override fun readyOrderIds(): List<UUID> = shipments.readyOrderIds()
 
     override fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> = shipments.trackingCandidatesForCustomer(customerId)
 
-    override fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean = shipments.markDeliveredIfCurrent(candidate)
+    @Transactional
+    override fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean {
+        val delivered = shipments.markDeliveredIfCurrent(candidate)
+        if (delivered) notifications.record(NotificationEventType.SHIPMENT_DELIVERED, candidate.orderId)
+        return delivered
+    }
 
     override fun update(
         record: ShipmentRecord,
