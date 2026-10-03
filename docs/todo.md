@@ -199,6 +199,20 @@
 - [ ] 그룹 담당 배정 변경 후 과거 주문 담당자·요율 snapshot 보존 검증
 - [ ] 인센티브 산정·멱등성·취소/환불 reversal·지급 상태 전이 자동화 테스트 개발 및 실행
 
+## Task 8 — Swagger request/response 모델 설명
+
+### 서비스 개발
+
+- [x] 모든 외부 HTTP request/response 모델 필드에 Swagger 설명 추가
+- [x] 필드 설명에 값의 의미·실제 예시·OpenAPI type·required 여부와 nullable·허용 상태·단위 등 계약상 필요한 조건 반영
+- [x] 모든 API controller의 `@Tag`, endpoint의 `@Operation(summary, description)`, request/response model의 `@Schema(description)` 추가
+- [x] OpenAPI에 경로·query parameter와 중첩 request/response 모델 설명이 노출되도록 API metadata 정리
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [x] API에 노출되는 request/response 모델의 모든 OpenAPI 필드에 설명이 존재하는지 자동 검증 및 실행
+- [x] controller tag·endpoint summary·model description·필드 example/type/required 및 중첩 DTO metadata의 OpenAPI 출력 확인
+
 ## 공통 완료 기준
 
 ### 서비스 개발 완료 기준

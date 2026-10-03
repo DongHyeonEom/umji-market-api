@@ -17,6 +17,9 @@ import com.buyeong.umji.api.operation.model.OperationConsentResponse
 import com.buyeong.umji.api.operation.model.OperationRoleResponse
 import com.buyeong.umji.api.operation.model.UpdateAccountStatusRequest
 import com.buyeong.umji.api.util.PhoneNumberHelper
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
@@ -39,28 +42,34 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/operation/accounts")
 @Validated
+@Tag(name = "운영 계정 관리", description = "운영자 계정·상태·역할·그룹·동의 관리 API")
 class OperationAccountController(
     private val useCase: OperationAccountUseCase,
     private val currentAccounts: CurrentAccountPort,
 ) {
+    @Operation(summary = "계정에 부여된 역할 조회", description = "계정에 부여된 역할 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/roles")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun managedRoles() = useCase.managedRoles().map { it.toResponse() }
 
+    @Operation(summary = "부여 가능한 역할 목록 조회", description = "부여 가능한 역할 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/{id}/roles")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
-    fun roles(@PathVariable id: UUID) = useCase.roles(id).map { it.toResponse() }
+    fun roles(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID) = useCase.roles(id).map { it.toResponse() }
 
+    @Operation(summary = "계정 역할 부여", description = "계정 역할 부여 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PutMapping("/{id}/roles/{roleCode}")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
-    fun grantRole(@PathVariable id: UUID, @PathVariable roleCode: String) =
+    fun grantRole(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID, @Parameter(description = "계정 역할 코드") @PathVariable roleCode: String) =
         useCase.grantRole(id, roleCode, currentAccounts.activeAccountPublicId()).map { it.toResponse() }
 
+    @Operation(summary = "계정 역할 회수", description = "계정 역할 회수 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @DeleteMapping("/{id}/roles/{roleCode}")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
-    fun revokeRole(@PathVariable id: UUID, @PathVariable roleCode: String) =
+    fun revokeRole(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID, @Parameter(description = "계정 역할 코드") @PathVariable roleCode: String) =
         useCase.revokeRole(id, roleCode).map { it.toResponse() }
 
+    @Operation(summary = "주문 생성", description = "주문 생성 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PostMapping
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     @ResponseStatus(HttpStatus.CREATED)
@@ -74,38 +83,48 @@ class OperationAccountController(
         ),
     ).toResponse()
 
+    @Operation(summary = "운영 계정 목록 조회", description = "운영 계정 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
-    fun list(@RequestParam(required = false) status: String?, @RequestParam(defaultValue = "0") @Min(0) page: Int, @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int) =
+    fun list(
+        @Parameter(description = "조회할 상태 코드") @RequestParam(required = false) status: String?,
+        @Parameter(description = "조회할 페이지 번호(0부터 시작)") @RequestParam(defaultValue = "0") @Min(0) page: Int,
+        @Parameter(description = "페이지당 조회할 항목 수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
+    ) =
         useCase.list(status, page, size).map { it.toResponse() }
 
+    @Operation(summary = "운영 계정 상세 조회", description = "운영 계정 상세 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/{id}")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
-    fun detail(@PathVariable id: UUID) = useCase.detail(id).toResponse()
+    fun detail(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID) = useCase.detail(id).toResponse()
 
+    @Operation(summary = "계정 상태 변경", description = "계정 상태 변경 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PatchMapping("/{id}/status")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun status(
-        @PathVariable id: UUID,
+        @Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID,
         @Valid @RequestBody request: UpdateAccountStatusRequest,
     ) = useCase.status(id, request.status).toResponse()
 
+    @Operation(summary = "사용자 프로필수정", description = "운영자 계정·상태·역할·그룹·동의 관리 API. /{id}/business-profile 경로에서 사용자 프로필수정를 수행")
     @PutMapping("/{id}/business-profile")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun profile(
-        @PathVariable id: UUID,
+        @Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID,
         @Valid @RequestBody request: BusinessProfileRequest,
     ) = useCase.profile(id, request.toData()).toResponse()
 
+    @Operation(summary = "구매자 그룹수정", description = "운영자 계정·상태·역할·그룹·동의 관리 API. /{id}/buyer-group 경로에서 구매자 그룹수정를 수행")
     @PutMapping("/{id}/buyer-group")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
-    fun assignBuyerGroup(@PathVariable id: UUID, @Valid @RequestBody request: AssignBuyerGroupRequest) =
+    fun assignBuyerGroup(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID, @Valid @RequestBody request: AssignBuyerGroupRequest) =
         useCase.assignBuyerGroup(id, request.buyerGroupId).toResponse()
 
+    @Operation(summary = "계정 약관 동의 등록", description = "계정 약관 동의 등록 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PostMapping("/{id}/consents")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun consent(
-        @PathVariable id: UUID,
+        @Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID,
         @Valid @RequestBody request: CreateConsentRequest,
     ) = useCase.consent(
         id,
@@ -118,10 +137,11 @@ class OperationAccountController(
         ),
     ).toResponse()
 
+    @Operation(summary = "계정 승인", description = "계정 승인 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PostMapping("/{id}/approve")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun approve(
-        @PathVariable id: UUID,
+        @Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID,
     ) = useCase.approve(id).toResponse()
 
     private fun BusinessProfileRequest.toData() = BusinessProfileData(
