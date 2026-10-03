@@ -30,6 +30,8 @@ OS push permission과 마케팅 수신 동의는 별개로 처리. 마케팅 pus
 중복 요청·재처리로 같은 주문 이벤트가 반복되어도 같은 알림을 중복 발송하지 않도록 이벤트별 멱등 key를 사용.<br>
 잠금 화면에 표시될 수 있는 push에는 주문번호·금액·사업자번호·주소·입금 계좌·상세 주문 내역을 넣지 않고, 알림 종류와 안전한 앱 이동 정보만 포함.<br>
 알림 전달 기록은 주문·입금·배송 상태 변경과 같은 DB 트랜잭션에서 outbox에 저장해 상태 변경 commit 후 발송되도록 연계.<br>
+업무 API는 DB commit 후 알림 전송 완료를 기다리지 않고 응답. 배송 관리자는 배송 상태·송장 정보 저장이 끝나면 작업을 이어갈 수 있음.<br>
+worker의 push 전송은 비동기이며, provider 전송 결과는 별도 알림 전달 상태로 추적. push provider의 접수 성공은 단말 표시·열람을 보장하지 않음.<br>
 FCM/APNs 장애는 주문·입금·배송 상태 변경을 rollback하지 않으며, outbox worker가 실패 메시지를 재시도.<br>
 재시도 간격·횟수는 미확정. 초기 제안은 첫 발송 실패 후 1분·5분·15분 간격으로 최대 3회 재시도하는 방식.<br>
 재시도 소진 후에는 `FAILED` 상태로 남겨 운영 확인 대상으로 분류하는 방향이며, 영구 실패 분류와 복구 방법은 미확정.<br>
@@ -51,7 +53,8 @@ flowchart TD
     Build --> Idempotency{"이벤트별 멱등 key가 이미 처리됐는가?"}
     Idempotency -->|예| Ignore
     Idempotency -->|아니오| Queue["상태 변경과 같은 트랜잭션에 outbox 저장"]
-    Queue --> Worker["commit 후 발송 worker"]
+    Queue -->|commit 성공| Response["업무 API 응답 반환"]
+    Queue --> Worker["비동기 발송 worker"]
     Worker --> Provider{"기기 플랫폼"}
     Provider -->|Android| FCM["FCM outbound adapter"]
     Provider -->|iOS| APNS["APNs outbound adapter"]
