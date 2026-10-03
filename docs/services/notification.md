@@ -23,7 +23,10 @@ SMS 본인 확인 코드 발송도 미구현임.<br>
 
 중복 요청·재처리로 같은 주문 이벤트가 반복되어도 같은 알림을 중복 발송하지 않도록 이벤트별 멱등 key를 사용.<br>
 알림 본문에는 주문 식별에 필요한 최소 정보만 포함하며 사업자번호·주소·입금 계좌·상세 주문 내역은 포함하지 않음.<br>
-운영자 입금 상태 변경과 배송 상태 변경의 성공 응답은 발송 queue 기록까지 완료된 뒤 확정되도록 연계하는 방식을 구현 시 결정.<br>
+알림 전달 기록은 주문·입금·배송 상태 변경과 같은 DB 트랜잭션에서 outbox에 저장해 상태 변경 commit 후 발송되도록 연계.<br>
+SMS 제공자 장애는 주문·입금·배송 상태 변경을 rollback하지 않으며, outbox worker가 실패 메시지를 재시도.<br>
+첫 발송 실패 후 1분·5분·15분 간격으로 최대 3회 재시도하고, 모두 실패하면 `FAILED` 상태로 남겨 운영 확인 대상으로 분류.<br>
+메시지 제공자 이름·인증 방식과 운영자 수동 재발송 경로는 구현 전에 확정할 설계 결정 항목.<br>
 
 ## 예정 흐름
 
@@ -40,11 +43,14 @@ flowchart TD
     Marketing -->|예| Build
     Build --> Idempotency{"이벤트별 멱등 key가 이미 처리됐는가?"}
     Idempotency -->|예| Ignore
-    Idempotency -->|아니오| Queue["발송 기록과 queue 저장"]
-    Queue --> Provider["SMS outbound adapter"]
+    Idempotency -->|아니오| Queue["상태 변경과 같은 트랜잭션에 outbox 저장"]
+    Queue --> Worker["commit 후 발송 worker"]
+    Worker --> Provider["SMS outbound port / adapter"]
     Provider -->|성공| Sent["발송 완료 기록"]
-    Provider -->|일시 실패| Retry["제한된 재시도 예약"]
+    Provider -->|일시 실패| Retry["1분·5분·15분 후 최대 3회 재시도"]
+    Retry --> Worker
     Provider -->|영구 실패 또는 재시도 소진| Failed["실패 기록 및 운영 조회 대상"]
 ```
 
-발송 조건·정보성/마케팅 동의 정책은 위 기준을 따르며, queue·재시도 횟수·실패 복구·제공자 계약은 구현 task에서 확정.<br>
+발송 조건·정보성/마케팅 동의·outbox·재시도 정책은 위 기준을 따름.<br>
+메시지 제공자별 요청·응답 계약과 실패 코드 분류는 외부 adapter 구현 시 확정.<br>
