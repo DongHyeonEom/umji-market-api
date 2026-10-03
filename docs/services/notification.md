@@ -10,7 +10,8 @@ SMS 본인 확인 코드 발송도 미구현임.<br>
 모바일 앱의 정보성 push 채널은 Android FCM, iOS APNs로 통일.<br>
 Flutter 앱이 OS push token을 획득·갱신하고, 인증된 앱이 알림 API에 token 등록·해제를 요청.<br>
 알림 기능은 통합 API 안에서 독립 notification application 및 adapter 경계로 구현하며, 초기에는 별도 배포 서비스로 분리하지 않음.<br>
-주문·결제·배송 API는 상태 변경과 outbox 기록까지만 담당하고, commit 이후 worker가 FCM/APNs outbound adapter를 호출.<br>
+초기에는 메시지 broker를 도입하지 않으며, 비동기 worker가 DB outbox를 직접 조회해 FCM/APNs outbound adapter를 호출.<br>
+주문·결제·배송 API는 상태 변경과 outbox 기록까지만 담당하고, DB commit 후 worker 전송 완료를 기다리지 않고 응답.<br>
 클라이언트에는 기기 token 등록·해제 API만 제공하고 임의 메시지 발송 API는 노출하지 않음.<br>
 웹 브라우저 push는 현재 범위에 포함하지 않음.<br>
 서비스 알림은 주문·입금·배송 진행에 필요한 정보성 알림으로 한정하며, 광고·쿠폰·재구매 권유는 발송하지 않음.<br>
@@ -54,7 +55,7 @@ flowchart TD
     Idempotency -->|예| Ignore
     Idempotency -->|아니오| Queue["상태 변경과 같은 트랜잭션에 outbox 저장"]
     Queue -->|commit 성공| Response["업무 API 응답 반환"]
-    Queue --> Worker["비동기 발송 worker"]
+    Queue --> Worker["DB outbox polling worker"]
     Worker --> Provider{"기기 플랫폼"}
     Provider -->|Android| FCM["FCM outbound adapter"]
     Provider -->|iOS| APNS["APNs outbound adapter"]
@@ -69,3 +70,4 @@ flowchart TD
 발송 조건·정보성/마케팅 동의·outbox·재시도 정책은 위 기준을 따름.<br>
 기기 token 등록·갱신·해제 API, FCM/APNs 요청 계약, token 만료·무효화 처리는 구현 task에서 확정.<br>
 별도 배포 서비스 분리는 발송량·장애 격리 요구가 발생할 때 검토하며, outbox 경계는 추후 분리를 지원하도록 유지.<br>
+RabbitMQ 등 broker 도입은 초기 범위에서 제외. worker 처리량이나 독립 확장 요구가 생기면 outbox relay가 broker에 발행하고 전송 worker가 소비하는 구조로 확장.<br>
