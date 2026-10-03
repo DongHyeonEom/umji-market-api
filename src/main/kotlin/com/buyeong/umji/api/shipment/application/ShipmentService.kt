@@ -1,6 +1,9 @@
 package com.buyeong.umji.api.shipment.application
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.notification.application.model.NotificationEventType
+import com.buyeong.umji.api.notification.application.port.`in`.NoOpNotificationEventUseCase
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.shipment.application.model.CarrierTrackingStatus
 import com.buyeong.umji.api.shipment.application.model.ShipmentChange
 import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
@@ -14,6 +17,7 @@ class ShipmentService(
     private val shipments: ShipmentStorePort,
     private val inventory: ShipmentInventoryPort,
     private val tracking: ShipmentTrackingPort,
+    private val notifications: NotificationEventUseCase = NoOpNotificationEventUseCase,
 ) : ShipmentUseCase {
     override fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChange {
         val carrier = carrierCode.trim()
@@ -26,6 +30,7 @@ class ShipmentService(
         }
         require(current.status == PREPARING || current.status == IN_TRANSIT) { "발송 처리 중인 주문만 송장 정보를 등록할 수 있습니다." }
         val changed = shipments.update(current, IN_TRANSIT, carrier, tracking, operatorId)
+        notifications.record(NotificationEventType.SHIPMENT_IN_TRANSIT, orderId)
         return changed.toChange(true)
     }
 
@@ -33,7 +38,9 @@ class ShipmentService(
         val current = shipments.lock(orderId) ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
         if (current.status == DELIVERED) return current.toChange(false)
         require(current.status == IN_TRANSIT) { "배송 중인 주문만 배송 완료 처리할 수 있습니다." }
-        return shipments.update(current, DELIVERED, current.carrierCode, current.trackingNumber, operatorId).toChange(true)
+        val delivered = shipments.update(current, DELIVERED, current.carrierCode, current.trackingNumber, operatorId)
+        notifications.record(NotificationEventType.SHIPMENT_DELIVERED, orderId)
+        return delivered.toChange(true)
     }
 
     override fun refreshForCustomer(customerId: UUID): Int = shipments.trackingCandidatesForCustomer(customerId).count { candidate ->
@@ -62,7 +69,9 @@ class ShipmentService(
         if (current.status == PREPARING) return current.toChange(false)
         require(current.status == READY_TO_SHIP) { "배송 준비 가능한 주문 상태가 아닙니다." }
         current.reservationKeys.forEach(inventory::confirm)
-        return shipments.update(current, PREPARING, null, null, null).toChange(true)
+        val preparing = shipments.update(current, PREPARING, null, null, null)
+        notifications.record(NotificationEventType.SHIPMENT_PREPARING, orderId)
+        return preparing.toChange(true)
     }
 
     private fun com.buyeong.umji.api.shipment.application.model.ShipmentRecord.toChange(changed: Boolean) =

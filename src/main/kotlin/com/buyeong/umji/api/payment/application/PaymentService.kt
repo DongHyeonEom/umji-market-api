@@ -1,6 +1,9 @@
 package com.buyeong.umji.api.payment.application
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.notification.application.model.NotificationEventType
+import com.buyeong.umji.api.notification.application.port.`in`.NoOpNotificationEventUseCase
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.payment.application.model.PaymentQueuePage
 import com.buyeong.umji.api.payment.application.model.PaymentStatusChange
 import com.buyeong.umji.api.payment.application.port.`in`.PaymentUseCase
@@ -9,6 +12,7 @@ import java.util.UUID
 
 class PaymentService(
     private val payments: PaymentStorePort,
+    private val notifications: NotificationEventUseCase = NoOpNotificationEventUseCase,
 ) : PaymentUseCase {
     override fun queue(status: String?, page: Int, size: Int): PaymentQueuePage {
         require(status == null || status in PAYMENT_STATUSES) { "유효하지 않은 결제 상태입니다." }
@@ -35,7 +39,9 @@ class PaymentService(
             return PaymentStatusChange(current.orderId, current.orderStatus, current.paymentStatus, false)
         }
 
-        return payments.updateStatus(current, status, operatorId)
+        val updated = payments.updateStatus(current, status, operatorId)
+        if (updated.changed) notifications.record(NotificationEventType.PAYMENT_STATUS_CHANGED, updated.orderId, updated.paymentStatus)
+        return updated
     }
 
     private companion object {

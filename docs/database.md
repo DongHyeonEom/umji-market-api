@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V23으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V24로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -47,6 +47,7 @@
 | V21 | 그룹 대표자, 활성 구성원 재가입 이력, 전화번호 초대 및 가입 요청 테이블 추가 |
 | V22 | 복수 구성원 그룹의 초기 대표자를 가장 먼저 생성된 계정으로 고정 |
 | V23 | `SHIPPING_MANAGER` role 및 배송 전용 `SHIPMENT_WRITE` permission seed, 운영자 role permission mapping |
+| V24 | `notification_outbox` 알림 이벤트 outbox 테이블 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -86,7 +87,8 @@
 
 ## 아직 없는 스키마
 
-현재 migration에 PG 거래 상세, 부분 취소, 파일 메타데이터, 알림, SMS 본인 확인 challenge 테이블은 없음.<br>
+현재 migration에 PG 거래 상세, 부분 취소, 파일 메타데이터, push 기기 token, SMS 본인 확인 challenge 테이블은 없음.<br>
+V24의 `notification_outbox`는 알림 이벤트 기록이며 push 전달 이력이나 기기 token 테이블은 아님.<br>
 해당 기능이 확정되면 정책과 테이블을 설계하고 새 Flyway migration으로 추가함.<br>
 설계안이나 Mermaid 관계도만으로 실제 테이블이 생성된 것으로 보지 않음.<br>
 

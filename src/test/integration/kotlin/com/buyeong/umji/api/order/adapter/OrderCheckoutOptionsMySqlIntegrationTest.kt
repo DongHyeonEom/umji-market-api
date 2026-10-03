@@ -5,6 +5,9 @@ import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUs
 import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
+import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
+import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
+import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import org.assertj.core.api.Assertions.assertThat
@@ -53,6 +56,15 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     @Autowired
     private lateinit var operationAccounts: OperationAccountUseCase
 
+    @Autowired
+    private lateinit var payments: TransactionalPaymentUseCase
+
+    @Autowired
+    private lateinit var shipments: TransactionalShipmentUseCase
+
+    @Autowired
+    private lateinit var cancellations: TransactionalOrderCancellationUseCase
+
     @Test
     fun `flyway v13 persists invoice preference and order-specific bank account snapshots`() {
         val migrationCount = jdbc.queryForObject(
@@ -60,6 +72,12 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             Int::class.java,
         )
         assertThat(migrationCount).isEqualTo(1)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '24' AND success = TRUE",
+                Int::class.java,
+            ),
+        ).isEqualTo(1)
 
         val accountId = createAccount()
         val addressId = createAddress(accountId)
@@ -83,6 +101,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         ).isFalse()
 
         val invoiceOrder = orders.create(accountId, addressId, true, true)
+        assertOutboxEvent(invoiceOrder.id, "ORDER_CREATED", null)
         assertThat(invoiceOrder.taxInvoiceRequested).isTrue()
         assertThat(invoiceOrder.depositBankName).isEqualTo("Tax Bank")
         assertThat(invoiceOrder.depositAccountNumber).isEqualTo("333-444")
@@ -106,12 +125,49 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val standardAddressId = createAddress(standardAccountId)
         createCartWithItem(standardAccountId, skuId)
         val standardOrder = orders.create(standardAccountId, standardAddressId, false, false)
+        assertOutboxEvent(standardOrder.id, "ORDER_CREATED", null)
         assertThat(standardOrder.taxInvoiceRequested).isFalse()
         assertThat(standardOrder.depositBankName).isEqualTo("Standard Bank")
         assertThat(standardOrder.depositAccountNumber).isEqualTo("111-222")
         assertThat(standardOrder.depositAccountHolder).isEqualTo("Standard Holder")
         assertPersistedOrderSnapshot(standardOrder.id, false, "Standard Bank", "111-222", "Standard Holder")
         assertThat(orders.checkoutOptions(standardAccountId).defaultTaxInvoiceRequested).isTrue()
+    }
+
+    @Test
+    fun `order payment and shipment state transitions append one outbox event per changed state`() {
+        val accountId = createAccount()
+        val addressId = createAddress(accountId)
+        val categoryId = createCategory()
+        val productId = createProduct(categoryId)
+        val skuId = createSku(productId)
+        createStock(skuId)
+        createCartWithItem(accountId, skuId)
+        val order = orders.create(accountId, addressId, false, false)
+        val operatorId = createAccount()
+
+        payments.updateStatus(order.id, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId)
+        payments.updateStatus(order.id, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId)
+        shipments.prepareOrder(order.id)
+        val trackingNumber = "TRACK-${UUID.randomUUID()}"
+        shipments.registerTracking(order.id, "DAESIN", trackingNumber, operatorId)
+        shipments.registerTracking(order.id, "DAESIN", trackingNumber, operatorId)
+        shipments.markDelivered(order.id, operatorId)
+        shipments.markDelivered(order.id, operatorId)
+
+        assertOutboxEvent(order.id, "ORDER_CREATED", null)
+        assertOutboxEvent(order.id, "PAYMENT_STATUS_CHANGED", "PARTIAL_PAYMENT_REVIEW_REQUIRED")
+        assertOutboxEvent(order.id, "SHIPMENT_PREPARING", null)
+        assertOutboxEvent(order.id, "SHIPMENT_IN_TRANSIT", null)
+        assertOutboxEvent(order.id, "SHIPMENT_DELIVERED", null)
+
+        val cancelledAccountId = createAccount()
+        val cancelledAddressId = createAddress(cancelledAccountId)
+        createCartWithItem(cancelledAccountId, skuId)
+        val cancelledOrder = orders.create(cancelledAccountId, cancelledAddressId, false, false)
+        cancellations.request(cancelledAccountId, cancelledOrder.id)
+        assertOutboxEvent(cancelledOrder.id, "ORDER_CREATED", null)
+        assertOutboxEvent(cancelledOrder.id, "ORDER_CANCELLED", null)
     }
 
     @Test
@@ -241,6 +297,16 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(row["shipping_postal_code"]).isEqualTo("12345")
         assertThat(row["shipping_address1"]).isEqualTo("Seoul address")
         assertThat(row["shipping_address2"]).isEqualTo("Details")
+    }
+
+    private fun assertOutboxEvent(orderId: UUID, eventType: String, detail: String?) {
+        val matchingRows = jdbc.queryForList(
+            "SELECT event_detail FROM notification_outbox WHERE order_public_id = ? AND event_type = ?",
+            orderId.toBytes(),
+            eventType,
+        )
+        assertThat(matchingRows).hasSize(1)
+        assertThat(matchingRows.single()["event_detail"]).isEqualTo(detail)
     }
 
     private fun createAddress(accountId: UUID): UUID {

@@ -2,6 +2,9 @@ package com.buyeong.umji.api.order.application
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.notification.application.model.NotificationEventType
+import com.buyeong.umji.api.notification.application.port.`in`.NoOpNotificationEventUseCase
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.order.application.model.CancellationChange
 import com.buyeong.umji.api.order.application.model.CancellationQueuePage
 import com.buyeong.umji.api.order.application.port.`in`.OrderCancellationUseCase
@@ -11,6 +14,7 @@ import java.util.UUID
 class OrderCancellationService(
     private val cancellations: OrderCancellationPort,
     private val inventory: InventoryUseCase,
+    private val notifications: NotificationEventUseCase = NoOpNotificationEventUseCase,
 ) : OrderCancellationUseCase {
     override fun request(accountId: UUID, orderId: UUID): CancellationChange {
         val order = cancellations.lock(orderId) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다.")
@@ -21,6 +25,7 @@ class OrderCancellationService(
                 order.reservationKeys.forEach(inventory::release)
                 cancellations.cancel(order, null)
                 cancellations.recordRequest(orderId, accountId, CANCELLED)
+                notifications.record(NotificationEventType.ORDER_CANCELLED, orderId)
                 return CancellationChange(orderId, CANCELLED, CANCELLED)
             }
             PREPARING -> {
@@ -46,6 +51,7 @@ class OrderCancellationService(
         if (approved) {
             order.reservationKeys.forEach(inventory::restoreConfirmed)
             cancellations.cancel(order, operatorId)
+            notifications.record(NotificationEventType.ORDER_CANCELLED, orderId)
         }
         cancellations.resolveRequest(orderId, status, operatorId)
         return CancellationChange(orderId, if (approved) CANCELLED else order.orderStatus, status)

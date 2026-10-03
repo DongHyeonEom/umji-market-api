@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V23가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V24가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -379,6 +379,21 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
+    NOTIFICATION_OUTBOX {
+        BIGINT id PK "내부 outbox ID"
+        BINARY public_id UK "고유 event ID"
+        VARCHAR event_type "알림 이벤트 코드"
+        VARCHAR event_detail "이벤트 상태 코드, nullable"
+        BINARY order_public_id FK "대상 주문 공개 UUID"
+        VARCHAR status "PENDING·SENT·FAILED"
+        INT attempt_count "전송 시도 횟수"
+        DATETIME next_attempt_at "다음 처리 가능 시각"
+        VARCHAR last_error_code "마지막 실패 코드, nullable"
+        DATETIME sent_at "처리 완료 시각, nullable"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
     ORDER_CANCELLATION_HISTORY {
         BIGINT id PK "취소 요청 및 처리 이력 ID"
         BIGINT order_id FK "대상 주문 ID"
@@ -447,6 +462,7 @@ erDiagram
     ORDER_PAYMENT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : tracks
     ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
     PURCHASE_ORDER ||--o| ORDER_SHIPMENT : shipment
+    PURCHASE_ORDER ||--o{ NOTIFICATION_OUTBOX : generates
     ACCOUNT ||--o{ ORDER_SHIPMENT : processes
     PURCHASE_ORDER ||--o{ ORDER_CANCELLATION_HISTORY : records
     ACCOUNT ||--o{ ORDER_CANCELLATION_HISTORY : requests
@@ -503,7 +519,8 @@ erDiagram
 | V21 | 그룹 대표자, 활성 구성원 재가입 이력, 전화번호 초대 및 가입 요청 테이블 추가 |
 | V22 | 복수 구성원 그룹의 초기 대표자를 가장 먼저 생성된 계정으로 고정 |
 | V23 | `SHIPPING_MANAGER` role 및 배송 전용 `SHIPMENT_WRITE` permission seed, 운영자 role permission mapping |
+| V24 | `notification_outbox` 알림 이벤트 outbox 테이블 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
-부분 취소·SMS 본인 확인·파일·알림 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>
+부분 취소·SMS 본인 확인·파일 metadata·push 기기 token 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>

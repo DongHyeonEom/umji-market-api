@@ -2,7 +2,8 @@
 
 ## 구현 상태
 
-알림 발송 API, 메시지 제공자 연동, 발송 이력은 아직 구현되지 않았음.<br>
+주문·취소·입금·배송 상태 변경을 업무 트랜잭션과 함께 기록하는 notification outbox 구현 완료.<br>
+기기 token API, FCM/APNs 발송 worker, delivery 이력은 아직 구현되지 않았음.<br>
 SMS 본인 확인 코드 발송도 미구현임.<br>
 
 ## 발송 정책

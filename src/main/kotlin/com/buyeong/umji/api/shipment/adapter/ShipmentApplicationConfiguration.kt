@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.shipment.adapter
 
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.shipment.application.ShipmentService
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentInventoryPort
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentStorePort
@@ -14,5 +15,6 @@ class ShipmentApplicationConfiguration {
         shipments: ShipmentStorePort,
         inventory: ShipmentInventoryPort,
         tracking: ShipmentTrackingPort,
-    ) = ShipmentService(shipments, inventory, tracking)
+        notifications: NotificationEventUseCase,
+    ) = ShipmentService(shipments, inventory, tracking, notifications)
 }

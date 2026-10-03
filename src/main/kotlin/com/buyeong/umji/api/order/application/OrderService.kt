@@ -1,6 +1,9 @@
 package com.buyeong.umji.api.order.application
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.notification.application.model.NotificationEventType
+import com.buyeong.umji.api.notification.application.port.`in`.NoOpNotificationEventUseCase
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.order.application.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.application.model.OrderDraft
 import com.buyeong.umji.api.order.application.model.OrderItemDraft
@@ -23,6 +26,7 @@ class OrderService(
         override fun standard() = com.buyeong.umji.api.order.application.model.BankAccountInstructions("", "", "")
         override fun taxInvoice() = standard()
     },
+    private val notifications: NotificationEventUseCase = NoOpNotificationEventUseCase,
 ) {
     fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions = OrderCheckoutOptions(
         defaultTaxInvoiceRequested = orders.defaultTaxInvoiceRequested(accountPublicId),
@@ -81,6 +85,7 @@ class OrderService(
         }
         saved.items.forEach { item -> inventory.reserve(item.skuId, item.quantity, item.reservationKey, null) }
         checkoutCart.clear(accountPublicId)
+        notifications.record(NotificationEventType.ORDER_CREATED, saved.id)
         return saved
     }
 
