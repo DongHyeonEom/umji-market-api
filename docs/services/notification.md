@@ -35,9 +35,12 @@ OS push permission과 마케팅 수신 동의는 별개로 처리. 마케팅 pus
 업무 API는 DB commit 후 알림 전송 완료를 기다리지 않고 응답. 배송 관리자는 배송 상태·송장 정보 저장이 끝나면 작업을 이어갈 수 있음.<br>
 worker의 push 전송은 비동기이며, provider 전송 결과는 별도 알림 전달 상태로 추적. push provider의 접수 성공은 단말 표시·열람을 보장하지 않음.<br>
 FCM/APNs 장애는 주문·입금·배송 상태 변경을 rollback하지 않으며, outbox worker가 실패 메시지를 재시도.<br>
-재시도 간격·횟수는 미확정. 초기 제안은 첫 발송 실패 후 1분·5분·15분 간격으로 최대 3회 재시도하는 방식.<br>
-재시도 소진 후에는 `FAILED` 상태로 남겨 운영 확인 대상으로 분류하는 방향이며, 영구 실패 분류와 복구 방법은 미확정.<br>
-FCM/APNs 자격 증명은 secret 설정으로 주입. 운영자 수동 재발송 경로는 별도 설계 결정 항목.<br>
+일시 실패는 최초 시도 후 1분·5분·15분 간격으로 최대 3회 재시도. 최초 시도를 포함해 최대 4회 전송.<br>
+네트워크·timeout·provider throttling·provider 5xx는 일시 실패로 분류. 요청 형식 오류와 유효하지 않은 token은 영구 실패로 분류하고 재시도하지 않음.<br>
+유효하지 않은 token은 해당 기기 token을 비활성화. 기타 영구 실패와 재시도 소진은 `FAILED`로 남기고 provider·실패 분류·응답 코드·시각을 운영 확인에 필요한 범위로 기록.<br>
+자동 재시도 소진 뒤 추가 발송은 자동 수행하지 않음. 운영자가 실패 원인을 확인하고 수정한 뒤 명시적 재처리 기능을 통해 재시도 상태로 되돌리는 복구 정책으로 처리.<br>
+외부 provider 접수 후 결과 저장 전에 worker가 중단되면 중복 접수 가능성이 있는 at-least-once 전달로 취급. 업무 상태 변경은 알림 전송 실패나 재처리로 rollback하지 않음.<br>
+FCM/APNs 자격 증명은 secret 설정으로 주입.<br>
 
 ## 예정 흐름
 
@@ -63,12 +66,17 @@ flowchart TD
     FCM -->|성공 또는 실패| Result["전달 결과 기록"]
     APNS -->|성공 또는 실패| Result
     Result -->|성공| Sent["발송 완료 기록"]
-    Result -->|일시 실패| Retry["미확정 재시도 정책으로 예약"]
+    Result -->|일시 실패·재시도 잔여| Retry["1분·5분·15분 간격으로 예약"]
     Retry --> Worker
-    Result -->|영구 실패 또는 재시도 소진| Failed["실패 기록 및 운영 조회 대상"]
+    Result -->|영구 실패| Failed["FAILED 기록·유효하지 않은 token 비활성화"]
+    Result -->|재시도 소진| Failed
+    Failed --> Inspect["운영자가 실패 원인 확인·수정"]
+    Inspect --> Replay["명시적 재처리 기능으로 재시도"]
+    Replay --> Worker
 ```
 
 발송 조건·정보성/마케팅 동의·outbox·재시도 정책은 위 기준을 따름.<br>
 기기 token 등록·갱신·해제 API, FCM/APNs 요청 계약, token 만료·무효화 처리는 구현 task에서 확정.<br>
+운영자 실패 조회·명시적 재처리 endpoint는 worker 구현 task의 범위에서 권한과 감사 이력을 확정.<br>
 별도 배포 서비스 분리는 발송량·장애 격리 요구가 발생할 때 검토하며, outbox 경계는 추후 분리를 지원하도록 유지.<br>
 RabbitMQ 등 broker 도입은 초기 범위에서 제외. worker 처리량이나 독립 확장 요구가 생기면 outbox relay가 broker에 발행하고 전송 worker가 소비하는 구조로 확장.<br>
