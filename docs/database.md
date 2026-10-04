@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V25로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V26으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -49,6 +49,7 @@
 | V23 | `SHIPPING_MANAGER` role 및 배송 전용 `SHIPMENT_WRITE` permission seed, 운영자 role permission mapping |
 | V24 | `notification_outbox` 알림 이벤트 outbox 테이블 |
 | V25 | outbox worker의 `PROCESSING` 상태와 만료 lease 추가 |
+| V26 | 활성 계정별 FCM·APNs 기기 token 저장 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -88,8 +89,9 @@
 
 ## 아직 없는 스키마
 
-현재 migration에 PG 거래 상세, 부분 취소, 파일 메타데이터, push 기기 token, SMS 본인 확인 challenge 테이블은 없음.<br>
+현재 migration에 PG 거래 상세, 부분 취소, 파일 메타데이터, SMS 본인 확인 challenge 테이블은 없음.<br>
 V24의 `notification_outbox`는 알림 이벤트 기록이며 push 전달 이력이나 기기 token 테이블은 아님.<br>
+`notification_device_token`은 token 원문과 전역 중복 식별용 SHA-256 hash를 저장하며 API 응답·로그에서 token 원문을 제외.<br>
 V25의 lease는 worker 장애 후 만료된 처리 행을 다시 claim하기 위한 값이며, 외부 push provider 호출과 DB 변경을 같은 트랜잭션으로 묶지 않음.<br>
 해당 기능이 확정되면 정책과 테이블을 설계하고 새 Flyway migration으로 추가함.<br>
 설계안이나 Mermaid 관계도만으로 실제 테이블이 생성된 것으로 보지 않음.<br>
