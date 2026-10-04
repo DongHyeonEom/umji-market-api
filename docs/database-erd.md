@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V24가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V25가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -385,9 +385,10 @@ erDiagram
         VARCHAR event_type "알림 이벤트 코드"
         VARCHAR event_detail "이벤트 상태 코드, nullable"
         BINARY order_public_id FK "대상 주문 공개 UUID"
-        VARCHAR status "PENDING·SENT·FAILED"
+        VARCHAR status "PENDING·PROCESSING·SENT·FAILED"
         INT attempt_count "전송 시도 횟수"
         DATETIME next_attempt_at "다음 처리 가능 시각"
+        DATETIME lease_expires_at "처리 lease 만료 시각, nullable"
         VARCHAR last_error_code "마지막 실패 코드, nullable"
         DATETIME sent_at "처리 완료 시각, nullable"
         BIGINT version "낙관적 잠금 버전"
@@ -520,6 +521,7 @@ erDiagram
 | V22 | 복수 구성원 그룹의 초기 대표자를 가장 먼저 생성된 계정으로 고정 |
 | V23 | `SHIPPING_MANAGER` role 및 배송 전용 `SHIPMENT_WRITE` permission seed, 운영자 role permission mapping |
 | V24 | `notification_outbox` 알림 이벤트 outbox 테이블 추가 |
+| V25 | `notification_outbox`의 `PROCESSING` 상태 및 lease 만료 컬럼·인덱스 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

@@ -3,7 +3,8 @@
 ## 구현 상태
 
 주문·취소·입금·배송 상태 변경을 업무 트랜잭션과 함께 기록하는 notification outbox 구현 완료.<br>
-기기 token API, FCM/APNs 발송 worker, delivery 이력은 아직 구현되지 않았음.<br>
+outbox batch claim·lease·worker 재시도 처리는 구현됨. 실제 발송 adapter가 아직 없어 scheduler는 비활성 상태.<br>
+기기 token API, FCM/APNs adapter, delivery 이력 및 운영자 실패 조회·재처리 API는 아직 구현되지 않았음.<br>
 SMS 본인 확인 코드 발송도 미구현임.<br>
 
 ## 발송 정책
@@ -44,7 +45,7 @@ FCM/APNs 자격 증명은 secret 설정으로 주입.<br>
 
 ## 예정 흐름
 
-아래 흐름은 미구현 설계이며 현재 발송 endpoint나 제공자 연동이 아님.<br>
+아래 흐름은 예정된 전체 발송 흐름이며 FCM/APNs 발송과 token 관리가 아직 미구현 상태.<br>
 
 ```mermaid
 flowchart TD

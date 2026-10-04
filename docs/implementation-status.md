@@ -26,7 +26,7 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 | 주문·결제·배송 | 주문 생성·조회·전체 취소, 공휴일 캘린더, 평일 15시 자동 배송 준비·재고 확정, 준비 이후 취소 요청·운영자 승인/거절, 수동 계좌이체 입금·환불 상태와 이력, 그룹 공용 배송지 선택과 주문 배송지 snapshot, 송장 등록·고객 주문 목록 조회 전 대신/천일택배 HTML 및 경동택배 JSON 미완료 송장 조회와 자동 배송완료·공식 WebView 링크·운영자 수동 보정 |
 | 재고 | 운영 조회·조정·변동 조회, 주문 재고 예약·해제·확정 |
 | 관리자 인가 | 계정·카탈로그·재고·배송 endpoint별 permission 검사, 배송 관리자 role 부여·회수, 운영 변경 감사 로그 |
-| 알림 | 주문·취소·입금·배송 상태 변경 이벤트의 DB outbox 기록. FCM/APNs 전송 worker, 기기 token API, 재시도는 미구현 |
+| 알림 | 주문·취소·입금·배송 상태 변경 이벤트의 DB outbox 기록, batch claim·lease·제한 재시도 worker core. FCM/APNs adapter, 기기 token API, worker 활성화, delivery 이력은 미구현 |
 
 ## 아직 구현되지 않은 범위
 
@@ -39,6 +39,6 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 
 ## Flyway
 
-현재 버전 마이그레이션은 V2부터 V24까지이며, 재실행 seed는 R 스크립트임.<br>
+현재 버전 마이그레이션은 V2부터 V25까지이며, 재실행 seed는 R 스크립트임.<br>
 버전 파일은 적용 후 수정하지 않고 새 변경은 다음 버전 migration으로 추가함.<br>
 정확한 버전별 테이블 목록은 [database.md](database.md)를 참고.<br>
