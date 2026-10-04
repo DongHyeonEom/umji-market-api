@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V25가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V26이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -395,6 +395,19 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
+    NOTIFICATION_DEVICE_TOKEN {
+        BIGINT id PK "내부 기기 token ID"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT account_id FK "token 소유 계정 ID"
+        VARCHAR platform "ANDROID_FCM 또는 IOS_APNS"
+        VARCHAR token_value "전송용 token 원문"
+        BINARY token_hash UK "SHA-256 token 중복 식별값"
+        VARCHAR status "ACTIVE 또는 INACTIVE"
+        DATETIME last_registered_at "마지막 등록·갱신 시각"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+        BIGINT version "낙관적 잠금 버전"
+    }
     ORDER_CANCELLATION_HISTORY {
         BIGINT id PK "취소 요청 및 처리 이력 ID"
         BIGINT order_id FK "대상 주문 ID"
@@ -464,6 +477,7 @@ erDiagram
     ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
     PURCHASE_ORDER ||--o| ORDER_SHIPMENT : shipment
     PURCHASE_ORDER ||--o{ NOTIFICATION_OUTBOX : generates
+    ACCOUNT ||--o{ NOTIFICATION_DEVICE_TOKEN : owns
     ACCOUNT ||--o{ ORDER_SHIPMENT : processes
     PURCHASE_ORDER ||--o{ ORDER_CANCELLATION_HISTORY : records
     ACCOUNT ||--o{ ORDER_CANCELLATION_HISTORY : requests
@@ -522,7 +536,8 @@ erDiagram
 | V23 | `SHIPPING_MANAGER` role 및 배송 전용 `SHIPMENT_WRITE` permission seed, 운영자 role permission mapping |
 | V24 | `notification_outbox` 알림 이벤트 outbox 테이블 추가 |
 | V25 | `notification_outbox`의 `PROCESSING` 상태 및 lease 만료 컬럼·인덱스 추가 |
+| V26 | 활성 계정별 FCM·APNs 기기 token 테이블 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
-부분 취소·SMS 본인 확인·파일 metadata·push 기기 token 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>
+부분 취소·SMS 본인 확인·파일 metadata 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>

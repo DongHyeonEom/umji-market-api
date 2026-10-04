@@ -72,6 +72,17 @@ management:
         enabled: true
 
 umji:
+  notification:
+    fcm:
+      enabled: ${UMJI_NOTIFICATION_FCM_ENABLED:false}
+      project-id: ${UMJI_NOTIFICATION_FCM_PROJECT_ID:}
+    apns:
+      enabled: ${UMJI_NOTIFICATION_APNS_ENABLED:false}
+      team-id: ${UMJI_NOTIFICATION_APNS_TEAM_ID:}
+      key-id: ${UMJI_NOTIFICATION_APNS_KEY_ID:}
+      private-key-path: ${UMJI_NOTIFICATION_APNS_PRIVATE_KEY_PATH:}
+      topic: ${UMJI_NOTIFICATION_APNS_TOPIC:}
+      environment: ${UMJI_NOTIFICATION_APNS_ENVIRONMENT:production}
   payment:
     bank-account:
       standard:
