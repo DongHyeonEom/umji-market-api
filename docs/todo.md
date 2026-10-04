@@ -121,10 +121,12 @@
 - [x] 각 outbox 행에 고유 event ID를 부여하고 중복 요청·재처리에서 중복 업무 이벤트 생성을 방지
 - [x] outbox 발송 worker와 제한 재시도·실패 상태 분류 구현
 - [x] 기기 push token 등록·갱신·해제 API와 권한 검증 구현
-  - [x] 활성 계정 인증, `ANDROID_FCM`·`IOS_APNS` 분류와 1~4096자 길이 검증
+  - [x] 활성 계정 인증, `ANDROID_FCM` 1~4096자 및 `IOS_APNS` 64자리 16진수 token 검증
   - [x] token SHA-256 중복 식별, 재등록 멱등성 및 인증 계정 소유권 연결
   - [x] 공개 token ID 기반 소유자 한정 비활성화, 원문 비응답·비로그 처리
-- [ ] Android FCM·iOS APNs adapter 연동 및 개인정보 최소화 구현
+- [x] Android FCM·iOS APNs adapter 연동 및 개인정보 최소화 구현
+  - [x] 주문자 계정의 활성 기기 대상, 일반 문구와 최소 앱 이동 data payload 구성
+  - [x] FCM·APNs 자격 증명 외부 주입 및 무효 token 비활성화
 
 ### 서비스 자동화 테스트 개발 및 테스트
 

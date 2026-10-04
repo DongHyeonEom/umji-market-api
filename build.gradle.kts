@@ -52,6 +52,7 @@ dependencies {
     implementation("com.azure.spring:spring-cloud-azure-starter-actuator")
     implementation("com.azure.spring:spring-cloud-azure-starter-jdbc-mysql")
     implementation("com.azure.spring:spring-cloud-azure-starter-storage")
+    implementation("com.google.firebase:firebase-admin:9.11.0")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("com.github.gavlyukovskiy:datasource-proxy-spring-boot-starter:1.12.1")

@@ -26,13 +26,13 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 | 주문·결제·배송 | 주문 생성·조회·전체 취소, 공휴일 캘린더, 평일 15시 자동 배송 준비·재고 확정, 준비 이후 취소 요청·운영자 승인/거절, 수동 계좌이체 입금·환불 상태와 이력, 그룹 공용 배송지 선택과 주문 배송지 snapshot, 송장 등록·고객 주문 목록 조회 전 대신/천일택배 HTML 및 경동택배 JSON 미완료 송장 조회와 자동 배송완료·공식 WebView 링크·운영자 수동 보정 |
 | 재고 | 운영 조회·조정·변동 조회, 주문 재고 예약·해제·확정 |
 | 관리자 인가 | 계정·카탈로그·재고·배송 endpoint별 permission 검사, 배송 관리자 role 부여·회수, 운영 변경 감사 로그 |
-| 알림 | 주문·취소·입금·배송 상태 변경 이벤트의 DB outbox 기록, batch claim·lease·제한 재시도 worker core, 활성 계정의 FCM·APNs 기기 token 등록·갱신·해제 API. FCM/APNs adapter, worker 활성화, delivery 이력은 미구현 |
+| 알림 | 주문·취소·입금·배송 상태 변경 이벤트의 DB outbox 기록, batch claim·lease·제한 재시도 worker, 활성 계정의 FCM·APNs 기기 token API, 주문자 활성 기기 fanout 및 FCM/APNs outbound adapter. delivery 이력과 운영자 실패 조회·재처리 API는 미구현 |
 
 ## 아직 구현되지 않은 범위
 
 - SMS 휴대폰 본인 확인 및 비활성/신규 계정 활성화 흐름
 - 부분 주문 취소, 배송 상태 이력
-- 파일 업로드 API, FCM/APNs 발송 adapter와 worker 활성화
+- 파일 업로드 API, 알림 delivery 이력과 운영자 실패 조회·재처리 API
 
 미구현 endpoint나 흐름은 실제 구현처럼 문서화하지 않음.<br>
 정책 결정이 필요한 항목은 해당 기능을 시작할 때 별도 설계함.<br>

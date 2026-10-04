@@ -2,6 +2,7 @@ package com.buyeong.umji.api.notification.adapter.out.persistence
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.notification.application.model.NotificationDevicePlatform
+import com.buyeong.umji.api.notification.application.model.NotificationDeviceRecipient
 import com.buyeong.umji.api.notification.application.model.NotificationDeviceTokenRegistration
 import com.buyeong.umji.api.notification.application.port.out.NotificationDeviceTokenStorePort
 import org.springframework.jdbc.core.JdbcTemplate
@@ -70,6 +71,36 @@ class JdbcNotificationDeviceTokenAdapter(private val jdbc: JdbcTemplate) : Notif
             """.trimIndent(),
             tokenId.toBytes(),
             accountId.toBytes(),
+        )
+    }
+
+    @Transactional(readOnly = true)
+    override fun activeRecipientsForOrder(orderId: UUID): List<NotificationDeviceRecipient> =
+        jdbc.query(
+            """SELECT device_token.public_id, device_token.platform, device_token.token_value
+                FROM purchase_order
+                JOIN notification_device_token device_token ON device_token.account_id = purchase_order.account_id
+                WHERE purchase_order.public_id = ? AND device_token.status = 'ACTIVE'
+                ORDER BY device_token.id
+            """.trimIndent(),
+            { result, _ ->
+                NotificationDeviceRecipient(
+                    result.getBytes("public_id").toUuid(),
+                    NotificationDevicePlatform.valueOf(result.getString("platform")),
+                    result.getString("token_value"),
+                )
+            },
+            orderId.toBytes(),
+        )
+
+    @Transactional
+    override fun deactivate(tokenId: UUID) {
+        jdbc.update(
+            """UPDATE notification_device_token
+                SET status = 'INACTIVE', updated_at = CURRENT_TIMESTAMP(3)
+                WHERE public_id = ? AND status = 'ACTIVE'
+            """.trimIndent(),
+            tokenId.toBytes(),
         )
     }
 

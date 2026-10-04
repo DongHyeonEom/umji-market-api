@@ -17,8 +17,11 @@ class NotificationDeviceTokenService(
         platform: NotificationDevicePlatform,
         token: String,
     ): NotificationDeviceTokenRegistration {
-        require(token.isNotBlank() && token.length <= MAX_TOKEN_LENGTH && token == token.trim()) {
-            "푸시 token 길이는 1~4096자이며 앞뒤 공백을 포함할 수 없습니다."
+        require(token.isNotBlank() && token == token.trim() && token.length <= MAX_TOKEN_LENGTH) {
+            "푸시 token은 1~4096자이며 앞뒤 공백을 포함할 수 없습니다."
+        }
+        if (platform == NotificationDevicePlatform.IOS_APNS) {
+            require(APNS_TOKEN.matches(token)) { "APNs token은 64자리 16진수 문자열이어야 합니다." }
         }
         val hash = MessageDigest.getInstance("SHA-256").digest(token.toByteArray(Charsets.UTF_8))
         return tokens.register(accountId, platform, token, hash, clock.instant())
@@ -28,5 +31,6 @@ class NotificationDeviceTokenService(
 
     private companion object {
         const val MAX_TOKEN_LENGTH = 4096
+        val APNS_TOKEN = Regex("^[A-Fa-f0-9]{64}$")
     }
 }

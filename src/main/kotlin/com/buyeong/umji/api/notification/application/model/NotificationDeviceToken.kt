@@ -13,3 +13,5 @@ data class NotificationDeviceTokenRegistration(
     val platform: NotificationDevicePlatform,
     val registeredAt: Instant,
 )
+
+data class NotificationDeviceRecipient(val id: UUID, val platform: NotificationDevicePlatform, val token: String)

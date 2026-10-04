@@ -5,7 +5,7 @@
 주문·취소·입금·배송 상태 변경을 업무 트랜잭션과 함께 기록하는 notification outbox 구현 완료.<br>
 outbox batch claim·lease·worker 재시도 처리는 구현됨. 실제 발송 adapter가 아직 없어 scheduler는 비활성 상태.<br>
 인증 활성 계정의 Android FCM·iOS APNs token 등록·갱신·해제 API와 소유 계정 검사는 구현됨.<br>
-FCM/APNs adapter, delivery 이력 및 운영자 실패 조회·재처리 API는 아직 구현되지 않았음.<br>
+FCM/APNs outbound adapter와 활성 기기 fanout은 구현됨. delivery 이력 및 운영자 실패 조회·재처리 API는 미구현임.<br>
 SMS 본인 확인 코드 발송도 미구현임.<br>
 
 ## 발송 정책
@@ -13,7 +13,7 @@ SMS 본인 확인 코드 발송도 미구현임.<br>
 모바일 앱의 정보성 push 채널은 Android FCM, iOS APNs로 통일.<br>
 Flutter 앱이 OS push token을 획득·갱신하고, 인증된 앱이 알림 API에 token 등록·해제를 요청.<br>
 token API는 활성 계정 인증을 요구하며 token 원문은 응답이나 로그에 포함하지 않음. 전송 adapter가 사용할 token 원문과 전역 중복 검사용 SHA-256 hash를 보관.<br>
-token은 `ANDROID_FCM` 또는 `IOS_APNS` platform과 연결하고 길이 1~4096자로 제한. 동일 token 재등록은 멱등 갱신이며 비활성 token을 다시 활성화.<br>
+token은 `ANDROID_FCM` 또는 `IOS_APNS` platform과 연결. Android FCM token은 1~4096자, APNs device token은 64자리 16진수로 제한. 동일 token 재등록은 멱등 갱신이며 비활성 token을 다시 활성화.<br>
 동일 token을 다른 활성 계정이 등록하면 연결 계정을 현재 인증 계정으로 옮겨 한 token에 한 계정만 연결. 계정은 공개 token ID로 자기 token만 해제 가능.<br>
 DB에는 전송용 token 원문과 전역 중복 식별용 SHA-256 hash를 저장. API 응답에는 공개 ID·platform·등록 시각만 포함하고 token 원문은 로그에 남기지 않음.<br>
 datasource-proxy가 SQL parameter를 기록하지 않도록 기기 token 테이블을 포함하는 query log를 제외.<br>
@@ -38,6 +38,8 @@ OS push permission과 마케팅 수신 동의는 별개로 처리. 마케팅 pus
 
 중복 요청·재처리로 같은 주문 이벤트가 반복되어도 같은 알림을 중복 발송하지 않도록 이벤트별 멱등 key를 사용.<br>
 잠금 화면에 표시될 수 있는 push에는 주문번호·금액·사업자번호·주소·입금 계좌·상세 주문 내역을 넣지 않고, 알림 종류와 안전한 앱 이동 정보만 포함.<br>
+알림 대상은 주문을 생성한 계정에 연결된 활성 기기로 제한. 구매자 그룹의 다른 구성원에게 주문 알림을 확장하지 않음.<br>
+알림 title/body는 이벤트별 일반 문구로 고정하고 주문 ID는 앱 내부 이동용 data field로만 전달.<br>
 알림 전달 기록은 주문·입금·배송 상태 변경과 같은 DB 트랜잭션에서 outbox에 저장해 상태 변경 commit 후 발송되도록 연계.<br>
 업무 API는 DB commit 후 알림 전송 완료를 기다리지 않고 응답. 배송 관리자는 배송 상태·송장 정보 저장이 끝나면 작업을 이어갈 수 있음.<br>
 worker의 push 전송은 비동기이며, provider 전송 결과는 별도 알림 전달 상태로 추적. push provider의 접수 성공은 단말 표시·열람을 보장하지 않음.<br>
@@ -51,7 +53,7 @@ FCM/APNs 자격 증명은 secret 설정으로 주입.<br>
 
 ## 예정 흐름
 
-아래 흐름은 예정된 전체 발송 흐름이며 FCM/APNs 발송과 token 관리가 아직 미구현 상태.<br>
+아래 흐름은 현재 구현과 미구현 범위를 함께 나타냄. delivery 이력 및 운영자 조회·재처리는 미구현 상태.<br>
 
 ```mermaid
 flowchart TD
@@ -82,9 +84,11 @@ flowchart TD
     Idempotency -->|아니오| Queue["상태 변경과 같은 트랜잭션에 outbox 저장"]
     Queue -->|commit 성공| Response["업무 API 응답 반환"]
     Queue --> Worker["DB outbox polling worker"]
-    Worker --> Provider{"기기 플랫폼"}
-    Provider -->|Android| FCM["FCM outbound adapter"]
-    Provider -->|iOS| APNS["APNs outbound adapter"]
+    Worker --> Recipients["주문 생성 계정의 활성 token 조회"]
+    Recipients --> Fanout["이벤트별 일반 문구 생성·기기별 fanout"]
+    Fanout --> Provider{"기기 platform"}
+    Provider -->|ANDROID_FCM| FCM["Firebase Admin SDK FCM adapter"]
+    Provider -->|IOS_APNS| APNS["APNs HTTP/2 token-auth adapter"]
     FCM -->|성공 또는 실패| Result["전달 결과 기록"]
     APNS -->|성공 또는 실패| Result
     Result -->|성공| Sent["발송 완료 기록"]
@@ -99,7 +103,8 @@ flowchart TD
 
 발송 조건·정보성/마케팅 동의·outbox·재시도 정책은 위 기준을 따름.<br>
 기기 token API는 `POST /api/notifications/device-tokens`에서 등록·갱신, `DELETE /api/notifications/device-tokens/{tokenId}`에서 인증 계정 소유 token 비활성화 제공.<br>
-FCM/APNs 요청 계약과 token 만료 정책은 provider 연동 task에서 확정.<br>
+FCM은 Firebase Admin SDK와 Application Default Credentials, APNs는 HTTP/2·TLS 1.2 이상과 ES256 token-based authentication 사용.<br>
+FCM project/service account와 APNs team ID·key ID·private key·bundle ID·환경 endpoint는 secret 또는 환경 설정으로 주입.<br>
 운영자 실패 조회·명시적 재처리 endpoint는 worker 구현 task의 범위에서 권한과 감사 이력을 확정.<br>
 별도 배포 서비스 분리는 발송량·장애 격리 요구가 발생할 때 검토하며, outbox 경계는 추후 분리를 지원하도록 유지.<br>
 RabbitMQ 등 broker 도입은 초기 범위에서 제외. worker 처리량이나 독립 확장 요구가 생기면 outbox relay가 broker에 발행하고 전송 worker가 소비하는 구조로 확장.<br>
