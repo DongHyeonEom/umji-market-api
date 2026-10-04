@@ -8,6 +8,10 @@ import com.buyeong.umji.api.exception.ErrorMessageService
 import com.buyeong.umji.api.inventory.adapter.`in`.web.OperationInventoryController
 import com.buyeong.umji.api.inventory.application.model.StockView
 import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.notification.adapter.`in`.web.NotificationDeviceTokenController
+import com.buyeong.umji.api.notification.application.model.NotificationDevicePlatform
+import com.buyeong.umji.api.notification.application.model.NotificationDeviceTokenRegistration
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationDeviceTokenUseCase
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationAccountController
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationBuyerGroupController
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
@@ -54,7 +58,7 @@ import java.util.UUID
     controllers = [
         OperationAccountController::class, OperationBuyerGroupController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
-        OrderCancellationController::class, OperationShippingHolidayController::class,
+        OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
     ],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
@@ -88,6 +92,9 @@ class OperationEndpointAuthorizationTest(
     private lateinit var holidays: ShippingHolidayUseCase
 
     @MockitoBean
+    private lateinit var deviceTokens: NotificationDeviceTokenUseCase
+
+    @MockitoBean
     private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 
     @MockitoBean
@@ -106,6 +113,76 @@ class OperationEndpointAuthorizationTest(
     fun `anonymous operation request returns 401`() {
         mockMvc.perform(get("/api/operation/inventory/skus/${UUID.randomUUID()}"))
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `anonymous device token registration returns 401`() {
+        mockMvc.perform(
+            post("/api/notifications/device-tokens")
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"platform":"ANDROID_FCM","token":"fcm-token"}"""),
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `anonymous device token revocation returns 401`() {
+        mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(
+                "/api/notifications/device-tokens/${UUID.randomUUID()}",
+            ).with(csrf()),
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `unsupported token platform returns 400 without registering a token`() {
+        mockMvc.perform(
+            post("/api/notifications/device-tokens")
+                .with(user("customer"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"platform":"WEB","token":"browser-token"}"""),
+        ).andExpect(status().isBadRequest)
+
+        Mockito.verifyNoInteractions(deviceTokens)
+    }
+
+    @Test
+    fun `authenticated device token registration uses the current account`() {
+        val accountId = UUID.randomUUID()
+        val tokenId = UUID.randomUUID()
+        val registeredAt = java.time.Instant.parse("2026-10-05T00:00:00Z")
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(accountId)
+        Mockito.`when`(deviceTokens.register(accountId, NotificationDevicePlatform.ANDROID_FCM, "fcm-token"))
+            .thenReturn(NotificationDeviceTokenRegistration(tokenId, NotificationDevicePlatform.ANDROID_FCM, registeredAt))
+
+        mockMvc.perform(
+            post("/api/notifications/device-tokens")
+                .with(user("customer"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"platform":"ANDROID_FCM","token":"fcm-token"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.id").value(tokenId.toString()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.token").doesNotExist())
+
+        Mockito.verify(deviceTokens).register(accountId, NotificationDevicePlatform.ANDROID_FCM, "fcm-token")
+    }
+
+    @Test
+    fun `authenticated account can only request revocation under its identity`() {
+        val accountId = UUID.randomUUID()
+        val tokenId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(accountId)
+
+        mockMvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/notifications/device-tokens/$tokenId")
+                .with(user("customer"))
+                .with(csrf()),
+        ).andExpect(status().isNoContent)
+
+        Mockito.verify(deviceTokens).revoke(accountId, tokenId)
     }
 
     @Test

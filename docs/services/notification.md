@@ -73,12 +73,8 @@ flowchart TD
     end
 
     Event["주문·입금·배송 상태 변경"] --> Eligible{"정의된 알림 이벤트인가?"}
-    Eligible -->|아니오| Ignore["알림 생략"]
-    Eligible -->|예| Consent{"정보성 또는 마케팅 동의 확인"}
-    Consent -->|정보성 이벤트| Build["최소 개인정보로 메시지 구성"]
-    Consent -->|마케팅 이벤트| Marketing{"명시적 마케팅 동의 활성 상태인가?"}
-    Marketing -->|아니오| Ignore
-    Marketing -->|예| Build
+    Eligible -->|아니오·마케팅 이벤트| Ignore["현재 미지원 이벤트 생략"]
+    Eligible -->|정보성 이벤트| Build["최소 개인정보로 메시지 구성"]
     Build --> Idempotency{"이벤트별 멱등 key가 이미 처리됐는가?"}
     Idempotency -->|예| Ignore
     Idempotency -->|아니오| Queue["상태 변경과 같은 트랜잭션에 outbox 저장"]

@@ -1,5 +1,7 @@
 package com.buyeong.umji.api.order.application
 
+import com.buyeong.umji.api.notification.application.model.NotificationEventType
+import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
 import com.buyeong.umji.api.order.application.model.CheckoutLine
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderView
@@ -20,7 +22,8 @@ class OrderServiceTest : DescribeSpec({
     val inventory = mockk<InventoryReservationPort>(relaxed = true)
     val orders = mockk<OrderStorePort>()
     val shippingAddresses = mockk<OrderShippingAddressPort>()
-    val service = OrderService(carts, inventory, orders, shippingAddresses)
+    val notifications = mockk<NotificationEventUseCase>(relaxed = true)
+    val service = OrderService(carts, inventory, orders, shippingAddresses, notifications = notifications)
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()
@@ -52,6 +55,7 @@ class OrderServiceTest : DescribeSpec({
             result.subtotalAmount shouldBe 36000L
             result.items.single().unitPrice shouldBe 12000L
             result.items.single().quantity shouldBe 3
+            verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, result.id, null) }
             verify(exactly = 1) { inventory.reserve(skuId, 3, any(), null) }
             verify(exactly = 1) { carts.clear(accountId) }
         }
