@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V26이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V30이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -15,6 +15,7 @@
   기본값 단일화는 구매자 그룹 행 잠금과 애플리케이션 트랜잭션으로 유지함.<br>
 - Nullable 필드는 설명에 표시했음.<br>
   `created_at`은 생성 시각, `updated_at`은 마지막 수정 시각이며 UTC `DATETIME(3)`임.<br>
+- `web_login_attempt`은 `(phone_hash, remote_address_hash)` 복합 unique key로 전화번호 원문과 주소 원문을 보관하지 않음.<br>
 
 ## 현재 관계 및 컬럼 설명
 
@@ -35,6 +36,8 @@ erDiagram
         DATETIME last_login_at "마지막 로그인 시각, nullable"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
+        VARBINARY admin_totp_secret_encrypted "AES-GCM 암호화 TOTP secret, nullable"
+        BOOLEAN admin_totp_enabled "관리자 TOTP 활성 여부"
     }
     ROLE {
         BIGINT id PK "내부 역할 ID"
@@ -70,6 +73,15 @@ erDiagram
         DATETIME revoked_at "폐기 시각, nullable이면 미폐기"
         DATETIME created_at "발급 시각"
         DATETIME last_used_at "최근 사용 시각, nullable"
+        BOOLEAN mfa_verified "세션의 MFA 완료 상태"
+    }
+    WEB_LOGIN_ATTEMPT {
+        BIGINT id PK "내부 시도 집계 ID"
+        BINARY phone_hash "전화번호 SHA-256 hash"
+        BINARY remote_address_hash "원격 주소 SHA-256 hash"
+        DATETIME window_started_at "15분 제한 window 시작 시각"
+        INT failure_count "로그인 실패 횟수"
+        DATETIME updated_at "마지막 수정 시각"
     }
     BUYER_GROUP_ADDRESS {
         BIGINT id PK "배송지 내부 ID"
@@ -537,6 +549,10 @@ erDiagram
 | V24 | `notification_outbox` 알림 이벤트 outbox 테이블 추가 |
 | V25 | `notification_outbox`의 `PROCESSING` 상태 및 lease 만료 컬럼·인덱스 추가 |
 | V26 | 활성 계정별 FCM·APNs 기기 token 테이블 추가 |
+| V27 | 계정에 관리자 TOTP secret 암호문 및 활성 상태 추가 |
+| V28 | Refresh Token에 MFA 완료 상태 추가 |
+| V29 | 기존 상위 관리자 token version 및 refresh session 무효화 |
+| V30 | 웹 로그인 시도 제한 집계 테이블 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

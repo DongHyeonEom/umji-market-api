@@ -17,7 +17,7 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 
 | 도메인 | 현황 |
 | --- | --- |
-| 인증 | 휴대폰 로그인, 1시간 Access Token, 1년 rolling Refresh Token, 세션별 refresh/revoke, SMS 본인 확인과 계정 활성화 API는 미구현 |
+| 인증 | 휴대폰 로그인, 사용자 웹 전용 비밀번호(Argon2), 웹 로그인, 상위 관리자 TOTP 등록·검증·운영자 초기화, MFA 미완료 운영 권한 차단, 실패 시도 제한, 1시간 Access Token, 1년 rolling Refresh Token 및 세션별 refresh/revoke. SMS 본인 확인·신규 계정 활성화 API는 미구현 |
 | 공개 카탈로그 | 카테고리·상품 목록·상품 상세 조회 |
 | 관리자 계정 | 계정 생성/조회, 프로필·동의 관리, 서면 동의 처리자 추적, 동의 확인 후 승인·상태 변경, 운영 role 부여·회수 |
 | 관리자 카탈로그 | 카테고리·브랜드·상품 생성/수정, 이미지·옵션·SKU 관리 |
@@ -39,6 +39,6 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 
 ## Flyway
 
-현재 버전 마이그레이션은 V2부터 V26까지이며, 재실행 seed는 R 스크립트임.<br>
+현재 버전 마이그레이션은 V2부터 V30까지이며, 재실행 seed는 R 스크립트임.<br>
 버전 파일은 적용 후 수정하지 않고 새 변경은 다음 버전 migration으로 추가함.<br>
 정확한 버전별 테이블 목록은 [database.md](database.md)를 참고.<br>

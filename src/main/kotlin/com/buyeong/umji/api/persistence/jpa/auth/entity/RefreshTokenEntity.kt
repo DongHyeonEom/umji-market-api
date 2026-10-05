@@ -38,6 +38,9 @@ class RefreshTokenEntity {
     @Column(name = "expires_at")
     var expiresAt: Instant? = null
 
+    @Column(name = "mfa_verified", nullable = false)
+    var mfaVerified: Boolean = false
+
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()
 }

@@ -57,6 +57,7 @@ class JpaAuthenticationStoreAdapter(
         entity.revokedAt = session.revokedAt
         entity.lastUsedAt = session.lastUsedAt
         entity.expiresAt = session.expiresAt
+        entity.mfaVerified = session.mfaVerified
         refreshTokens.save(entity)
     }
 
@@ -72,7 +73,12 @@ class JpaAuthenticationStoreAdapter(
             String::class.java,
             requireNotNull(id),
         ).toSet()
-        return AccountRecord(accountPublicId, name, status, tokenVersion, permissions)
+        val roles = jdbc.queryForList(
+            "SELECT r.code FROM account_role ar JOIN role r ON r.id = ar.role_id WHERE ar.account_id = ?",
+            String::class.java,
+            requireNotNull(id),
+        ).toSet()
+        return AccountRecord(accountPublicId, name, status, tokenVersion, permissions, roles)
     }
     private fun RefreshTokenEntity.toRecord() = RefreshSessionRecord(
         tokenHash,
@@ -81,5 +87,6 @@ class JpaAuthenticationStoreAdapter(
         revokedAt,
         lastUsedAt,
         expiresAt,
+        mfaVerified,
     )
 }

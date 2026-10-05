@@ -16,6 +16,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import java.security.MessageDigest
 import java.time.Duration
@@ -78,6 +79,30 @@ class AuthenticationServiceTest : DescribeSpec({
     }
 
     describe("Refresh Token 갱신과 만료") {
+        it("MFA 검증을 마친 관리자 세션은 refresh 이후에도 MFA 완료 상태를 유지한다") {
+            val account = AccountRecord(accountId, "관리자", "ACTIVE", 2, roles = setOf("SUPER_ADMIN"), mfaVerified = true)
+            val session = RefreshSessionRecord(
+                MessageDigest.getInstance("SHA-256").digest("mfa-refresh".toByteArray()),
+                account,
+                "admin-browser",
+                null,
+                null,
+                Instant.now().plusSeconds(60),
+                mfaVerified = true,
+            )
+            every { sessions.findLockedByHash(any()) } returns session
+            every { tokenIssuer.issue(any(), any(), any()) } returns "new-access"
+            val saved = slot<RefreshSessionRecord>()
+            every { sessions.save(capture(saved)) } answers { Unit }
+
+            service.refresh(RefreshTokenCommand("mfa-refresh", "admin-browser"))
+
+            saved.captured.mfaVerified shouldBe true
+            val issuedAccount = slot<AccountRecord>()
+            verify { tokenIssuer.issue(capture(issuedAccount), any(), any()) }
+            issuedAccount.captured.mfaVerified shouldBe true
+        }
+
         it("사용한 세션을 폐기하고 새 Refresh Token과 rolling 만료 시각을 저장한다") {
             val account = AccountRecord(accountId, "테스트 회원", "ACTIVE", 0)
             val previous = RefreshSessionRecord(

@@ -37,6 +37,15 @@ class AccountEntity {
     @Column(name = "token_version", nullable = false)
     var tokenVersion: Long = 0
 
+    @Column(name = "password_hash")
+    var passwordHash: String? = null
+
+    @Column(name = "admin_totp_secret_encrypted")
+    var adminTotpSecretEncrypted: ByteArray? = null
+
+    @Column(name = "admin_totp_enabled", nullable = false)
+    var adminTotpEnabled: Boolean = false
+
     @Column(name = "default_tax_invoice_requested", nullable = false)
     var defaultTaxInvoiceRequested: Boolean = false
 

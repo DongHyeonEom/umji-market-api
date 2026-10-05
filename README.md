@@ -21,6 +21,8 @@ Controller는 입력 adapter, application UseCase는 업무 흐름, JPA 구현�
 
 필수 변수: `DB_READ_URL`, `DB_WRITE_URL`, `DB_USER_NAME`, `DB_USER_PASSWORD`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_KEY_ID`, `JWT_RSA_PUBLIC_KEY_PATH`, `JWT_RSA_PRIVATE_KEY_PATH`, `UMJI_BANK_STANDARD_NAME`, `UMJI_BANK_STANDARD_ACCOUNT_NUMBER`, `UMJI_BANK_STANDARD_ACCOUNT_HOLDER`, `UMJI_BANK_TAX_INVOICE_NAME`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER`.
 
+관리자 TOTP를 사용할 때 `UMJI_AUTH_TOTP_ENCRYPTION_KEY`에 32바이트 난수 키의 Base64 값을 secret store 또는 환경 변수로 주입. 키 생성 예: `openssl rand -base64 32`. 기존 계정의 TOTP secret 복호화를 위해 키를 안정적으로 보관하며 변경 시 등록된 관리자 TOTP 재등록 필요.
+
 계좌 안내 변수는 세금계산서 미발행 계좌(`UMJI_BANK_STANDARD_*`)와 발행 계좌(`UMJI_BANK_TAX_INVOICE_*`)를 각각 설정함. 주문 생성 시 선택한 계좌 정보는 주문에 스냅샷으로 저장.
 
 FCM 발송 사용 시 `UMJI_NOTIFICATION_FCM_ENABLED=true`, `UMJI_NOTIFICATION_FCM_PROJECT_ID`와 Google Application Default Credentials를 설정함. APNs 발송 사용 시 `UMJI_NOTIFICATION_APNS_ENABLED=true`, `UMJI_NOTIFICATION_APNS_TEAM_ID`, `UMJI_NOTIFICATION_APNS_KEY_ID`, `UMJI_NOTIFICATION_APNS_PRIVATE_KEY_PATH`, `UMJI_NOTIFICATION_APNS_TOPIC`, `UMJI_NOTIFICATION_APNS_ENVIRONMENT`를 설정함. provider 미사용이 기본값이며 자격 증명은 저장소 밖에서 주입.

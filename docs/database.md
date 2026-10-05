@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V26으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V30으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -50,6 +50,10 @@
 | V24 | `notification_outbox` 알림 이벤트 outbox 테이블 |
 | V25 | outbox worker의 `PROCESSING` 상태와 만료 lease 추가 |
 | V26 | 활성 계정별 FCM·APNs 기기 token 저장 |
+| V27 | 관리자 계정의 암호화 TOTP secret 및 등록 상태 저장 |
+| V28 | Refresh Token 세션의 2차 인증 완료 상태 저장 |
+| V29 | MFA 적용 전 상위 관리자 token version 갱신 및 기존 refresh session 폐기 |
+| V30 | 웹 로그인 실패 횟수 제한용 전화번호·원격 주소 hash와 15분 window 저장 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -65,6 +69,10 @@
   예약 식별자는 주문 항목과 재고 예약에 같은 UUID를 보관하며 두 행 사이 DB FK는 없음.<br>
 - Refresh Token 원문은 저장하지 않고 hash를 저장함.<br>
   토큰 만료·폐기 의미는 인증 구현과 일치.<br>
+- `account.password_hash`는 웹 전용 비밀번호 해시를 저장하며 앱 휴대폰 로그인과 분리됨.<br>
+  관리자 TOTP secret은 애플리케이션 환경 변수 키로 AES-GCM 암호화해 저장하고, Refresh Token은 MFA 완료 상태를 보존함.<br>
+- `web_login_attempt`은 전화번호·원격 주소 SHA-256 hash별 최근 실패 횟수만 저장함.<br>
+  15분 내 동일 조합 5회 또는 전화번호 전체 합계 10회 실패 시 로그인 거부, 15분이 지난 행은 매시 정리.<br>
 - 업체 동의 이력은 기존 행을 덮어쓰지 않고 새 이력으로 추가함.<br>
 - 구매 주문은 `buyer_group_id`로 그룹에 귀속하고, 기존 `purchase_order.account_id`는 실제 주문한 계정으로 유지함.<br>
   현재 각 기존 계정에 개인 또는 사업자 구매자 그룹 하나를 생성해 기존 주문·프로필을 backfill함.<br>

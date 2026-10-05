@@ -27,7 +27,13 @@ class JwtAccessTokenIssuer(
                         .expiresAt(expiresAt)
                         .claim("tokenVersion", account.tokenVersion)
                         .claim("permissions", account.permissions.sorted())
+                        .claim("mfaRequired", account.roles.any { it in PRIVILEGED_ROLES })
+                        .claim("mfaVerified", account.mfaVerified)
                         .build(),
                 ),
             ).tokenValue
+
+    private companion object {
+        val PRIVILEGED_ROLES = setOf("ADMIN", "SUPER_ADMIN", "PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER")
+    }
 }
