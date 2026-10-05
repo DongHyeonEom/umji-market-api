@@ -45,7 +45,7 @@ class AuthenticationService(
             throw ClientBadRequestException("Refresh Token 기기 정보가 일치하지 않습니다.")
         }
         refreshSessions.save(session.copy(revokedAt = now, lastUsedAt = now))
-        return createTokenPair(session.account, command.deviceId ?: session.deviceId)
+        return createTokenPair(session.account.copy(mfaVerified = session.mfaVerified), command.deviceId ?: session.deviceId)
     }
 
     fun revoke(command: RevokeRefreshTokenCommand) {
@@ -61,7 +61,7 @@ class AuthenticationService(
         val refreshToken = newOpaqueToken()
         val refreshExpiresAt = now.plus(REFRESH_TOKEN_TTL)
         refreshSessions.save(
-            RefreshSessionRecord(hash(refreshToken), account, deviceId?.trim()?.ifBlank { null }, null, null, refreshExpiresAt),
+            RefreshSessionRecord(hash(refreshToken), account, deviceId?.trim()?.ifBlank { null }, null, null, refreshExpiresAt, account.mfaVerified),
         )
         return IssuedTokens(accessToken, accessExpiresAt, refreshToken)
     }

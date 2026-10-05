@@ -58,6 +58,9 @@ endpoint별 권한, 실제 감사 대상, 개인정보 제외, role bootstrap과
 
 관리자 endpoint는 `/api/operation/**` 아래에 있음.<br>
 `REQUIRED` 모드에서는 Access Token의 permission claim으로 endpoint별 인가를 적용함.<br>
+MFA 대상 관리자 role은 Access Token에 MFA 완료 claim이 있어야 permission 인가를 통과함.<br>
+관리자 TOTP 초기화는 `ADMIN_ACCOUNT_MANAGE` 권한이 필요하며 대상 계정 token version·refresh session 무효화와 운영 감사 기록을 수행함.<br>
+MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim도 만족해야 운영 API를 사용할 수 있음.<br>
 인증 정보가 없거나 유효하지 않은 요청은 `401`, 인증됐지만 권한이 없는 요청은 `403`으로 거절함.<br>
 로컬 전용 `BYPASS`는 권한 검사를 포함한 보안 검사를 생략함.<br>
 운영 환경에서 `BYPASS` 사용 금지.<br>

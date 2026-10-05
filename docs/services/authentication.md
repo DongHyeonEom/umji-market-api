@@ -2,8 +2,8 @@
 
 ## 구현 상태
 
-휴대폰 번호 로그인과 Access/Refresh Token 발급·갱신·폐기를 구현했음.<br>
-비밀번호·소셜 로그인을 제공하지 않음.<br>
+휴대폰 번호 로그인과 웹 전용 비밀번호 인증, Access/Refresh Token 발급·갱신·폐기를 구현했음.<br>
+`ADMIN`, `SUPER_ADMIN`, 상품·주문·재고 관리자 role에는 Google Authenticator 호환 TOTP 2차 인증을 적용했음.<br>
 SMS 휴대폰 본인 확인과 고객 셀프 가입·활성화 API는 아직 없음.<br>
 운영자 계정 관리 API의 동의 이력 기록과 승인을 통한 활성화는 제공됨.<br>
 ACTIVE 계정의 일반 로그인마다 코드를 요구하지 않음.<br>
@@ -42,6 +42,11 @@ Access Token 유효성 검사 시 계정 상태와 token version을 현재 저�
 ## Endpoint
 
 - `POST /api/auth/login`
+- `POST /api/auth/web-password`
+- `POST /api/auth/web/login`
+- `POST /api/auth/admin/totp/setup`
+- `POST /api/auth/admin/totp/confirm`
+- `POST /api/operation/accounts/{id}/totp/reset`
 - `POST /api/auth/token/refresh`
 - `POST /api/auth/tokens/revoke`
 
@@ -49,30 +54,47 @@ Access Token 유효성 검사 시 계정 상태와 token version을 현재 저�
 `ACTIVE` 계정은 토큰을 발급하고, 비활성 또는 미등록 계정은 `PHONE_VERIFICATION_REQUIRED` 결과를 수신.<br>
 정지·탈퇴 계정은 로그인할 수 없음.<br>
 
-## 웹 비밀번호 인증 계획
+## 웹 비밀번호 및 관리자 2차 인증
 
-웹 로그인은 휴대폰 번호를 ID로 사용하고 비밀번호 인증을 추가하는 정책 방향. 앱과 웹은 동일한 사람 계정을 사용.<br>
-관리자는 별도 계정 저장소 대신 공용 계정의 role/permission으로 웹 운영 기능을 인가.<br>
-앱 비밀번호 로그인, 웹 비밀번호 로그인, 초기 웹 비밀번호 설정은 현재 인증 구현에 미포함.<br>
-기존 고객의 최초 비밀번호 설정을 위한 본인 확인 방식과 초대·복구 절차는 미확정.<br>
+앱·웹은 같은 계정을 사용하며 기존 `password_hash`에 웹 전용 비밀번호를 저장함.<br>
+기존 휴대폰 로그인 token으로 웹 비밀번호 최초 설정·변경 가능. 고정 초기 비밀번호·임시 비밀번호·SMS 발송은 사용하지 않음.<br>
+웹 비밀번호는 15~128자로 제한하고 Argon2 해시로 저장. 변경 시 token version 증가와 기존 refresh session 폐기를 수행.<br>
+TOTP 대상은 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`. `SHIPPING_MANAGER`, `SALES_MANAGER`만 보유한 계정은 제외하며, 상위 관리자 role을 함께 보유하면 TOTP 대상.<br>
+TOTP secret은 AES-GCM으로 암호화 저장. 등록 URI 발급 후 앱 코드 확인 시 활성화하며 token version 증가와 기존 refresh session 폐기 수행.<br>
+등록된 TOTP 분실 시 다른 MFA 완료 운영자가 `ADMIN_ACCOUNT_MANAGE` 권한으로 초기화 가능. 변경 endpoint는 운영 감사 로그에 기록.<br>
+MFA가 필요한 계정은 MFA 미완료 token으로 운영 API를 사용할 수 없음. 기존 관리자 token과 refresh session은 V29 migration에서 무효화.<br>
+Refresh Token은 MFA 완료 상태를 보존함. `UMJI_AUTH_TOTP_ENCRYPTION_KEY`에 32바이트 Base64 키를 외부 주입하며 키를 잃거나 변경하면 등록 TOTP 재설정 필요.<br>
+동일 전화번호·원격 주소 조합의 15분 내 실패 5회 또는 전화번호 합계 10회에서 웹 로그인을 거부. 저장 값은 hash만 보관하고 매시 1일 초과 window 정리.<br>
+TOTP 등록 계정이 하나뿐인 경우의 운영자 외 recovery 절차는 별도.<br>
 
 ```mermaid
 flowchart TD
-    WEB[웹 로그인 요청: 휴대폰 번호·비밀번호] --> ACCOUNT[공용 계정 조회·비밀번호 검증]
-    ACCOUNT --> ACTIVE{계정 활성 및 인증 성공}
-    ACTIVE -- 아니오 --> DENY[일반 인증 실패 응답]
-    ACTIVE -- 예 --> ROLE[공용 role/permission 기반 사용자·관리자 인가]
-    ROLE --> SESSION[웹 세션 발급 및 권한별 화면 제공]
-    FIRST[웹 최초 비밀번호 설정 요청] --> VERIFY{본인 확인 방식}
-    VERIFY -- 정책 미확정 --> HOLD[본인 확인 정책 결정 전 설정 보류]
-    DEFAULT[고정 문구 + 휴대폰 뒷자리 초기 비밀번호] --> REJECT[추측 가능한 초기 비밀번호로 사용하지 않음]
-    VERIFY -- 본인 확인 완료 후속 정책 --> SET[사용자가 직접 비밀번호 설정]
+    PHONE[휴대폰 로그인] --> ACTIVE[전화번호 정규화·ACTIVE 계정 확인]
+    ACTIVE --> MOBILETOKEN[앱 token 발급]
+    MOBILETOKEN --> SET[인증 계정 웹 비밀번호 설정/변경]
+    SET --> HASH[15~128자 검증·Argon2 해시 저장]
+    HASH --> REVOKE[token version 증가·기존 refresh session 폐기]
+
+    WEB[웹 로그인: 휴대폰·웹 비밀번호·TOTP] --> CREDENTIAL[ACTIVE 계정·웹 비밀번호 검증]
+    CREDENTIAL --> PRIVILEGED{상위 관리자 role 보유}
+    PRIVILEGED -- 아니오 --> ISSUE[Access/Refresh Token 발급]
+    PRIVILEGED -- 예 --> OTP{등록된 secret·유효한 TOTP 코드}
+    OTP -- 아니오 --> DENY[일반 인증 실패]
+    OTP -- 예 --> ISSUE
+    ISSUE --> MFA[JWT와 refresh session에 MFA 완료 상태 기록]
+    MFA --> OP[운영 API가 MFA 상태 및 permission 검사]
+
+    SETUP[휴대폰 로그인한 관리자 TOTP 등록] --> ROLE{상위 관리자 role}
+    ROLE -- 아니오 --> DENY
+    ROLE -- 예 --> SECRET[secret 생성·AES-GCM 암호화 저장·URI 응답]
+    SECRET --> CONFIRM[Authenticator 코드 검증]
+    CONFIRM --> ENABLE[등록 활성화·token version 증가·기존 refresh 폐기]
+
+    REFRESH[Refresh 요청] --> ROTATE[유효성 검사·기존 토큰 폐기·MFA 상태를 보존해 회전]
+    LOGOUT[로그아웃] --> REVOKESESSION[Refresh session 폐기]
 ```
 
-고정 문자열·휴대폰 번호 일부를 조합한 초기 비밀번호는 추측하기 쉬우므로 사용하지 않는 권고안.<br>
-초기 설정과 복구는 본인 확인 후 사용자가 직접 새 비밀번호를 정하는 단회·만료형 등록 절차 권고. 구체적인 본인 확인 채널과 만료 시간은 미확정.<br>
-신규 비밀번호는 흔하거나 유출된 비밀번호 차단, 로그인 실패 제한, 안전한 비밀번호 해시 저장을 포함해 설계 필요.<br>
-현재 ACTIVE 계정의 앱 로그인은 휴대폰 번호만으로 처리되므로 웹 비밀번호 설정 전에 운영 인증 흐름의 보안 강도 점검 필요.<br>
+기존 상위 관리자 토큰과 refresh session은 V29 migration에서 무효화하며, 재로그인·비밀번호 설정·TOTP 등록 과정 필요.<br>
 
 ## 토큰 정책
 
@@ -87,6 +109,7 @@ Refresh Token은 발급·갱신 시점부터 1년간 사용되지 않으면 만�
 Access Token 검증 시 계정 상태와 token version을 DB의 현재 값과 대조함.<br>
 계정 정지 또는 token version 변경 시 기존 Access Token은 즉시 인증 실패 처리되며, 정지 계정의 Refresh Token 갱신도 거부됨.<br>
 인증할 수 없는 토큰은 `401`, 인증은 유효하나 endpoint 권한이 부족한 요청은 `403`을 반환함.<br>
+상위 관리자 role의 운영 API는 `mfaRequired` 및 `mfaVerified` JWT claim도 검사함.<br>
 
 ## 보안 모드
 

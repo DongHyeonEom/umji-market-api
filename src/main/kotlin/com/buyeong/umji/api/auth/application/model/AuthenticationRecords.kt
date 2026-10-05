@@ -9,6 +9,8 @@ data class AccountRecord(
     val status: String,
     val tokenVersion: Long,
     val permissions: Set<String> = emptySet(),
+    val roles: Set<String> = emptySet(),
+    val mfaVerified: Boolean = false,
 )
 enum class AuthenticationStatus { AUTHENTICATED, PHONE_VERIFICATION_REQUIRED }
 data class AuthenticatedAccount(val id: UUID, val name: String, val status: String)
@@ -21,4 +23,5 @@ data class RefreshSessionRecord(
     val revokedAt: Instant?,
     val lastUsedAt: Instant?,
     val expiresAt: Instant?,
+    val mfaVerified: Boolean = false,
 )

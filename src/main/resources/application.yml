@@ -72,6 +72,8 @@ management:
         enabled: true
 
 umji:
+  auth:
+    totp-encryption-key: ${UMJI_AUTH_TOTP_ENCRYPTION_KEY:}
   notification:
     fcm:
       enabled: ${UMJI_NOTIFICATION_FCM_ENABLED:false}

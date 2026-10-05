@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.operation.account.adapter.`in`.web
 
+import com.buyeong.umji.api.auth.application.WebAuthenticationService
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 import com.buyeong.umji.api.operation.account.application.model.AccountData
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
@@ -46,6 +47,7 @@ import java.util.UUID
 class OperationAccountController(
     private val useCase: OperationAccountUseCase,
     private val currentAccounts: CurrentAccountPort,
+    private val webAuthentication: WebAuthenticationService,
 ) {
     @Operation(summary = "계정에 부여된 역할 조회", description = "계정에 부여된 역할 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/roles")
@@ -143,6 +145,12 @@ class OperationAccountController(
     fun approve(
         @Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID,
     ) = useCase.approve(id).toResponse()
+
+    @Operation(summary = "관리자 TOTP 초기화", description = "MFA 인증된 운영자가 대상 관리자 Authenticator 등록을 초기화하고 기존 token session을 폐기")
+    @PostMapping("/{id}/totp/reset")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun resetAdminTotp(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID) = webAuthentication.resetTotp(id)
 
     private fun BusinessProfileRequest.toData() = BusinessProfileData(
         businessName.trim(),

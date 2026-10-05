@@ -51,7 +51,9 @@ class SecurityConfig {
         } else {
             http
                 .authorizeHttpRequests {
-                    it.requestMatchers("/actuator/health", "/actuator/info", "/swagger-ui/**", "/v3/api-docs/**", "/api/auth/**").permitAll()
+                    it.requestMatchers("/actuator/health", "/actuator/info", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/web/login", "/api/auth/token/refresh", "/api/auth/tokens/revoke").permitAll()
+                        .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/operation/accounts/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
                         .requestMatchers("/api/operation/buyer-groups/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
                         .requestMatchers(HttpMethod.GET, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")

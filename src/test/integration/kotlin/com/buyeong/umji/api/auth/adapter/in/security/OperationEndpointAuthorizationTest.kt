@@ -1,5 +1,8 @@
 package com.buyeong.umji.api.auth.adapter.`in`.security
 
+import com.buyeong.umji.api.auth.adapter.`in`.web.AuthenticationController
+import com.buyeong.umji.api.auth.application.WebAuthenticationService
+import com.buyeong.umji.api.auth.application.port.`in`.AuthenticationUseCase
 import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import com.buyeong.umji.api.auth.config.JwtProperties
@@ -56,6 +59,7 @@ import java.util.UUID
 
 @WebMvcTest(
     controllers = [
+        AuthenticationController::class,
         OperationAccountController::class, OperationBuyerGroupController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
@@ -98,6 +102,12 @@ class OperationEndpointAuthorizationTest(
     private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 
     @MockitoBean
+    private lateinit var authentication: AuthenticationUseCase
+
+    @MockitoBean
+    private lateinit var webAuthentication: WebAuthenticationService
+
+    @MockitoBean
     private lateinit var errorMessages: ErrorMessageService
 
     @MockitoBean
@@ -113,6 +123,26 @@ class OperationEndpointAuthorizationTest(
     fun `anonymous operation request returns 401`() {
         mockMvc.perform(get("/api/operation/inventory/skus/${UUID.randomUUID()}"))
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `web password and TOTP management endpoints require an authenticated phone login token`() {
+        mockMvc.perform(post("/api/auth/web-password").contentType("application/json").content("{}"))
+            .andExpect(status().isUnauthorized)
+        mockMvc.perform(post("/api/auth/admin/totp/setup"))
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `admin TOTP reset requires account management permission`() {
+        val accountId = UUID.randomUUID()
+        mockMvc.perform(post("/api/operation/accounts/$accountId/totp/reset").with(authorities("PRODUCT_READ")))
+            .andExpect(status().isForbidden)
+
+        mockMvc.perform(post("/api/operation/accounts/$accountId/totp/reset").with(authorities("ADMIN_ACCOUNT_MANAGE")))
+            .andExpect(status().isNoContent)
+
+        Mockito.verify(webAuthentication).resetTotp(accountId)
     }
 
     @Test
