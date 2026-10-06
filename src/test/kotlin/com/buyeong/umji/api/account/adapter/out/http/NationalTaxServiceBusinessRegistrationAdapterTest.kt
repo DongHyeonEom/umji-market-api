@@ -1,0 +1,60 @@
+package com.buyeong.umji.api.account.adapter.out.http
+
+import com.buyeong.umji.api.exception.ClientBadRequestException
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.hamcrest.Matchers.containsString
+import org.junit.jupiter.api.Test
+import org.springframework.http.MediaType
+import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.client.match.MockRestRequestMatchers.content
+import org.springframework.test.web.client.match.MockRestRequestMatchers.method
+import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
+import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
+import org.springframework.web.client.RestClient
+import org.springframework.http.HttpMethod
+
+class NationalTaxServiceBusinessRegistrationAdapterTest {
+    @Test
+    fun `status lookup allows ongoing and temporarily closed registrations`() {
+        listOf("01", "02").forEach { statusCode ->
+            val builder = RestClient.builder()
+            val server = MockRestServiceServer.bindTo(builder).build()
+            server.expect(requestTo(containsString("nts-businessman/v1/status")))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andRespond(
+                    withSuccess(
+                        """{"status_code":"OK","data":[{"b_no":"1234567890","b_stt_cd":"$statusCode"}]}""",
+                        MediaType.APPLICATION_JSON,
+                    ),
+                )
+
+            NationalTaxServiceBusinessRegistrationAdapter(
+                BusinessRegistrationStatusProperties("https://api.odcloud.kr/api", "test-key"),
+                builder,
+            ).ensureNotClosed("1234567890")
+            server.verify()
+        }
+    }
+
+    @Test
+    fun `status lookup rejects closed registration`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        server.expect(requestTo(containsString("nts-businessman/v1/status")))
+            .andRespond(
+                withSuccess(
+                    """{"status_code":"OK","data":[{"b_no":"1234567890","b_stt_cd":"03"}]}""",
+                    MediaType.APPLICATION_JSON,
+                ),
+            )
+
+        assertThatThrownBy {
+            NationalTaxServiceBusinessRegistrationAdapter(
+                BusinessRegistrationStatusProperties("https://api.odcloud.kr/api", "test-key"),
+                builder,
+            ).ensureNotClosed("1234567890")
+        }.isInstanceOf(ClientBadRequestException::class.java)
+        server.verify()
+    }
+}

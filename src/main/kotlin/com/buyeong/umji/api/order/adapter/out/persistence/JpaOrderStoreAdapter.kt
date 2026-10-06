@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.order.adapter.out.persistence
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.order.application.model.OrderDraft
 import com.buyeong.umji.api.order.application.model.OrderItemDraft
 import com.buyeong.umji.api.order.application.model.OrderItemView
@@ -11,6 +12,7 @@ import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshot
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSupplier
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationHistoryRepository
@@ -32,6 +34,7 @@ import java.util.UUID
 @Component
 class JpaOrderStoreAdapter(
     private val accounts: AccountJpaEntityService,
+    private val buyerGroupMembers: BuyerGroupMemberRepository,
     private val buyerGroups: BuyerGroupJpaEntityService,
     private val catalog: CatalogJpaEntityService,
     private val orders: OrderJpaEntityService,
@@ -50,7 +53,9 @@ class JpaOrderStoreAdapter(
 
     override fun save(draft: OrderDraft): OrderView {
         val account = account(draft.accountId)
-        val buyerGroup = buyerGroups.ensureForAccount(draft.accountId)
+        val buyerGroup = buyerGroupMembers.findFirstByAccount_IdAndStatus(requireNotNull(account.id), "ACTIVE")?.buyerGroup
+            ?.takeIf { it.status == "ACTIVE" }
+            ?: throw ClientBadRequestException("주문 전 개인 또는 사업자 그룹 등록이 필요합니다.")
         val order = PurchaseOrderEntity().apply {
             this.account = account
             this.buyerGroup = buyerGroup

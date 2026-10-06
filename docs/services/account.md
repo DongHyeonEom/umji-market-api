@@ -60,6 +60,7 @@ flowchart TD
 - `GET /api/account/groups/onboarding`
 - `GET /api/account/groups/current`
 - `POST /api/account/groups/individual`
+- `POST /api/account/groups` (유형 선택형 최초 그룹 등록, 사업자 선택 시 국세청 폐업 상태 확인)
 - `GET /api/account/groups/search?phone=`
 - `POST /api/account/groups/invitations`
 - `GET /api/account/groups/invitations`
@@ -112,7 +113,37 @@ flowchart TD
 그룹 검색은 입력한 휴대폰 번호와 정확히 일치하는 일반 계정 번호 또는 사업자 대표 계정 번호로 수행. 결과에는 그룹 식별에 필요한 이름·유형만 노출.<br>
 일반 구성원은 검색 결과 그룹에 가입 요청 가능. 대표자가 승인하면 기존 개인 그룹 소속을 종료하고 대상 그룹에 이동. 기존 주문의 그룹 귀속은 변경하지 않음.<br>
 대표자의 사전 등록 초대는 계정 onboarding 조회에서 확인. 여러 그룹의 미처리 초대가 있으면 사용자가 대상을 선택하고, 수락 전에 자동으로 그룹을 이동하지 않음.<br>
-그룹이 없는 최초 계정은 개인 그룹 생성 또는 대표자 번호 검색 후 가입 요청을 선택. 개인 그룹 생성자는 최초 대표자로 지정.<br>
+그룹이 없는 최초 계정은 개인·사업자 그룹 등록 또는 대표자 번호 검색 후 가입 요청을 선택. 새 그룹을 등록한 계정은 최초 대표자로 지정.<br>
+
+## 신규 그룹 등록
+
+신규 가입 후 그룹이 없는 사용자는 개인/사업자 유형을 먼저 선택. 개인 선택도 내부적으로 `INDIVIDUAL` 구매자 그룹과 활성 구성원 관계를 생성.<br>
+사업자 선택은 그룹 표시 정보와 사업자등록 필수 항목 입력·확인 후 `BUSINESS` 그룹과 최초 대표자 관계를 같은 트랜잭션으로 생성.<br>
+사업자등록번호·상호·대표자·사업자등록 주소·업태·종목은 `buyer_group_business_profile`에서 관리. 그룹 공용 배송지는 별도 `buyer_group_address`에 저장하며 사업자등록 주소에서 자동 생성하지 않음.<br>
+사용자가 최초 사업자 그룹을 만드는 경우 사업자등록번호를 국세청 사업자등록 상태조회 API로 확인. 폐업 상태는 거부하고 계속사업자·휴업자는 허용. 상호·대표자·주소·업태·종목은 사용자가 입력·확인.<br>
+상태조회는 국세청 원천 정보에서 30분 간격으로 갱신되며 신규 개업 정보는 반영에 1~2일이 걸릴 수 있음. API 개요는 [공공데이터포털 국세청 사업자등록정보 상태조회](https://www.data.go.kr/data/15081808/openapi.do)를 참고.<br>
+운영자가 그룹 초기값으로 사업자 프로필을 입력한 경우 사용자 그룹 생성 검증은 다시 요구하지 않음. 활성 그룹에 소속된 사용자에게도 유형 선택·그룹 생성 흐름을 다시 노출하지 않고 기존 초대·가입 요청 처리를 유지.<br>
+
+```mermaid
+flowchart TD
+    AUTH[인증된 사용자 확인] --> CURRENT{활성 그룹 소속 여부}
+    CURRENT -- 있음 --> EXISTING[현재 그룹·초대·가입 요청 확인]
+    EXISTING --> KEEP[기존 그룹 유지 또는 기존 연결 절차 진행]
+    CURRENT -- 없음 --> TYPE{개인 또는 사업자 선택}
+    TYPE -- 개인 --> INDIVIDUAL[사용자 확인 정보로 개인 그룹 등록]
+    INDIVIDUAL --> MEMBER[개인 그룹 및 대표 구성원 관계 생성]
+    TYPE -- 사업자 --> FORM[사업자등록번호 입력 및 그룹 내용 기입]
+    FORM --> CHECK[국세청 사업자 상태조회 API 호출]
+    CHECK --> STATUS{폐업 상태인가}
+    STATUS -- 예 --> REJECT[사업자 그룹 등록 거부]
+    STATUS -- 아니오 --> CONFIRM[상호·대표자·사업자등록 주소·업태·종목 사용자 확인]
+    CONFIRM --> VALID{필수값·형식 유효 및 사용자 확인}
+    VALID -- 아니오 --> FORM
+    VALID -- 예 --> BUSINESS[사업자 그룹 및 확인 시각 포함 등록 프로필 원자적 생성]
+    BUSINESS --> REP[등록 사용자를 그룹 대표자로 지정]
+    MEMBER --> END[그룹 등록 완료]
+    REP --> END
+```
 
 ```mermaid
 flowchart TD

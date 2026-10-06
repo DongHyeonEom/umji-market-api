@@ -44,6 +44,9 @@ class BuyerGroupBusinessProfileEntity {
     @Column(name = "tax_invoice_email", length = 255)
     var taxInvoiceEmail: String? = null
 
+    @Column(name = "business_registration_verified_at")
+    var businessRegistrationVerifiedAt: Instant? = null
+
     @Column(name = "postal_code")
     var postalCode: String? = null
 

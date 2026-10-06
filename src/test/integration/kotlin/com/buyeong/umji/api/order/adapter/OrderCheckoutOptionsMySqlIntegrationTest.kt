@@ -4,8 +4,12 @@ import com.buyeong.umji.api.account.application.model.SharedAddressCommand
 import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
 import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
 import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
+import com.buyeong.umji.api.account.application.model.BusinessGroupRegistration
+import com.buyeong.umji.api.account.application.port.out.BusinessRegistrationStatusPort
 import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
 import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
@@ -21,9 +25,11 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.util.UUID
+import org.mockito.Mockito
 
 @SpringBootTest(
     properties = [
@@ -65,6 +71,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     @Autowired
     private lateinit var groupMembership: BuyerGroupMembershipUseCase
+
+    @MockitoBean
+    private lateinit var businessRegistrationStatus: BusinessRegistrationStatusPort
 
     @Autowired
     private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileUseCase
@@ -393,6 +402,68 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         buyerGroups.assignAccountToBusinessGroup(memberId, groupId)
         assertThatThrownBy { taxInvoiceProfiles.updateForAccount(memberId, command) }
             .isInstanceOf(com.buyeong.umji.api.exception.ForbiddenOperationException::class.java)
+    }
+
+    @Test
+    fun `first group registration creates personal group or verifies business number and keeps registered address separate`() {
+        val personalAccountId = createAccount()
+        val personalGroup = groupMembership.register(personalAccountId, BuyerGroupRegistrationCommand("INDIVIDUAL", null))
+        assertThat(personalGroup.type).isEqualTo("INDIVIDUAL")
+        assertThat(groupMembership.current(personalAccountId)?.id).isEqualTo(personalGroup.id)
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+            Int::class.java,
+            personalGroup.id.toBytes(),
+        )).isZero()
+
+        val businessAccountId = createAccount()
+        Mockito.doNothing().`when`(businessRegistrationStatus).ensureNotClosed("1234567890")
+        val businessGroup = groupMembership.register(
+            businessAccountId,
+            BuyerGroupRegistrationCommand(
+                "BUSINESS",
+                BusinessGroupRegistration(
+                    "1234567890", "Buyer Business", "Buyer Owner", "12345", "Registered Place", "Building 1", "Retail", "Hardware", "billing@example.com", true,
+                ),
+            ),
+        )
+        assertThat(businessGroup.type).isEqualTo("BUSINESS")
+        Mockito.verify(businessRegistrationStatus).ensureNotClosed("1234567890")
+        assertThat(jdbc.queryForObject(
+            "SELECT business_registration_verified_at IS NOT NULL FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+            Boolean::class.java,
+            businessGroup.id.toBytes(),
+        )).isTrue()
+        assertThat(jdbc.queryForObject(
+            "SELECT COUNT(*) FROM buyer_group_address WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+            Int::class.java,
+            businessGroup.id.toBytes(),
+        )).isZero()
+        assertThatThrownBy { groupMembership.register(businessAccountId, BuyerGroupRegistrationCommand("INDIVIDUAL", null)) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun `closed business registration is rejected before group creation and preset group skips external check`() {
+        val closedAccountId = createAccount()
+        Mockito.doThrow(ClientBadRequestException("폐업 상태"))
+            .`when`(businessRegistrationStatus).ensureNotClosed("1234567890")
+        assertThatThrownBy {
+            groupMembership.register(
+                closedAccountId,
+                BuyerGroupRegistrationCommand(
+                    "BUSINESS",
+                    BusinessGroupRegistration(
+                        "1234567890", "Closed Business", "Owner", "12345", "Registered Place", null, "Retail", "Hardware", null, true,
+                    ),
+                ),
+            )
+        }.isInstanceOf(ClientBadRequestException::class.java)
+        assertThat(groupMembership.current(closedAccountId)).isNull()
+
+        val presetAccountId = createAccount()
+        createBusinessGroup(presetAccountId)
+        Mockito.verify(businessRegistrationStatus, Mockito.times(1)).ensureNotClosed("1234567890")
     }
 
     private fun createAccount(): UUID {
