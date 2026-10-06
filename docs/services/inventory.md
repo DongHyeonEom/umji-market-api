@@ -53,8 +53,7 @@ flowchart TD
 - 입금 상태와 발송 상태는 독립적으로 관리.<br>
   미입금 만료 때 예약을 확정·해제할 조건은 정책 미확정.<br>
 
-재고 UseCase는 SKU 식별자와 재고 Port를 사용함.<br>
-카탈로그 SKU 저장 구현은 outbound adapter를 통해 조회함.<br>
+`InventoryService`가 `CatalogJpaEntityService`와 `InventoryJpaEntityService`를 직접 호출해 SKU·재고·예약·변동 이력을 처리함.<br>
 
 ## 도매 박스 및 재고 표시 확장 정책
 

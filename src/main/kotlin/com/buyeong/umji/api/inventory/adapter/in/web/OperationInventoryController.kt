@@ -3,7 +3,7 @@ package com.buyeong.umji.api.inventory.adapter.`in`.web
 import com.buyeong.umji.api.inventory.application.model.MovementPageState
 import com.buyeong.umji.api.inventory.application.model.MovementState
 import com.buyeong.umji.api.inventory.application.model.StockView
-import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.inventory.model.AdjustInventoryRequest
 import com.buyeong.umji.api.inventory.model.InventoryMovementPageResponse
 import com.buyeong.umji.api.inventory.model.InventoryMovementResponse
@@ -30,7 +30,7 @@ import java.util.UUID
 @Validated
 @Tag(name = "운영 재고", description = "SKU 재고 조회·조정과 변동 이력 관리 API")
 class OperationInventoryController(
-    private val inventoryService: InventoryUseCase,
+    private val inventoryService: InventoryService,
 ) {
     @Operation(summary = "상품 옵션조회", description = "SKU 재고 조회·조정과 변동 이력 관리 API. /skus/{skuId} 경로에서 상품 옵션조회를 수행")
     @GetMapping("/skus/{skuId}")
