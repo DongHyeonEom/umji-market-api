@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.cart
 
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -19,6 +20,10 @@ class CartItemEntity : DomainPublicEntity() {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sku_id", nullable = false)
     lateinit var sku: ProductSkuEntity
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "sales_offer_id", nullable = false)
+    lateinit var salesOffer: SalesOfferEntity
 
     @Column(nullable = false)
     var quantity: Int = 0

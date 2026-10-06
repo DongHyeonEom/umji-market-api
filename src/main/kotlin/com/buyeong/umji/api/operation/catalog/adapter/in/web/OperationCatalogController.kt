@@ -3,6 +3,8 @@ package com.buyeong.umji.api.operation.catalog.adapter.`in`.web
 import com.buyeong.umji.api.operation.catalog.application.model.BrandCommand
 import com.buyeong.umji.api.operation.catalog.application.model.CatalogResource
 import com.buyeong.umji.api.operation.catalog.application.model.CategoryCommand
+import com.buyeong.umji.api.operation.catalog.application.model.ChannelCategoryCommand
+import com.buyeong.umji.api.operation.catalog.application.model.ChannelListingCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ImageCommand
 import com.buyeong.umji.api.operation.catalog.application.model.OptionCommand
 import com.buyeong.umji.api.operation.catalog.application.model.OptionValueCommand
@@ -10,9 +12,12 @@ import com.buyeong.umji.api.operation.catalog.application.model.ProductCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductStatusCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductView
 import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
+import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
+import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView
 import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
 import com.buyeong.umji.api.operation.model.CreateCategoryRequest
+import com.buyeong.umji.api.operation.model.CreateChannelCategoryRequest
 import com.buyeong.umji.api.operation.model.CreateProductImageRequest
 import com.buyeong.umji.api.operation.model.CreateProductOptionRequest
 import com.buyeong.umji.api.operation.model.CreateProductRequest
@@ -26,8 +31,11 @@ import com.buyeong.umji.api.operation.model.OperationProductOptionValueResponse
 import com.buyeong.umji.api.operation.model.OperationProductPageResponse
 import com.buyeong.umji.api.operation.model.OperationProductResponse
 import com.buyeong.umji.api.operation.model.OperationProductSkuResponse
+import com.buyeong.umji.api.operation.model.OperationSalesOfferResponse
 import com.buyeong.umji.api.operation.model.UpdateProductRequest
 import com.buyeong.umji.api.operation.model.UpdateProductStatusRequest
+import com.buyeong.umji.api.operation.model.UpdateChannelListingRequest
+import com.buyeong.umji.api.operation.model.UpdateSalesOfferRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -41,6 +49,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
@@ -56,7 +65,46 @@ class OperationCatalogController(private val useCase: OperationCatalogUseCase) {
     @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/categories")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_READ')")
-    fun categories() = useCase.categories().map { OperationCategoryResponse(it.id, it.parentId, it.name, it.path, it.depth, it.displayOrder, it.displayStatus) }
+    fun categories() = useCase.categories("WHOLESALE").map { OperationCategoryResponse(it.id, it.parentId, it.name, it.path, it.depth, it.displayOrder, it.displayStatus) }
+
+    @Operation(summary = "채널 카테고리 목록 조회", description = "판매 채널에 연결된 카테고리 트리를 조회")
+    @GetMapping("/channels/{channelCode}/categories")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_READ')")
+    fun channelCategories(@PathVariable channelCode: String) =
+        useCase.categories(channelCode).map { OperationCategoryResponse(it.id, it.parentId, it.name, it.path, it.depth, it.displayOrder, it.displayStatus) }
+
+    @Operation(summary = "채널 카테고리 등록", description = "지정한 판매 채널에 전용 카테고리를 등록")
+    @PostMapping("/channels/{channelCode}/categories")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_WRITE')")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createChannelCategory(
+        @PathVariable channelCode: String,
+        @Valid @RequestBody request: CreateChannelCategoryRequest,
+    ) = useCase.createChannelCategory(
+        ChannelCategoryCommand(channelCode, request.name, request.parentId, request.displayOrder, request.displayStatus),
+    ).toResponse()
+
+    @Operation(summary = "채널별 상품 전시 수정", description = "공용 상품을 채널 카테고리에 연결하고 채널별 노출·순서를 수정")
+    @PutMapping("/channels/{channelCode}/products/{productId}/listing")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_WRITE')")
+    fun updateChannelListing(
+        @PathVariable channelCode: String,
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: UpdateChannelListingRequest,
+    ) = useCase.updateChannelListing(
+        ChannelListingCommand(channelCode, productId, request.categoryId, request.displayStatus, request.displayOrder),
+    ).toResponse()
+
+    @Operation(summary = "채널별 SKU 판매 오퍼 수정", description = "공용 실물 SKU의 채널별 판매가·정가·판매 상태를 수정")
+    @PutMapping("/channels/{channelCode}/skus/{skuId}/offer")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_WRITE')")
+    fun updateSalesOffer(
+        @PathVariable channelCode: String,
+        @PathVariable skuId: UUID,
+        @Valid @RequestBody request: UpdateSalesOfferRequest,
+    ) = useCase.updateSalesOffer(
+        SalesOfferCommand(channelCode, skuId, request.salePrice, request.listPrice, request.salesStatus),
+    ).toResponse()
 
     @Operation(summary = "브랜드 목록 조회", description = "브랜드 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/brands")
@@ -163,6 +211,7 @@ class OperationCatalogController(private val useCase: OperationCatalogUseCase) {
     private fun CreateProductOptionRequest.toCommand() = OptionCommand(name, displayOrder, values.map { OptionValueCommand(it.value, it.displayOrder) })
     private fun CreateProductSkuRequest.toCommand() = SkuCommand(skuCode, name, salePrice, listPrice, salesStatus, optionValueIds)
     private fun CatalogResource.toResponse() = OperationCatalogResourceResponse(id)
+    private fun SalesOfferView.toResponse() = OperationSalesOfferResponse(id, channelCode, skuId, salePrice, listPrice, salesStatus)
     private fun ProductView.toResponse() = OperationProductResponse(
         id, categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder,
         images.map {

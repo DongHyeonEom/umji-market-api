@@ -6,6 +6,8 @@ import com.buyeong.umji.api.catalog.application.model.ProductPageView
 import com.buyeong.umji.api.catalog.application.model.ProductSkuView
 import com.buyeong.umji.api.catalog.application.model.ProductSummaryView
 import com.buyeong.umji.api.catalog.application.port.out.CatalogReadPort
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -14,21 +16,39 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Component
-class JpaCatalogReadAdapter(private val catalog: CatalogJpaEntityService) : CatalogReadPort {
+class JpaCatalogReadAdapter(
+    private val catalog: CatalogJpaEntityService,
+    private val listings: ChannelProductListingRepository,
+    private val offers: SalesOfferRepository,
+) : CatalogReadPort {
     @Transactional(readOnly = true)
-    override fun categories(): List<CategoryView> = catalog.displayedCategories(DISPLAYED).map { category ->
-        CategoryView(requireNotNull(category.publicId), category.name, category.path, category.depth)
+    override fun categories(channelCode: String): List<CategoryView> = listings.findCategories(channelCode, DISPLAYED).map { category ->
+        CategoryView(requireNotNull(category.publicId), category.name, category.path, category.depth, channelCode)
     }
 
     @Transactional(readOnly = true)
-    override fun products(page: Int, size: Int): ProductPageView {
-        val result = catalog.publicProducts(
+    override fun products(page: Int, size: Int, channelCode: String): ProductPageView {
+        val result = listings.findPublicListings(
+            channelCode,
             DISPLAYED,
             ON_SALE,
             PageRequest.of(page, size, Sort.by("displayOrder").ascending().and(Sort.by("id").descending())),
         )
         return ProductPageView(
-            items = result.content.map { ProductSummaryView(requireNotNull(it.publicId), it.name, it.brand?.name) },
+            items = result.content.map { listing ->
+                val prices = offers.findAllBySalesChannel_CodeAndSalesStatusAndProductSku_Product_IdOrderBySalePriceAsc(
+                    channelCode,
+                    ON_SALE,
+                    requireNotNull(listing.product.id),
+                )
+                ProductSummaryView(
+                    requireNotNull(listing.product.publicId),
+                    listing.product.name,
+                    listing.product.brand?.name,
+                    channelCode,
+                    prices.firstOrNull()?.salePrice,
+                )
+            },
             page = result.number,
             size = result.size,
             totalElements = result.totalElements,
@@ -37,17 +57,32 @@ class JpaCatalogReadAdapter(private val catalog: CatalogJpaEntityService) : Cata
     }
 
     @Transactional(readOnly = true)
-    override fun product(productId: UUID): ProductDetailView? {
-        val product = catalog.publicProduct(productId, DISPLAYED, ON_SALE) ?: return null
+    override fun product(channelCode: String, productId: UUID): ProductDetailView? {
+        val listing = listings.findPublicListing(channelCode, productId, DISPLAYED, ON_SALE) ?: return null
+        val product = listing.product
+        val salesOffers = offers.findAllBySalesChannel_CodeAndSalesStatusAndProductSku_Product_IdOrderBySalePriceAsc(
+            channelCode,
+            ON_SALE,
+            requireNotNull(product.id),
+        )
         return ProductDetailView(
             id = requireNotNull(product.publicId),
             name = product.name,
             description = product.description,
-            categoryName = product.category.name,
+            categoryName = listing.category.name,
             brandName = product.brand?.name,
-            skus = catalog.skus(requireNotNull(product.id), ON_SALE).map {
-                ProductSkuView(requireNotNull(it.publicId), it.skuCode, it.name, it.salePrice, it.listPrice)
+            skus = salesOffers.map { offer ->
+                val sku = offer.productSku
+                ProductSkuView(
+                    requireNotNull(sku.publicId),
+                    sku.skuCode,
+                    sku.name,
+                    offer.salePrice,
+                    offer.listPrice,
+                    requireNotNull(offer.publicId),
+                )
             },
+            channelCode = channelCode,
         )
     }
 

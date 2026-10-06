@@ -5,6 +5,8 @@ import com.buyeong.umji.api.operation.catalog.application.model.BrandCommand
 import com.buyeong.umji.api.operation.catalog.application.model.BrandView
 import com.buyeong.umji.api.operation.catalog.application.model.CatalogResource
 import com.buyeong.umji.api.operation.catalog.application.model.CategoryCommand
+import com.buyeong.umji.api.operation.catalog.application.model.ChannelCategoryCommand
+import com.buyeong.umji.api.operation.catalog.application.model.ChannelListingCommand
 import com.buyeong.umji.api.operation.catalog.application.model.CategoryView
 import com.buyeong.umji.api.operation.catalog.application.model.ImageCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ImageView
@@ -17,6 +19,8 @@ import com.buyeong.umji.api.operation.catalog.application.model.ProductStatusCom
 import com.buyeong.umji.api.operation.catalog.application.model.ProductView
 import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SkuView
+import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
+import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView
 import com.buyeong.umji.api.operation.catalog.application.port.out.OperationCatalogPort
 import com.buyeong.umji.api.persistence.jpa.catalog.BrandEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
@@ -26,6 +30,12 @@ import com.buyeong.umji.api.persistence.jpa.catalog.ProductImageEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductOptionEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductOptionValueEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ChannelProductListingEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesChannelEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesChannelRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
@@ -34,9 +44,14 @@ import java.util.UUID
 
 @Component
 @Transactional
-class JpaOperationCatalogAdapter(private val catalog: CatalogJpaEntityService) : OperationCatalogPort {
+class JpaOperationCatalogAdapter(
+    private val catalog: CatalogJpaEntityService,
+    private val channels: SalesChannelRepository,
+    private val listings: ChannelProductListingRepository,
+    private val offers: SalesOfferRepository,
+) : OperationCatalogPort {
     @Transactional(readOnly = true)
-    override fun categories() = catalog.categories().map {
+    override fun categories(channelCode: String) = catalog.categories(channelCode).map {
         CategoryView(requireNotNull(it.publicId), it.parent?.publicId, it.name, it.path, it.depth, it.displayOrder, it.displayStatus)
     }
 
@@ -68,8 +83,55 @@ class JpaOperationCatalogAdapter(private val catalog: CatalogJpaEntityService) :
             path = parent?.path?.let { "$it/$name" } ?: name
             displayOrder = command.displayOrder
             displayStatus = command.displayStatus
+            salesChannel = channel(WHOLESALE)
         }
         return CatalogResource(requireNotNull(catalog.save(e).publicId))
+    }
+
+    override fun createChannelCategory(command: ChannelCategoryCommand): CatalogResource {
+        val salesChannel = channel(command.channelCode)
+        val parent = command.parentId?.let(::category)
+        require(parent == null || parent.salesChannel.id == salesChannel.id) { "상위 카테고리는 같은 판매 채널에 속해야 합니다." }
+        val entity = CategoryEntity().apply {
+            this.salesChannel = salesChannel
+            name = command.name
+            this.parent = parent
+            depth = (parent?.depth ?: -1) + 1
+            path = parent?.path?.let { "$it/${command.name}" } ?: command.name
+            displayOrder = command.displayOrder
+            displayStatus = command.displayStatus
+        }
+        return CatalogResource(requireNotNull(catalog.save(entity).publicId))
+    }
+
+    override fun updateChannelListing(command: ChannelListingCommand): CatalogResource? {
+        val channel = channel(command.channelCode)
+        val product = catalog.product(command.productId) ?: return null
+        val category = category(command.categoryId)
+        require(category.salesChannel.id == channel.id) { "상품 listing 카테고리는 같은 판매 채널에 속해야 합니다." }
+        val listing = listings.findBySalesChannel_IdAndProduct_Id(requireNotNull(channel.id), requireNotNull(product.id))
+            ?: ChannelProductListingEntity().apply {
+                salesChannel = channel
+                this.product = product
+            }
+        listing.category = category
+        listing.displayStatus = command.displayStatus
+        listing.displayOrder = command.displayOrder
+        return CatalogResource(requireNotNull(listings.save(listing).publicId))
+    }
+
+    override fun updateSalesOffer(command: SalesOfferCommand): SalesOfferView? {
+        val channel = channel(command.channelCode)
+        val sku = catalog.sku(command.skuId) ?: return null
+        val offer = offers.findBySalesChannel_IdAndProductSku_Id(requireNotNull(channel.id), requireNotNull(sku.id))
+            ?: SalesOfferEntity().apply {
+                salesChannel = channel
+                productSku = sku
+            }
+        offer.salePrice = command.salePrice
+        offer.listPrice = command.listPrice
+        offer.salesStatus = command.salesStatus
+        return offers.save(offer).toView()
     }
     override fun createBrand(
         command: BrandCommand,
@@ -92,15 +154,20 @@ class JpaOperationCatalogAdapter(private val catalog: CatalogJpaEntityService) :
     ): CatalogResource {
         val product = buildProduct(command)
         val saved = catalog.save(product)
+        wholesaleListing(saved, saved.category, saved.displayStatus, saved.displayOrder)
         command.images.forEach { catalog.save(image(saved, it)) }
         command.options.forEach { saveOption(saved, it) }
-        command.skus.forEach { catalog.save(sku(saved, it)) }
+        command.skus.forEach {
+            val savedSku = catalog.save(sku(saved, it))
+            wholesaleOffer(savedSku, savedSku.salePrice, savedSku.listPrice, savedSku.salesStatus)
+        }
         return CatalogResource(requireNotNull(saved.publicId))
     }
     override fun updateProduct(id: UUID, command: ProductCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
         applyProduct(p, command)
+        wholesaleListing(p, p.category, p.displayStatus, p.displayOrder)
         return CatalogResource(requireNotNull(p.publicId))
     }
     override fun addImage(id: UUID, command: ImageCommand): CatalogResource? {
@@ -116,13 +183,18 @@ class JpaOperationCatalogAdapter(private val catalog: CatalogJpaEntityService) :
     override fun addSku(id: UUID, command: SkuCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
-        return CatalogResource(requireNotNull(catalog.save(sku(p, command)).publicId))
+        val savedSku = catalog.save(sku(p, command))
+        wholesaleOffer(savedSku, savedSku.salePrice, savedSku.listPrice, savedSku.salesStatus)
+        return CatalogResource(requireNotNull(savedSku.publicId))
     }
     override fun updateStatus(id: UUID, command: ProductStatusCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
         p.displayStatus = command.displayStatus
         p.salesStatus = command.salesStatus
+        wholesaleListing(p, p.category, command.displayStatus, p.displayOrder)
+        offers.findAllBySalesChannel_IdAndProductSku_Product_Id(requireNotNull(channel(WHOLESALE).id), requireNotNull(p.id))
+            .forEach { it.salesStatus = command.salesStatus }
         return CatalogResource(requireNotNull(p.publicId))
     }
 
@@ -196,6 +268,37 @@ class JpaOperationCatalogAdapter(private val catalog: CatalogJpaEntityService) :
     }
     private fun category(id: UUID) = catalog.category(id) ?: throw ItemNotFoundException("카테고리를 찾을 수 없습니다.")
     private fun brand(id: UUID) = catalog.brand(id) ?: throw ItemNotFoundException("브랜드를 찾을 수 없습니다.")
+    private fun channel(code: String): SalesChannelEntity = channels.findByCode(code) ?: throw ItemNotFoundException("판매 채널을 찾을 수 없습니다.")
+
+    private fun wholesaleListing(product: ProductEntity, category: CategoryEntity, displayStatus: String, displayOrder: Int) {
+        val salesChannel = channel(WHOLESALE)
+        val listing = listings.findBySalesChannel_IdAndProduct_Id(requireNotNull(salesChannel.id), requireNotNull(product.id))
+            ?: ChannelProductListingEntity().apply {
+                this.salesChannel = salesChannel
+                this.product = product
+            }
+        listing.category = category
+        listing.displayStatus = displayStatus
+        listing.displayOrder = displayOrder
+        listings.save(listing)
+    }
+
+    private fun wholesaleOffer(sku: ProductSkuEntity, salePrice: Long, listPrice: Long?, salesStatus: String) {
+        val salesChannel = channel(WHOLESALE)
+        val offer = offers.findBySalesChannel_IdAndProductSku_Id(requireNotNull(salesChannel.id), requireNotNull(sku.id))
+            ?: SalesOfferEntity().apply {
+                this.salesChannel = salesChannel
+                productSku = sku
+            }
+        offer.salePrice = salePrice
+        offer.listPrice = listPrice
+        offer.salesStatus = salesStatus
+        offers.save(offer)
+    }
+
+    private fun SalesOfferEntity.toView() = SalesOfferView(
+        requireNotNull(publicId), salesChannel.code, requireNotNull(productSku.publicId), salePrice, listPrice, salesStatus,
+    )
 
     private fun ProductEntity.toView(details: Boolean = false): ProductView {
         val pid = requireNotNull(id)
@@ -234,5 +337,9 @@ class JpaOperationCatalogAdapter(private val catalog: CatalogJpaEntityService) :
                 emptyList()
             },
         )
+    }
+
+    private companion object {
+        const val WHOLESALE = "WHOLESALE"
     }
 }

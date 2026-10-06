@@ -120,3 +120,25 @@ data class UpdateProductStatusRequest(
     @field:NotBlank @field:Schema(description = "화면 노출 상태 코드", example = "예시 값", type = "string", required = true) val displayStatus: String,
     @field:NotBlank @field:Schema(description = "판매 상태 코드", example = "예시 값", type = "string", required = true) val salesStatus: String,
 )
+
+@Schema(description = "판매 채널 전용 카테고리 등록 요청")
+data class CreateChannelCategoryRequest(
+    @field:NotBlank @field:Size(max = 100) @field:Schema(description = "채널 카테고리명", example = "공구", type = "string", required = true) val name: String,
+    @field:Schema(description = "같은 채널의 상위 카테고리 UUID", format = "uuid", type = "string", required = false) val parentId: UUID? = null,
+    @field:Min(0) @field:Schema(description = "채널 내 표시 순서", example = "0", type = "integer", required = false) val displayOrder: Int = 0,
+    @field:NotBlank @field:Schema(description = "노출 상태: DISPLAYED 또는 HIDDEN", example = "HIDDEN", type = "string", required = true) val displayStatus: String = "HIDDEN",
+)
+
+@Schema(description = "판매 채널 상품 listing 수정 요청")
+data class UpdateChannelListingRequest(
+    @field:NotNull @field:Schema(description = "대상 채널 카테고리 UUID", format = "uuid", type = "string", required = true) val categoryId: UUID,
+    @field:NotBlank @field:Schema(description = "노출 상태: DISPLAYED 또는 HIDDEN", example = "DISPLAYED", type = "string", required = true) val displayStatus: String,
+    @field:Min(0) @field:Schema(description = "채널 내 상품 표시 순서", example = "0", type = "integer", required = true) val displayOrder: Int,
+)
+
+@Schema(description = "채널별 SKU 판매 오퍼 수정 요청")
+data class UpdateSalesOfferRequest(
+    @field:Min(0) @field:Schema(description = "채널 판매가(원)", example = "1000", type = "integer", required = true) val salePrice: Long,
+    @field:Min(0) @field:Schema(description = "채널 정가(원)", example = "1200", type = "integer", required = false) val listPrice: Long? = null,
+    @field:NotBlank @field:Schema(description = "판매 상태: ON_SALE 또는 STOPPED", example = "ON_SALE", type = "string", required = true) val salesStatus: String,
+)

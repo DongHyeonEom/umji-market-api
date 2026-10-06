@@ -2,7 +2,16 @@ package com.buyeong.umji.api.cart.application.model
 
 import java.util.UUID
 
-data class SellableSku(val id: UUID, val code: String, val productName: String, val name: String, val price: Long, val salesStatus: String)
+data class SellableSku(
+    val id: UUID,
+    val salesOfferId: UUID,
+    val channelCode: String,
+    val code: String,
+    val productName: String,
+    val name: String,
+    val price: Long,
+    val salesStatus: String,
+)
 data class CartItemState(val id: UUID?, val sku: SellableSku, val quantity: Int)
 data class CartState(val accountId: UUID, val items: List<CartItemState>)
 data class CartItemView(
@@ -14,7 +23,9 @@ data class CartItemView(
     val quantity: Int,
     val unitPrice: Long,
     val salesStatus: String,
+    val salesOfferId: UUID,
+    val channelCode: String,
 )
 data class CartView(val items: List<CartItemView>)
-data class AddCartItemCommand(val skuId: UUID, val quantity: Int)
+data class AddCartItemCommand(val skuId: UUID?, val salesOfferId: UUID?, val channelCode: String = "WHOLESALE", val quantity: Int)
 data class UpdateCartItemCommand(val quantity: Int)

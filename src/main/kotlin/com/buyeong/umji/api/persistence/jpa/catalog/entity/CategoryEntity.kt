@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.catalog
 
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainSoftDeletableEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesChannelEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -11,6 +12,10 @@ import jakarta.persistence.Table
 @Entity
 @Table(name = "category")
 class CategoryEntity : DomainSoftDeletableEntity() {
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "sales_channel_id", nullable = false)
+    lateinit var salesChannel: SalesChannelEntity
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     var parent: CategoryEntity? = null

@@ -27,14 +27,17 @@ class OrderServiceTest : DescribeSpec({
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()
+    val offerId = UUID.randomUUID()
 
     describe("주문 생성") {
         it("가격 스냅샷을 저장하고 재고를 예약한 뒤 장바구니를 비운다") {
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
                 ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
-            every { carts.linesForCheckout(accountId) } returns listOf(CheckoutLine(skuId, "SKU-001", "테스트 상품", "규격 A", 12000, 3, "ON_SALE"))
+            every { carts.linesForCheckout(accountId) } returns listOf(CheckoutLine(skuId, "SKU-001", "테스트 상품", "규격 A", 12000, 3, "ON_SALE", offerId, "RETAIL"))
             every { orders.save(any()) } answers {
                 val draft = firstArg<com.buyeong.umji.api.order.application.model.OrderDraft>()
+                draft.channelCode shouldBe "RETAIL"
+                draft.items.single().salesOfferId shouldBe offerId
                 OrderView(
                     UUID.randomUUID(),
                     "UMJ-20260923-000001",

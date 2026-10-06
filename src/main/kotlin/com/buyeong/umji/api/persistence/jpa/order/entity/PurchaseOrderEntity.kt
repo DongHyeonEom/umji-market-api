@@ -19,6 +19,9 @@ import java.time.LocalDate
 @Entity
 @Table(name = "purchase_order")
 class PurchaseOrderEntity : DomainPublicEntity() {
+    @Column(name = "sales_channel_code", nullable = false, length = 30)
+    var salesChannelCode: String = "WHOLESALE"
+
     @Column(name = "order_number", nullable = false)
     lateinit var orderNumber: String
 

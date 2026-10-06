@@ -36,6 +36,7 @@ data class OrderResponse(
     @field:Schema(description = "배송지 기본 주소", example = "예시 값", type = "string", required = true) val shippingAddress1: String?,
     @field:Schema(description = "배송지 상세 주소", example = "예시 값", type = "string", required = true) val shippingAddress2: String?,
     @field:Schema(description = "세금계산서 발행 정보 snapshot. 미발행 주문은 null", type = "object", required = true) val taxInvoiceSnapshot: TaxInvoiceSnapshotResponse?,
+    @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", required = true) val channelCode: String = "WHOLESALE",
 )
 
 @Schema(description = "주문 입금에 사용할 은행 계좌 안내 정보")
@@ -78,6 +79,7 @@ data class OrderItemResponse(
     @field:Schema(description = "수량", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
     @field:Schema(description = "수량을 반영한 항목 금액(원)", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val lineAmount: Long,
     @field:Schema(description = "현재 상태 코드", example = "ACTIVE", type = "string", required = true) val status: String,
+    @field:Schema(description = "채널별 판매 오퍼 공개 UUID") val salesOfferId: UUID? = null,
 )
 
 @Schema(description = "주문 검색 결과 목록과 페이지 정보")

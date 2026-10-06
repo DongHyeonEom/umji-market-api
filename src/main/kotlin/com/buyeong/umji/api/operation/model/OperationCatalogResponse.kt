@@ -96,3 +96,13 @@ data class OperationProductPageResponse(
     @field:Schema(description = "전체 검색 결과 수", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val totalElements: Long,
     @field:Schema(description = "전체 페이지 수", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class) val totalPages: Int,
 )
+
+@Schema(description = "채널별 실물 SKU 판매 오퍼")
+data class OperationSalesOfferResponse(
+    @field:Schema(description = "오퍼 공개 UUID", format = "uuid", type = "string", required = true) val id: UUID,
+    @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", type = "string", required = true) val channelCode: String,
+    @field:Schema(description = "공용 실물 SKU UUID", format = "uuid", type = "string", required = true) val skuId: UUID,
+    @field:Schema(description = "채널 판매가(원)", example = "1000", type = "integer", required = true) val salePrice: Long,
+    @field:Schema(description = "채널 정가(원)", example = "1200", type = "integer", required = false) val listPrice: Long?,
+    @field:Schema(description = "판매 상태", example = "ON_SALE", type = "string", required = true) val salesStatus: String,
+)

@@ -17,7 +17,7 @@ class OperationCatalogConfiguration {
 @Transactional
 class TransactionalOperationCatalogUseCase(private val delegate: OperationCatalogUseCase) : OperationCatalogUseCase by delegate {
     @Transactional(readOnly = true)
-    override fun categories() = delegate.categories()
+    override fun categories(channelCode: String) = delegate.categories(channelCode)
 
     @Transactional(readOnly = true)
     override fun brands(page: Int, size: Int) = delegate.brands(page, size)

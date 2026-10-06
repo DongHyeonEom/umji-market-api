@@ -9,7 +9,7 @@ import java.util.UUID
 @Component
 class CartUseCaseCheckoutAdapter(private val carts: CartUseCase) : CheckoutCartPort {
     override fun linesForCheckout(accountId: UUID): List<CheckoutLine> = carts.cart(accountId).items.map {
-        CheckoutLine(it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus)
+        CheckoutLine(it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus, it.salesOfferId, it.channelCode)
     }
 
     override fun clear(accountId: UUID) = carts.clearForCheckout(accountId)

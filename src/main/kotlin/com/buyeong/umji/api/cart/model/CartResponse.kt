@@ -22,4 +22,6 @@ data class CartItemResponse(
     @field:Schema(description = "Current Sale Price 정보", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val currentSalePrice:
     Long,
     @field:Schema(description = "판매 상태 코드", example = "예시 값", type = "string", required = true) val salesStatus: String,
+    @field:Schema(description = "판매 오퍼 공개 식별자") val salesOfferId: UUID,
+    @field:Schema(description = "판매 채널 코드") val channelCode: String,
 )
