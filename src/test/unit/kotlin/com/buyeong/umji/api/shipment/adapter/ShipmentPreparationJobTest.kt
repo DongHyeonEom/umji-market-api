@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.shipment.adapter
 
-import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
-import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
+import com.buyeong.umji.api.shipment.application.ShipmentService
+import com.buyeong.umji.api.order.application.ShippingHolidayService
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
@@ -10,8 +10,8 @@ import io.mockk.verify
 import java.time.LocalDate
 
 class ShipmentPreparationJobTest : DescribeSpec({
-    val shipments = mockk<TransactionalShipmentUseCase>(relaxed = true)
-    val holidays = mockk<ShippingHolidayUseCase>()
+    val shipments = mockk<ShipmentService>(relaxed = true)
+    val holidays = mockk<ShippingHolidayService>()
     val job = ShipmentPreparationJob(shipments, holidays)
     beforeTest { clearMocks(shipments, holidays, answers = false, recordedCalls = true) }
 

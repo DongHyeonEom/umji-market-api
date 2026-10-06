@@ -1,13 +1,13 @@
 package com.buyeong.umji.api.shipment.adapter
 
 import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
-import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
-import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
-import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
-import com.buyeong.umji.api.order.application.port.`in`.CustomerOrderListingUseCase
-import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
-import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
+import com.buyeong.umji.api.account.application.BuyerGroupMembershipService
+import com.buyeong.umji.api.payment.application.PaymentService
+import com.buyeong.umji.api.shipment.application.ShipmentService
+import com.buyeong.umji.api.order.application.OrderCancellationService
+import com.buyeong.umji.api.order.application.CustomerOrderListingService
+import com.buyeong.umji.api.order.application.OrderService
+import com.buyeong.umji.api.order.application.ShippingHolidayService
 import com.buyeong.umji.api.shipment.application.model.CarrierTrackingStatus
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentTrackingPort
 import org.assertj.core.api.Assertions.assertThat
@@ -33,25 +33,25 @@ class OrderShipmentMySqlIntegrationTest {
     private lateinit var jdbc: JdbcTemplate
 
     @Autowired
-    private lateinit var shipments: TransactionalShipmentUseCase
+    private lateinit var shipments: ShipmentService
 
     @Autowired
-    private lateinit var orders: OrderUseCase
+    private lateinit var orders: OrderService
 
     @Autowired
-    private lateinit var customerOrderListing: CustomerOrderListingUseCase
+    private lateinit var customerOrderListing: CustomerOrderListingService
 
     @Autowired
-    private lateinit var cancellations: TransactionalOrderCancellationUseCase
+    private lateinit var cancellations: OrderCancellationService
 
     @Autowired
-    private lateinit var holidays: ShippingHolidayUseCase
+    private lateinit var holidays: ShippingHolidayService
 
     @Autowired
-    private lateinit var payments: TransactionalPaymentUseCase
+    private lateinit var payments: PaymentService
 
     @Autowired
-    private lateinit var groupMembership: BuyerGroupMembershipUseCase
+    private lateinit var groupMembership: BuyerGroupMembershipService
 
     @MockitoBean
     private lateinit var trackingSource: ShipmentTrackingPort
