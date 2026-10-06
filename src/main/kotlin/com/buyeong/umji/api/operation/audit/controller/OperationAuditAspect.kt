@@ -82,7 +82,7 @@ class OperationAuditAspect(
     private fun uuidOrNull(value: String): UUID? = runCatching { UUID.fromString(value) }.getOrNull()
 
     private companion object {
-        val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER")
+        val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER", "SHIPPING_MANAGER", "SALES_MANAGER")
         val MUTATING_METHODS = setOf("POST", "PUT", "PATCH", "DELETE")
         val TRACE_ID_PATTERN = Regex("[A-Za-z0-9._-]{1,64}")
     }
