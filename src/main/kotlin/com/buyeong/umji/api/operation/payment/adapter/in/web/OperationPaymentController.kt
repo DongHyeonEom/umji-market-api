@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.operation.payment.adapter.`in`.web
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
+import com.buyeong.umji.api.payment.application.PaymentService
 import com.buyeong.umji.api.payment.model.OperationPaymentPageResponse
 import com.buyeong.umji.api.payment.model.PaymentStatusRequest
 import com.buyeong.umji.api.payment.model.PaymentStatusResponse
@@ -28,7 +29,7 @@ import java.util.UUID
 @Tag(name = "운영 결제 관리", description = "주문 입금 상태 조회와 결제 상태 변경 API")
 class OperationPaymentController(
     private val currentAccounts: CurrentAccountPort,
-    private val payments: TransactionalPaymentUseCase,
+    private val payments: PaymentService,
 ) {
     @Operation(summary = "결제 대기 목록 조회", description = "결제 대기 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping

@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.payment.adapter
 
 import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
-import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
-import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
+import com.buyeong.umji.api.account.application.BuyerGroupMembershipService
+import com.buyeong.umji.api.payment.application.PaymentService
+import com.buyeong.umji.api.order.application.OrderService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -28,13 +28,13 @@ class ManualPaymentMySqlIntegrationTest {
     private lateinit var jdbc: JdbcTemplate
 
     @Autowired
-    private lateinit var transactionalPayments: TransactionalPaymentUseCase
+    private lateinit var transactionalPayments: PaymentService
 
     @Autowired
-    private lateinit var orders: OrderUseCase
+    private lateinit var orders: OrderService
 
     @Autowired
-    private lateinit var groupMembership: BuyerGroupMembershipUseCase
+    private lateinit var groupMembership: BuyerGroupMembershipService
 
     @Test
     fun `general payment issue is visible and can be resolved with operator history`() {
