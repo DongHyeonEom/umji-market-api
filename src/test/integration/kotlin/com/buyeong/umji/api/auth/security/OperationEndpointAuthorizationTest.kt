@@ -1,17 +1,16 @@
 package com.buyeong.umji.api.auth.security
 
-import com.buyeong.umji.api.auth.controller.AuthenticationController
-import com.buyeong.umji.api.auth.service.WebAuthenticationService
-import com.buyeong.umji.api.auth.service.AuthenticationService
-import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
+import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import com.buyeong.umji.api.auth.config.JwtProperties
 import com.buyeong.umji.api.auth.config.SecurityConfig
-import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.auth.controller.AuthenticationController
+import com.buyeong.umji.api.auth.service.AuthenticationService
+import com.buyeong.umji.api.auth.service.WebAuthenticationService
 import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.inventory.controller.OperationInventoryController
-import com.buyeong.umji.api.inventory.service.InventoryService
 import com.buyeong.umji.api.inventory.model.StockView
+import com.buyeong.umji.api.inventory.service.InventoryService
 import com.buyeong.umji.api.notification.controller.NotificationDeviceTokenController
 import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.model.NotificationDeviceTokenRegistration
@@ -25,15 +24,16 @@ import com.buyeong.umji.api.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.operation.catalog.controller.OperationCatalogController
 import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.operation.payment.controller.OperationPaymentController
-import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.operation.shipment.controller.OperationShipmentController
-import com.buyeong.umji.api.shipment.service.ShipmentService
 import com.buyeong.umji.api.order.controller.OperationShippingHolidayController
 import com.buyeong.umji.api.order.controller.OrderCancellationController
 import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.ShippingHolidayService
 import com.buyeong.umji.api.payment.model.PaymentQueuePage
+import com.buyeong.umji.api.payment.service.PaymentService
+import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
 import com.buyeong.umji.api.shipment.model.ShipmentChange
+import com.buyeong.umji.api.shipment.service.ShipmentService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -243,6 +243,31 @@ class OperationEndpointAuthorizationTest(
                 .contentType("application/json")
                 .content("""{"accountId":"${UUID.randomUUID()}"}"""),
         ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `assigning buyer group requires account management permission`() {
+        val accountId = UUID.randomUUID()
+        val groupId = UUID.randomUUID()
+        mockMvc.perform(
+            put("/api/operation/accounts/$accountId/buyer-group")
+                .with(authorities("ORDER_READ"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"buyerGroupId":"$groupId"}"""),
+        ).andExpect(status().isForbidden)
+
+        Mockito.`when`(accounts.assignBuyerGroup(accountId, groupId)).thenReturn(
+            com.buyeong.umji.api.operation.account.model.AccountData(accountId, "Buyer", "01012345678", null, "ACTIVE", 1, buyerGroupId = groupId),
+        )
+        mockMvc.perform(
+            put("/api/operation/accounts/$accountId/buyer-group")
+                .with(authorities("ADMIN_ACCOUNT_MANAGE"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"buyerGroupId":"$groupId"}"""),
+        ).andExpect(status().isOk)
+        Mockito.verify(accounts).assignBuyerGroup(accountId, groupId)
     }
 
     @Test

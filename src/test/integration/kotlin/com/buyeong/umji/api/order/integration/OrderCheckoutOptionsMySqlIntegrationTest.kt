@@ -1,15 +1,15 @@
 package com.buyeong.umji.api.order.integration
 
 import com.buyeong.umji.api.account.integration.BusinessRegistrationVerificationJob
-import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
-import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
-import com.buyeong.umji.api.account.service.CustomerAccountService
+import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
 import com.buyeong.umji.api.account.model.BusinessGroupRegistration
+import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
 import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
 import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileCommand
 import com.buyeong.umji.api.account.model.SharedAddressCommand
-import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
-import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
+import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
+import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.account.service.CustomerAccountService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.service.OperationAccountService
@@ -21,6 +21,8 @@ import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.shipment.service.ShipmentService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
+import java.nio.ByteBuffer
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -32,8 +34,6 @@ import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
-import java.nio.ByteBuffer
-import java.util.UUID
 
 @SpringBootTest(
     properties = [
@@ -319,6 +319,66 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     }
 
     @Test
+    fun `group members share orders with masked orderer details while other groups stay isolated`() {
+        val ownerId = createAccount()
+        val memberId = createAccount()
+        val otherId = createAccount()
+        val businessGroupId = createBusinessGroup(ownerId)
+        buyerGroups.ensureForAccount(memberId)
+        buyerGroups.assignAccountToBusinessGroup(memberId, businessGroupId)
+        val otherGroupId = createBusinessGroup(otherId)
+        jdbc.update(
+            "UPDATE buyer_group_business_profile SET business_registration_number = NULL WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+            businessGroupId.toBytes(),
+        )
+
+        assertThat(jdbc.queryForObject("SELECT group_type FROM buyer_group WHERE public_id = ?", String::class.java, businessGroupId.toBytes()))
+            .isEqualTo("BUSINESS")
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT business_registration_number IS NULL FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                Boolean::class.java,
+                businessGroupId.toBytes(),
+            ),
+        ).isTrue()
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM buyer_group_member WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?) AND status = 'ACTIVE'",
+                Int::class.java,
+                businessGroupId.toBytes(),
+            ),
+        ).isEqualTo(2)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM buyer_group_member WHERE account_id = (SELECT id FROM account WHERE public_id = ?) AND status = 'ACTIVE'",
+                Int::class.java,
+                memberId.toBytes(),
+            ),
+        ).isEqualTo(1)
+
+        val addressId = createAddress(ownerId)
+        val categoryId = createCategory()
+        val skuId = createSku(createProduct(categoryId))
+        createStock(skuId)
+
+        createCartWithItem(ownerId, skuId)
+        val ownerOrder = orders.create(ownerId, addressId, false, false)
+        createCartWithItem(memberId, skuId)
+        val memberOrder = orders.create(memberId, addressId, false, false)
+
+        assertThat(orders.list(ownerId, 0, 20).items.map { it.id }).containsExactlyInAnyOrder(ownerOrder.id, memberOrder.id)
+        assertThat(orders.list(memberId, 0, 20).items.map { it.id }).containsExactlyInAnyOrder(ownerOrder.id, memberOrder.id)
+        assertThat(orders.detail(ownerId, memberOrder.id).orderedByName).matches("C\\*+")
+        assertThat(orders.detail(ownerId, memberOrder.id).orderedByPhoneSuffix).matches("\\d{4}")
+        assertThat(orders.list(otherId, 0, 20).items).isEmpty()
+        assertThatThrownBy { orders.detail(otherId, memberOrder.id) }.isInstanceOf(ItemNotFoundException::class.java)
+
+        buyerGroups.assignAccountToBusinessGroup(memberId, otherGroupId)
+        assertThat(orders.list(memberId, 0, 20).items).isEmpty()
+        assertThat(orders.list(ownerId, 0, 20).items.map { it.id }).containsExactlyInAnyOrder(ownerOrder.id, memberOrder.id)
+    }
+
+    @Test
     fun `group invitations and join requests require recipient acceptance and representative approval`() {
         val representativeId = createAccount()
         val invitedId = createAccount()
@@ -341,6 +401,24 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(groupMembership.current(requestedId)?.id).isEqualTo(businessGroupId)
         assertThat(groupMembership.search("010-9000-0000").map { it.id }).contains(businessGroupId)
         assertThat(groupMembership.search(accountPhone(requestedId)).map { it.id }).contains(businessGroupId)
+    }
+
+    @Test
+    fun `business groups with the same registration number are not merged`() {
+        val firstRepresentative = createAccount()
+        val secondRepresentative = createAccount()
+        val firstGroupId = createBusinessGroup(firstRepresentative)
+        val secondGroupId = createBusinessGroup(secondRepresentative)
+
+        assertThat(firstGroupId).isNotEqualTo(secondGroupId)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(DISTINCT buyer_group_id) FROM buyer_group_business_profile WHERE business_registration_number = '987-65-43210'",
+                Int::class.java,
+            ),
+        ).isGreaterThanOrEqualTo(2)
+        assertThat(groupMembership.current(firstRepresentative)?.id).isEqualTo(firstGroupId)
+        assertThat(groupMembership.current(secondRepresentative)?.id).isEqualTo(secondGroupId)
     }
 
     @Test
