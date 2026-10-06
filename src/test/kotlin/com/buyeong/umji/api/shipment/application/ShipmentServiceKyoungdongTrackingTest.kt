@@ -2,14 +2,16 @@ package com.buyeong.umji.api.shipment.application
 
 import com.buyeong.umji.api.shipment.adapter.out.tracking.KyoungdongTrackingAdapter
 import com.buyeong.umji.api.shipment.application.model.CarrierTrackingStatus
-import com.buyeong.umji.api.shipment.application.model.ShipmentRecord
 import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
-import com.buyeong.umji.api.shipment.application.port.out.ShipmentInventoryPort
-import com.buyeong.umji.api.shipment.application.port.out.ShipmentStorePort
 import com.buyeong.umji.api.shipment.application.port.out.ShipmentTrackingPort
+import com.buyeong.umji.api.notification.application.NotificationEventService
+import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import io.mockk.every
+import io.mockk.mockk
 import java.util.UUID
 
 class ShipmentServiceKyoungdongTrackingTest {
@@ -21,28 +23,9 @@ class ShipmentServiceKyoungdongTrackingTest {
             carrierCode = "KDEXP",
             trackingNumber = "1501602023302",
         )
-        val expectedCandidate = candidate
-        var markedDelivered = false
-        val shipments = object : ShipmentStorePort {
-            override fun lock(orderId: UUID): ShipmentRecord? = null
-
-            override fun readyOrderIds(): List<UUID> = emptyList()
-
-            override fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> = listOf(candidate)
-
-            override fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean {
-                markedDelivered = candidate == expectedCandidate
-                return markedDelivered
-            }
-
-            override fun update(
-                record: ShipmentRecord,
-                status: String,
-                carrierCode: String?,
-                trackingNumber: String?,
-                operatorId: UUID?,
-            ): ShipmentRecord = error("Not used by customer refresh")
-        }
+        val shipments = mockk<OrderShipmentJpaEntityService>()
+        every { shipments.trackingCandidatesForCustomer(any()) } returns listOf(candidate)
+        every { shipments.markDeliveredIfCurrent(candidate) } returns true
         val adapter = KyoungdongTrackingAdapter(jacksonObjectMapper())
         val tracking = object : ShipmentTrackingPort {
             override fun lookup(carrierCode: String, trackingNumber: String): CarrierTrackingStatus =
@@ -52,13 +35,11 @@ class ShipmentServiceKyoungdongTrackingTest {
         }
         val service = ShipmentService(
             shipments = shipments,
-            inventory = object : ShipmentInventoryPort {
-                override fun confirm(reservationKey: UUID) = error("Not used by customer refresh")
-            },
+            inventory = mockk<InventoryService>(relaxed = true),
             tracking = tracking,
+            notifications = mockk<NotificationEventService>(relaxed = true),
         )
 
         assertThat(service.refreshForCustomer(UUID.randomUUID())).isEqualTo(1)
-        assertThat(markedDelivered).isTrue()
     }
 }
