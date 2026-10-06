@@ -13,6 +13,8 @@ import com.buyeong.umji.api.order.model.OrderCheckoutOptionsResponse
 import com.buyeong.umji.api.order.model.OrderItemResponse
 import com.buyeong.umji.api.order.model.OrderPageResponse
 import com.buyeong.umji.api.order.model.OrderResponse
+import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotResponse
+import com.buyeong.umji.api.order.model.TaxInvoiceItemResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -98,10 +100,36 @@ class OrderController(
         shippingPostalCode,
         shippingAddress1,
         shippingAddress2,
+        taxInvoiceSnapshot?.let { snapshot ->
+            TaxInvoiceSnapshotResponse(
+                status = snapshot.status,
+                writtenDate = snapshot.writtenDate,
+                supplyDate = snapshot.supplyDate,
+                supplierBusinessRegistrationNumber = snapshot.supplier.businessRegistrationNumber,
+                supplierBusinessName = snapshot.supplier.businessName,
+                supplierName = snapshot.supplier.representativeName,
+                supplierAddress = snapshot.supplier.businessAddress,
+                supplierIndustry = snapshot.supplier.businessIndustry,
+                supplierItem = snapshot.supplier.businessItem,
+                supplierEmail = snapshot.supplier.email,
+                buyerBusinessRegistrationNumber = requireNotNull(snapshot.buyer.businessRegistrationNumber),
+                buyerBusinessName = requireNotNull(snapshot.buyer.businessName),
+                buyerName = requireNotNull(snapshot.buyer.representativeName),
+                buyerPostalCode = requireNotNull(snapshot.buyer.postalCode),
+                buyerAddress1 = requireNotNull(snapshot.buyer.address1),
+                buyerAddress2 = snapshot.buyer.address2,
+                buyerIndustry = requireNotNull(snapshot.buyer.businessIndustry),
+                buyerItem = requireNotNull(snapshot.buyer.businessItem),
+                buyerEmail = snapshot.buyer.email,
+                items = items.map { TaxInvoiceItemResponse(it.productName, it.skuCode, it.quantity, it.lineAmount) },
+                supplyAmount = snapshot.supplyAmount,
+            )
+        },
     )
 
     private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(
         defaultTaxInvoiceRequested,
+        taxInvoiceAvailable,
         standardBankAccount.toResponse(),
         taxInvoiceBankAccount.toResponse(),
     )

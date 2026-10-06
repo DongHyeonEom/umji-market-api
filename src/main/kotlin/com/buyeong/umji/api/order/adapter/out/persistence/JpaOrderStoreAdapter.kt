@@ -6,6 +6,9 @@ import com.buyeong.umji.api.order.application.model.OrderItemDraft
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
+import com.buyeong.umji.api.order.application.model.TaxInvoiceBuyer
+import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshot
+import com.buyeong.umji.api.order.application.model.TaxInvoiceSupplier
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
@@ -22,6 +25,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Component
 import java.time.ZoneOffset
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -56,6 +60,25 @@ class JpaOrderStoreAdapter(
             subtotalAmount = draft.subtotalAmount
             totalAmount = draft.totalAmount
             taxInvoiceRequested = draft.taxInvoiceRequested
+            draft.taxInvoiceSnapshot?.let { snapshot ->
+                taxInvoiceStatus = WAITING_FOR_SHIPMENT
+                taxInvoiceSupplierRegistrationNumber = snapshot.supplier.businessRegistrationNumber
+                taxInvoiceSupplierBusinessName = snapshot.supplier.businessName
+                taxInvoiceSupplierName = snapshot.supplier.representativeName
+                taxInvoiceSupplierAddress = snapshot.supplier.businessAddress
+                taxInvoiceSupplierIndustry = snapshot.supplier.businessIndustry
+                taxInvoiceSupplierItem = snapshot.supplier.businessItem
+                taxInvoiceSupplierEmail = snapshot.supplier.email
+                taxInvoiceBuyerRegistrationNumber = snapshot.buyer.businessRegistrationNumber
+                taxInvoiceBuyerBusinessName = snapshot.buyer.businessName
+                taxInvoiceBuyerName = snapshot.buyer.representativeName
+                taxInvoiceBuyerPostalCode = snapshot.buyer.postalCode
+                taxInvoiceBuyerAddress1 = snapshot.buyer.address1
+                taxInvoiceBuyerAddress2 = snapshot.buyer.address2
+                taxInvoiceBuyerIndustry = snapshot.buyer.businessIndustry
+                taxInvoiceBuyerItem = snapshot.buyer.businessItem
+                taxInvoiceBuyerEmail = snapshot.buyer.email
+            }
             depositBankName = draft.depositBankName
             depositAccountNumber = draft.depositAccountNumber
             depositAccountHolder = draft.depositAccountHolder
@@ -143,9 +166,44 @@ class JpaOrderStoreAdapter(
         shippingPostalCode = shippingPostalCode,
         shippingAddress1 = shippingAddress1,
         shippingAddress2 = shippingAddress2,
+        taxInvoiceSnapshot = toTaxInvoiceSnapshot(),
     )
+
+    private fun PurchaseOrderEntity.toTaxInvoiceSnapshot(): TaxInvoiceSnapshot? {
+        if (taxInvoiceStatus !in setOf(WAITING_FOR_SHIPMENT, READY_FOR_ISSUANCE)) return null
+        return TaxInvoiceSnapshot(
+            status = requireNotNull(taxInvoiceStatus),
+            supplier = TaxInvoiceSupplier(
+                requireNotNull(taxInvoiceSupplierRegistrationNumber),
+                requireNotNull(taxInvoiceSupplierBusinessName),
+                requireNotNull(taxInvoiceSupplierName),
+                requireNotNull(taxInvoiceSupplierAddress),
+                requireNotNull(taxInvoiceSupplierIndustry),
+                requireNotNull(taxInvoiceSupplierItem),
+                requireNotNull(taxInvoiceSupplierEmail),
+            ),
+            buyer = TaxInvoiceBuyer(
+                buyerGroupId = requireNotNull(buyerGroup.publicId),
+                businessRegistrationNumber = taxInvoiceBuyerRegistrationNumber,
+                businessName = taxInvoiceBuyerBusinessName,
+                representativeName = taxInvoiceBuyerName,
+                postalCode = taxInvoiceBuyerPostalCode,
+                address1 = taxInvoiceBuyerAddress1,
+                address2 = taxInvoiceBuyerAddress2,
+                businessIndustry = taxInvoiceBuyerIndustry,
+                businessItem = taxInvoiceBuyerItem,
+                email = taxInvoiceBuyerEmail,
+                complete = true,
+            ),
+            writtenDate = taxInvoiceWrittenDate,
+            supplyDate = taxInvoiceSupplyDate,
+            supplyAmount = items.sumOf { it.lineAmount },
+        )
+    }
 
     private companion object {
         val ORDER_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC)
+        const val WAITING_FOR_SHIPMENT = "WAITING_FOR_SHIPMENT"
+        const val READY_FOR_ISSUANCE = "READY_FOR_ISSUANCE"
     }
 }

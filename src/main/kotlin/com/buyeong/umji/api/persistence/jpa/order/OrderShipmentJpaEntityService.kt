@@ -6,6 +6,7 @@ import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 
 @Service
@@ -60,6 +61,12 @@ class OrderShipmentJpaEntityService(
         shipment.trackingNumber = trackingNumber
         shipment.processedBy = operatorId?.let { accounts.findByPublicId(it) ?: error("처리자 계정을 찾을 수 없습니다.") }
         shipment.updatedAt = Instant.now()
+        if (status == IN_TRANSIT && shipment.order.taxInvoiceStatus == WAITING_FOR_SHIPMENT) {
+            val orderDate = shipment.order.orderedAt.atZone(KST).toLocalDate()
+            shipment.order.taxInvoiceWrittenDate = orderDate
+            shipment.order.taxInvoiceSupplyDate = orderDate
+            shipment.order.taxInvoiceStatus = READY_FOR_ISSUANCE
+        }
         return shipments.saveAndFlush(shipment)
     }
 
@@ -67,5 +74,8 @@ class OrderShipmentJpaEntityService(
         const val READY_TO_SHIP = "READY_TO_SHIP"
         const val IN_TRANSIT = "IN_TRANSIT"
         const val DELIVERED = "DELIVERED"
+        const val WAITING_FOR_SHIPMENT = "WAITING_FOR_SHIPMENT"
+        const val READY_FOR_ISSUANCE = "READY_FOR_ISSUANCE"
+        val KST: ZoneId = ZoneId.of("Asia/Seoul")
     }
 }

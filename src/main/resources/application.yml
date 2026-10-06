@@ -72,6 +72,15 @@ management:
         enabled: true
 
 umji:
+  tax-invoice:
+    supplier:
+      business-registration-number: ${UMJI_TAX_INVOICE_SUPPLIER_BUSINESS_REGISTRATION_NUMBER:}
+      business-name: ${UMJI_TAX_INVOICE_SUPPLIER_BUSINESS_NAME:}
+      representative-name: ${UMJI_TAX_INVOICE_SUPPLIER_NAME:}
+      business-address: ${UMJI_TAX_INVOICE_SUPPLIER_ADDRESS:}
+      business-industry: ${UMJI_TAX_INVOICE_SUPPLIER_INDUSTRY:}
+      business-item: ${UMJI_TAX_INVOICE_SUPPLIER_ITEM:}
+      email: ${UMJI_TAX_INVOICE_SUPPLIER_EMAIL:}
   auth:
     totp-encryption-key: ${UMJI_AUTH_TOTP_ENCRYPTION_KEY:}
   notification:

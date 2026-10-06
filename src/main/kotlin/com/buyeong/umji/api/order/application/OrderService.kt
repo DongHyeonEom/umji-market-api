@@ -9,11 +9,15 @@ import com.buyeong.umji.api.order.application.model.OrderDraft
 import com.buyeong.umji.api.order.application.model.OrderItemDraft
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
+import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshotDraft
 import com.buyeong.umji.api.order.application.port.out.BankAccountInstructionsPort
 import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
 import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
 import com.buyeong.umji.api.order.application.port.out.OrderShippingAddressPort
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
+import com.buyeong.umji.api.order.application.port.out.TaxInvoiceBuyerProfilePort
+import com.buyeong.umji.api.order.application.port.out.TaxInvoiceSupplierPort
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import java.time.Instant
 import java.util.UUID
 
@@ -27,12 +31,23 @@ class OrderService(
         override fun taxInvoice() = standard()
     },
     private val notifications: NotificationEventUseCase = NoOpNotificationEventUseCase,
+    private val taxInvoiceSuppliers: TaxInvoiceSupplierPort = object : TaxInvoiceSupplierPort {
+        override fun supplier() = null
+    },
+    private val taxInvoiceBuyers: TaxInvoiceBuyerProfilePort = object : TaxInvoiceBuyerProfilePort {
+        override fun forAccount(accountPublicId: UUID) = null
+    },
 ) {
-    fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions = OrderCheckoutOptions(
-        defaultTaxInvoiceRequested = orders.defaultTaxInvoiceRequested(accountPublicId),
-        standardBankAccount = bankAccounts.standard(),
-        taxInvoiceBankAccount = bankAccounts.taxInvoice(),
-    )
+    fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions {
+        val buyer = taxInvoiceBuyers.forAccount(accountPublicId)
+        val available = taxInvoiceSuppliers.supplier() != null && buyer?.complete == true
+        return OrderCheckoutOptions(
+            defaultTaxInvoiceRequested = orders.defaultTaxInvoiceRequested(accountPublicId),
+            taxInvoiceAvailable = available,
+            standardBankAccount = bankAccounts.standard(),
+            taxInvoiceBankAccount = bankAccounts.taxInvoice(),
+        )
+    }
 
     fun create(
         accountPublicId: UUID,
@@ -42,12 +57,19 @@ class OrderService(
     ): OrderView {
         val shippingAddress = shippingAddresses.findForAccount(accountPublicId, shippingAddressPublicId)
             ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
-        val defaultPreference = if (taxInvoiceRequested == null || updateDefaultTaxInvoicePreference) {
+        val currentDefaultPreference = if (taxInvoiceRequested == null || updateDefaultTaxInvoicePreference) {
             orders.defaultTaxInvoiceRequested(accountPublicId)
         } else {
             taxInvoiceRequested
         }
-        val selectedPreference = taxInvoiceRequested ?: defaultPreference
+        val invoiceSupplier = taxInvoiceSuppliers.supplier()
+        val invoiceBuyer = taxInvoiceBuyers.forAccount(accountPublicId)
+        val canRequestInvoice = invoiceSupplier != null && invoiceBuyer?.complete == true
+        val selectedPreference = taxInvoiceRequested ?: (currentDefaultPreference && canRequestInvoice)
+        if (selectedPreference && !canRequestInvoice) {
+            throw ClientBadRequestException("공급자와 사업자 그룹의 세금계산서 필수 정보를 먼저 입력해야 합니다.")
+        }
+        val defaultPreference = currentDefaultPreference
         val bankAccount = if (selectedPreference) bankAccounts.taxInvoice() else bankAccounts.standard()
         val lines = checkoutCart.linesForCheckout(accountPublicId)
         require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
@@ -78,6 +100,7 @@ class OrderService(
                 bankAccount.accountHolder,
                 shippingAddress,
                 items,
+                if (selectedPreference) TaxInvoiceSnapshotDraft(requireNotNull(invoiceSupplier), requireNotNull(invoiceBuyer)) else null,
             ),
         )
         if (updateDefaultTaxInvoicePreference && selectedPreference != defaultPreference) {

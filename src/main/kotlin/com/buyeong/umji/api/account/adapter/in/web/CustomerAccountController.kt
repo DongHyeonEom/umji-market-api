@@ -2,6 +2,7 @@ package com.buyeong.umji.api.account.adapter.`in`.web
 
 import com.buyeong.umji.api.account.model.BuyerGroupOnboardingResponse
 import com.buyeong.umji.api.account.model.CreateIndividualGroupRequest
+import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileRequest
 import com.buyeong.umji.api.account.model.CustomerProfileResponse
 import com.buyeong.umji.api.account.model.DecideBuyerGroupJoinRequest
 import com.buyeong.umji.api.account.model.InviteBuyerGroupMemberRequest
@@ -10,6 +11,7 @@ import com.buyeong.umji.api.account.model.SharedAddressRequest
 import com.buyeong.umji.api.account.model.SharedAddressResponse
 import com.buyeong.umji.api.account.model.toCommand
 import com.buyeong.umji.api.account.model.toResponse
+import com.buyeong.umji.api.account.model.toResponse as taxInvoiceProfileResponse
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -39,6 +41,7 @@ class CustomerAccountController(
     private val currentAccounts: CurrentAccountPort,
     private val account: TransactionalCustomerAccountUseCase,
     private val groups: TransactionalBuyerGroupMembershipUseCase,
+    private val taxInvoiceProfiles: TransactionalBuyerGroupTaxInvoiceProfileUseCase,
 ) {
     @Operation(summary = "사용자 프로필조회", description = "사용자 프로필·배송지·구매자 그룹 가입 API. /profile 경로에서 사용자 프로필조회를 수행")
     @GetMapping("/profile")
@@ -74,6 +77,15 @@ class CustomerAccountController(
     @Operation(summary = "구매자 그룹조회", description = "사용자 프로필·배송지·구매자 그룹 가입 API. /groups/current 경로에서 구매자 그룹조회를 수행")
     @GetMapping("/groups/current")
     fun currentGroup() = groups.current(currentAccounts.activeAccountPublicId())?.toResponse()
+
+    @Operation(summary = "그룹 세금계산서 정보 조회", description = "현재 활성 구매자 그룹의 공급받는자 세금계산서 정보를 조회")
+    @GetMapping("/groups/current/tax-invoice-profile")
+    fun taxInvoiceProfile() = taxInvoiceProfiles.forAccount(currentAccounts.activeAccountPublicId()).taxInvoiceProfileResponse()
+
+    @Operation(summary = "그룹 세금계산서 정보 수정", description = "현재 활성 구매자 그룹의 공급받는자 세금계산서 정보를 대표자가 수정")
+    @PutMapping("/groups/current/tax-invoice-profile")
+    fun updateTaxInvoiceProfile(@Valid @RequestBody request: BuyerGroupTaxInvoiceProfileRequest) =
+        taxInvoiceProfiles.updateForAccount(currentAccounts.activeAccountPublicId(), request.toCommand()).taxInvoiceProfileResponse()
 
     @Operation(summary = "구매자 그룹조회", description = "사용자 프로필·배송지·구매자 그룹 가입 API. /groups/onboarding 경로에서 구매자 그룹조회를 수행")
     @GetMapping("/groups/onboarding")

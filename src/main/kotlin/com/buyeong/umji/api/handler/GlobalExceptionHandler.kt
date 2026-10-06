@@ -4,6 +4,7 @@ import com.buyeong.umji.api.enums.ErrorCode
 import com.buyeong.umji.api.exception.ApiCallException
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ErrorMessageService
+import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.model.ErrorResponseModel
 import com.buyeong.umji.api.util.logger
@@ -39,6 +40,13 @@ class GlobalExceptionHandler(
         logger.error("ItemNotFoundException", ex)
         val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
         return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_NOT_FOUND)
+    }
+
+    @ExceptionHandler(ForbiddenOperationException::class)
+    protected fun handleForbiddenOperationException(ex: ForbiddenOperationException): ResponseEntity<ErrorResponseModel> {
+        logger.error("ForbiddenOperationException", ex)
+        val response = ErrorResponseModel.of(ErrorCode.FORBIDDEN_ERROR, ex.message)
+        return ResponseEntity(response, HttpStatus.FORBIDDEN)
     }
 
     @ExceptionHandler(ClientBadRequestException::class)

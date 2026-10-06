@@ -7,6 +7,7 @@ import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import com.buyeong.umji.api.auth.config.JwtProperties
 import com.buyeong.umji.api.auth.config.SecurityConfig
+import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
 import com.buyeong.umji.api.exception.ErrorMessageService
 import com.buyeong.umji.api.inventory.adapter.`in`.web.OperationInventoryController
 import com.buyeong.umji.api.inventory.application.model.StockView
@@ -73,6 +74,9 @@ class OperationEndpointAuthorizationTest(
 ) {
     @MockitoBean
     private lateinit var accounts: OperationAccountUseCase
+
+    @MockitoBean
+    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileUseCase
 
     @MockitoBean
     private lateinit var catalog: OperationCatalogUseCase
@@ -239,6 +243,14 @@ class OperationEndpointAuthorizationTest(
                 .contentType("application/json")
                 .content("""{"accountId":"${UUID.randomUUID()}"}"""),
         ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `buyer group tax invoice profile requires account management permission`() {
+        mockMvc.perform(
+            get("/api/operation/buyer-groups/${UUID.randomUUID()}/tax-invoice-profile")
+                .with(authorities("ORDER_READ")),
+        ).andExpect(status().isForbidden)
     }
 
     @Test

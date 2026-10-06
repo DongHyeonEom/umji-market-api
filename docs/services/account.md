@@ -10,7 +10,10 @@
 대표자는 전화번호 초대와 가입 요청 처리를 수행. 대표자 지정·변경은 운영자 권한으로 제한.<br>
 최초 가입 계정은 그룹 onboarding 조회에서 현재 그룹과 전화번호가 일치하는 대기 초대를 확인하고, 초대 수락 후에만 그룹에 연결.<br>
 그룹이 없는 계정은 개인 그룹을 만들거나 휴대폰 번호로 그룹을 찾아 가입 요청 가능. 그룹 이동 전 주문의 귀속은 유지.<br>
-그룹 세금계산서 정보 관리 정책은 별도 미구현 범위.<br>
+공급받는자 세금계산서 정보는 `buyer_group_business_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 그룹 구성원이 공유.<br>
+활성 그룹 구성원은 세금계산서 정보를 조회할 수 있고, 대표자와 `ADMIN_ACCOUNT_MANAGE` 운영자만 수정 가능. 개인 그룹은 세금계산서 정보를 등록하거나 발행 요청할 수 없음.<br>
+공급받는자 정보 완성 기준은 활성 `BUSINESS` 그룹과 사업자등록번호·상호·성명·사업자주소·업태·종목 입력. 이메일은 선택 항목.<br>
+주문별 발행 선택과 계정별 기본 발행 선택은 기존 계약을 유지. 발행을 요청한 주문에는 주문 시점의 그룹 세금계산서 정보를 snapshot하고, 이후 프로필 변경은 기존 주문을 변경하지 않음.<br>
 
 ## 사용자 계정·공용 배송지 흐름
 
@@ -23,6 +26,8 @@ flowchart TD
     ACTION -- 프로필 조회 --> PROFILE[본인 계정 프로필 조회]
     ACTION -- 배송지 목록 --> GROUP[활성 구매자 그룹 확인]
     ACTION -- 배송지 변경 --> GROUP
+    ACTION -- 세금계산서 정보 조회 --> GROUP
+    ACTION -- 세금계산서 정보 수정 --> GROUP
     GROUP --> SCOPE[그룹 소유 공용 배송지로 범위 제한]
     SCOPE --> VALID{요청·대상 배송지 유효}
     VALID -- 아니오 --> ERROR[400 또는 그룹 범위 404]
@@ -31,9 +36,15 @@ flowchart TD
     CHANGE -- 추가·수정 --> SAVE[주소 저장 및 기본값 단일화]
     CHANGE -- 기본값 지정 --> DEFAULT[그룹 주소 기본값 교체]
     CHANGE -- 삭제 --> DELETE[주소 삭제 및 필요 시 기본 주소 승격]
+    CHANGE -- 세금계산서 조회 --> INVOICEVIEW[그룹 정보와 발행 가능 여부 반환]
+    CHANGE -- 세금계산서 수정 --> INVOICEAUTH{대표자 또는 권한 운영자}
+    INVOICEAUTH -- 아니오 --> DENY[403 거부]
+    INVOICEAUTH -- 예 --> INVOICESAVE[사업자 그룹 정보 저장]
     SAVE --> RESPONSE[프로필 또는 그룹 배송지 응답]
     DEFAULT --> RESPONSE
     DELETE --> RESPONSE
+    INVOICEVIEW --> RESPONSE
+    INVOICESAVE --> RESPONSE
 ```
 
 ### Endpoint
@@ -44,6 +55,8 @@ flowchart TD
 - `PUT /api/account/addresses/{addressId}`
 - `PUT /api/account/addresses/{addressId}/default`
 - `DELETE /api/account/addresses/{addressId}`
+- `GET /api/account/groups/current/tax-invoice-profile`
+- `PUT /api/account/groups/current/tax-invoice-profile` (활성 그룹 대표자 전용)
 - `GET /api/account/groups/onboarding`
 - `GET /api/account/groups/current`
 - `POST /api/account/groups/individual`
@@ -59,6 +72,8 @@ flowchart TD
 모든 endpoint는 Access Token의 subject가 가리키는 활성 계정을 사용. 계정 ID를 요청에서 받지 않음.<br>
 배송지 목록·수정 범위는 인증 계정이 속한 활성 구매자 그룹으로 제한.<br>
 주문 생성은 `shippingAddressId`를 필수 입력으로 받고 주문 요청의 구매자 그룹 배송지인지 확인.<br>
+세금계산서 정보 조회·수정은 인증 계정의 현재 활성 그룹을 사용하며 그룹 ID를 사용자 요청에서 받지 않음. 조회는 활성 구성원, 수정은 대표자만 허용.<br>
+운영자 수정 endpoint는 [operation.md](operation.md)의 `ADMIN_ACCOUNT_MANAGE` 권한을 요구.<br>
 
 운영자 계정 생성·동의·프로필·승인 및 role 변경 흐름은 [operation.md](operation.md)를 기준으로 함.<br>
 

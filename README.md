@@ -25,6 +25,8 @@ Controller는 입력 adapter, application UseCase는 업무 흐름, JPA 구현�
 
 계좌 안내 변수는 세금계산서 미발행 계좌(`UMJI_BANK_STANDARD_*`)와 발행 계좌(`UMJI_BANK_TAX_INVOICE_*`)를 각각 설정함. 주문 생성 시 선택한 계좌 정보는 주문에 스냅샷으로 저장.
 
+공급자 세금계산서 정보는 `application.yml`에서 `UMJI_TAX_INVOICE_SUPPLIER_BUSINESS_REGISTRATION_NUMBER`, `UMJI_TAX_INVOICE_SUPPLIER_BUSINESS_NAME`, `UMJI_TAX_INVOICE_SUPPLIER_NAME`, `UMJI_TAX_INVOICE_SUPPLIER_ADDRESS`, `UMJI_TAX_INVOICE_SUPPLIER_INDUSTRY`, `UMJI_TAX_INVOICE_SUPPLIER_ITEM`, `UMJI_TAX_INVOICE_SUPPLIER_EMAIL` 환경 변수로 주입. 일곱 값이 모두 설정되어야 발행 요청 주문 생성 가능. 실제 공급자 값은 저장소에 저장하지 않음.
+
 FCM 발송 사용 시 `UMJI_NOTIFICATION_FCM_ENABLED=true`, `UMJI_NOTIFICATION_FCM_PROJECT_ID`와 Google Application Default Credentials를 설정함. APNs 발송 사용 시 `UMJI_NOTIFICATION_APNS_ENABLED=true`, `UMJI_NOTIFICATION_APNS_TEAM_ID`, `UMJI_NOTIFICATION_APNS_KEY_ID`, `UMJI_NOTIFICATION_APNS_PRIVATE_KEY_PATH`, `UMJI_NOTIFICATION_APNS_TOPIC`, `UMJI_NOTIFICATION_APNS_ENVIRONMENT`를 설정함. provider 미사용이 기본값이며 자격 증명은 저장소 밖에서 주입.
 
 로컬 프로필은 인증을 우회하는 `BYPASS` 설정을 사용함.

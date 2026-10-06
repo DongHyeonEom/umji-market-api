@@ -56,7 +56,9 @@ interface BuyerGroupJoinRequestRepository : JpaRepository<BuyerGroupJoinRequestE
     fun findFirstByBuyerGroup_IdAndAccount_IdAndStatus(buyerGroupId: Long, accountId: Long, status: String): BuyerGroupJoinRequestEntity?
 }
 
-interface BuyerGroupBusinessProfileRepository : JpaRepository<BuyerGroupBusinessProfileEntity, Long>
+interface BuyerGroupBusinessProfileRepository : JpaRepository<BuyerGroupBusinessProfileEntity, Long> {
+    fun findByBuyerGroup_Id(buyerGroupId: Long): BuyerGroupBusinessProfileEntity?
+}
 
 interface BuyerGroupAddressRepository : JpaRepository<BuyerGroupAddressEntity, Long> {
     @Query(
