@@ -1,35 +1,35 @@
-package com.buyeong.umji.api.auth.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.auth
 
 import com.buyeong.umji.api.auth.application.model.AccountRecord
 import com.buyeong.umji.api.auth.application.model.RefreshSessionRecord
-import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
-import com.buyeong.umji.api.auth.application.port.out.RefreshSessionPort
+
+
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenEntity
 import com.buyeong.umji.api.persistence.jpa.auth.RefreshTokenJpaEntityService
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.UUID
 
-@Component
-class JpaAuthenticationStoreAdapter(
+@Service
+class AuthenticationJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val refreshTokens: RefreshTokenJpaEntityService,
     private val jdbc: JdbcTemplate,
-) : AccountAuthenticationPort, RefreshSessionPort {
+) {
     @Transactional(readOnly = true)
-    override fun findByPublicId(id: java.util.UUID): AccountRecord? = accounts.findByPublicId(id)?.toRecord()
+    fun findByPublicId(id: java.util.UUID): AccountRecord? = accounts.findByPublicId(id)?.toRecord()
 
     @Transactional(readOnly = true)
-    override fun findByNormalizedPhone(phone: String): AccountRecord? = accounts.findByPhoneNormalized(phone)?.toRecord()
+    fun findByNormalizedPhone(phone: String): AccountRecord? = accounts.findByPhoneNormalized(phone)?.toRecord()
 
     @Transactional(readOnly = true)
-    override fun isTokenCurrent(id: UUID, tokenVersion: Long): Boolean =
+    fun isTokenCurrent(id: UUID, tokenVersion: Long): Boolean =
         jdbc.query(
             "SELECT 1 FROM account WHERE public_id = ? AND status = 'ACTIVE' AND token_version = ?",
             { result, _ -> result.getInt(1) == 1 },
@@ -38,17 +38,17 @@ class JpaAuthenticationStoreAdapter(
         ).firstOrNull() == true
 
     @Transactional
-    override fun recordLogin(accountId: java.util.UUID, at: Instant) {
+    fun recordLogin(accountId: java.util.UUID, at: Instant) {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         account.lastLoginAt = at
     }
 
     @Transactional
-    override fun findLockedByHash(tokenHash: ByteArray): RefreshSessionRecord? =
+    fun findLockedByHash(tokenHash: ByteArray): RefreshSessionRecord? =
         refreshTokens.findLockedByTokenHash(tokenHash)?.toRecord()
 
     @Transactional
-    override fun save(session: RefreshSessionRecord) {
+    fun save(session: RefreshSessionRecord) {
         val account = accounts.findByPublicId(session.account.id) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val entity = refreshTokens.findLockedByTokenHash(session.tokenHash) ?: RefreshTokenEntity()
         entity.account = account

@@ -2,36 +2,36 @@ package com.buyeong.umji.api.auth.adapter.`in`.security
 
 import com.buyeong.umji.api.auth.adapter.`in`.web.AuthenticationController
 import com.buyeong.umji.api.auth.application.WebAuthenticationService
-import com.buyeong.umji.api.auth.application.port.`in`.AuthenticationUseCase
+import com.buyeong.umji.api.auth.application.AuthenticationService
 import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import com.buyeong.umji.api.auth.config.JwtProperties
 import com.buyeong.umji.api.auth.config.SecurityConfig
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
-import com.buyeong.umji.api.exception.ErrorMessageService
+import com.buyeong.umji.api.account.application.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.inventory.adapter.`in`.web.OperationInventoryController
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.inventory.application.model.StockView
-import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
 import com.buyeong.umji.api.notification.adapter.`in`.web.NotificationDeviceTokenController
 import com.buyeong.umji.api.notification.application.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.application.model.NotificationDeviceTokenRegistration
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationDeviceTokenUseCase
+import com.buyeong.umji.api.notification.application.NotificationDeviceTokenService
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationAccountController
 import com.buyeong.umji.api.operation.account.adapter.`in`.web.OperationBuyerGroupController
-import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
+import com.buyeong.umji.api.operation.account.application.OperationAccountService
 import com.buyeong.umji.api.operation.audit.adapter.`in`.web.OperationAuditController
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditPage
-import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
+import com.buyeong.umji.api.operation.audit.application.OperationAuditService
 import com.buyeong.umji.api.operation.catalog.adapter.`in`.web.OperationCatalogController
-import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
+import com.buyeong.umji.api.operation.catalog.application.OperationCatalogService
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.OperationPaymentController
-import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
+import com.buyeong.umji.api.payment.application.PaymentService
 import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.OperationShipmentController
-import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
+import com.buyeong.umji.api.shipment.application.ShipmentService
 import com.buyeong.umji.api.order.adapter.`in`.web.OperationShippingHolidayController
 import com.buyeong.umji.api.order.adapter.`in`.web.OrderCancellationController
-import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
-import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
+import com.buyeong.umji.api.order.application.OrderCancellationService
+import com.buyeong.umji.api.order.application.ShippingHolidayService
 import com.buyeong.umji.api.payment.application.model.PaymentQueuePage
 import com.buyeong.umji.api.shipment.application.model.ShipmentChange
 import org.junit.jupiter.api.Test
@@ -73,46 +73,46 @@ class OperationEndpointAuthorizationTest(
     @Autowired private val mockMvc: MockMvc,
 ) {
     @MockitoBean
-    private lateinit var accounts: OperationAccountUseCase
+    private lateinit var accounts: OperationAccountService
 
     @MockitoBean
-    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileUseCase
+    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileService
 
     @MockitoBean
-    private lateinit var catalog: OperationCatalogUseCase
+    private lateinit var catalog: OperationCatalogService
 
     @MockitoBean
-    private lateinit var inventory: InventoryUseCase
+    private lateinit var inventory: InventoryService
 
     @MockitoBean
-    private lateinit var audit: OperationAuditUseCase
+    private lateinit var audit: OperationAuditService
 
     @MockitoBean
-    private lateinit var payments: TransactionalPaymentUseCase
+    private lateinit var payments: PaymentService
 
     @MockitoBean
-    private lateinit var shipments: TransactionalShipmentUseCase
+    private lateinit var shipments: ShipmentService
 
     @MockitoBean
-    private lateinit var cancellations: TransactionalOrderCancellationUseCase
+    private lateinit var cancellations: OrderCancellationService
 
     @MockitoBean
-    private lateinit var holidays: ShippingHolidayUseCase
+    private lateinit var holidays: ShippingHolidayService
 
     @MockitoBean
-    private lateinit var deviceTokens: NotificationDeviceTokenUseCase
+    private lateinit var deviceTokens: NotificationDeviceTokenService
 
     @MockitoBean
     private lateinit var currentAccounts: com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 
     @MockitoBean
-    private lateinit var authentication: AuthenticationUseCase
+    private lateinit var authentication: AuthenticationService
 
     @MockitoBean
     private lateinit var webAuthentication: WebAuthenticationService
 
     @MockitoBean
-    private lateinit var errorMessages: ErrorMessageService
+    private lateinit var errorMessages: DefaultErrorMessageService
 
     @MockitoBean
     private lateinit var accountAuthentication: AccountAuthenticationPort

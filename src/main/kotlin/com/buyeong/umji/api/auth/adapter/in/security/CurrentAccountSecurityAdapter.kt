@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.auth.adapter.`in`.security
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
-import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
+import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.springframework.security.core.context.SecurityContextHolder
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 import java.util.UUID
 
 @Component
-class CurrentAccountSecurityAdapter(private val accounts: AccountAuthenticationPort) : CurrentAccountPort {
+class CurrentAccountSecurityAdapter(private val accounts: AuthenticationJpaEntityService) : CurrentAccountPort {
     override fun activeAccountPublicId(): UUID {
         val jwt = SecurityContextHolder.getContext().authentication?.principal as? Jwt
             ?: throw ClientBadRequestException("인증된 계정이 필요합니다.")

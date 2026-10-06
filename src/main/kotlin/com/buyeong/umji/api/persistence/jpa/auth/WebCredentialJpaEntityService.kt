@@ -1,13 +1,13 @@
-package com.buyeong.umji.api.auth.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.auth
 
 import com.buyeong.umji.api.auth.application.model.AccountRecord
 import com.buyeong.umji.api.auth.application.model.WebAccountCredentials
-import com.buyeong.umji.api.auth.application.port.out.WebCredentialPort
+
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
 import java.util.Base64
@@ -16,20 +16,20 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-@Component
-class JpaWebCredentialAdapter(
+@Service
+class WebCredentialJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val jdbc: JdbcTemplate,
     @Value("\${umji.auth.totp-encryption-key:}") private val encryptionKeyBase64: String,
-) : WebCredentialPort {
+) {
     @Transactional(readOnly = true)
-    override fun findByNormalizedPhone(phone: String): WebAccountCredentials? = accounts.findByPhoneNormalized(phone)?.toCredentials()
+    fun findByNormalizedPhone(phone: String): WebAccountCredentials? = accounts.findByPhoneNormalized(phone)?.toCredentials()
 
     @Transactional(readOnly = true)
-    override fun findById(id: UUID): WebAccountCredentials? = accounts.findByPublicId(id)?.toCredentials()
+    fun findById(id: UUID): WebAccountCredentials? = accounts.findByPublicId(id)?.toCredentials()
 
     @Transactional
-    override fun savePassword(id: UUID, passwordHash: String) {
+    fun savePassword(id: UUID, passwordHash: String) {
         val entity = accounts.findByPublicId(id) ?: return
         entity.passwordHash = passwordHash
         entity.tokenVersion++
@@ -41,7 +41,7 @@ class JpaWebCredentialAdapter(
     }
 
     @Transactional
-    override fun saveTotpSecret(id: UUID, secret: String, enabled: Boolean) {
+    fun saveTotpSecret(id: UUID, secret: String, enabled: Boolean) {
         val entity = accounts.findByPublicId(id) ?: return
         entity.adminTotpSecretEncrypted = encrypt(secret)
         entity.adminTotpEnabled = enabled
@@ -56,7 +56,7 @@ class JpaWebCredentialAdapter(
     }
 
     @Transactional
-    override fun resetTotp(id: UUID) {
+    fun resetTotp(id: UUID) {
         val entity = accounts.findByPublicId(id) ?: return
         entity.adminTotpSecretEncrypted = null
         entity.adminTotpEnabled = false

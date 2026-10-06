@@ -8,9 +8,9 @@ import com.buyeong.umji.api.auth.application.model.WebLoginResult
 import com.buyeong.umji.api.auth.application.model.WebPasswordCommand
 import com.buyeong.umji.api.auth.application.port.out.AccessTokenIssuerPort
 import com.buyeong.umji.api.auth.application.port.out.CredentialEncoderPort
-import com.buyeong.umji.api.auth.application.port.out.RefreshSessionPort
 import com.buyeong.umji.api.auth.application.port.out.TotpPort
-import com.buyeong.umji.api.auth.application.port.out.WebCredentialPort
+import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.WebCredentialJpaEntityService
 import com.buyeong.umji.api.auth.application.port.out.WebLoginAttemptPort
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.util.PhoneNumberHelper
@@ -21,11 +21,12 @@ import java.time.Instant
 import java.util.Base64
 import java.util.UUID
 
+@org.springframework.stereotype.Service
 class WebAuthenticationService(
-    private val credentials: WebCredentialPort,
+    private val credentials: WebCredentialJpaEntityService,
     private val encoder: CredentialEncoderPort,
     private val totp: TotpPort,
-    private val refreshSessions: RefreshSessionPort,
+    private val refreshSessions: AuthenticationJpaEntityService,
     private val accessTokens: AccessTokenIssuerPort,
     private val loginAttempts: WebLoginAttemptPort,
 ) {

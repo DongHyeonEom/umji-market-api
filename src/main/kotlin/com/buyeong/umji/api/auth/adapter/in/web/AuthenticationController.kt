@@ -9,7 +9,7 @@ import com.buyeong.umji.api.auth.application.model.RefreshTokenCommand
 import com.buyeong.umji.api.auth.application.model.RevokeRefreshTokenCommand
 import com.buyeong.umji.api.auth.application.model.WebLoginCommand
 import com.buyeong.umji.api.auth.application.model.WebPasswordCommand
-import com.buyeong.umji.api.auth.application.port.`in`.AuthenticationUseCase
+import com.buyeong.umji.api.auth.application.AuthenticationService
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 import com.buyeong.umji.api.auth.model.AuthenticatedAccountResponse
 import com.buyeong.umji.api.auth.model.ConfirmTotpRequest
@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/auth")
 @Tag(name = "인증", description = "휴대폰 번호 로그인과 인증 token 발급·갱신·폐기 API")
 class AuthenticationController(
-    private val authenticationService: AuthenticationUseCase,
+    private val authenticationService: AuthenticationService,
     private val webAuthentication: WebAuthenticationService,
     private val currentAccounts: CurrentAccountPort,
 ) {
