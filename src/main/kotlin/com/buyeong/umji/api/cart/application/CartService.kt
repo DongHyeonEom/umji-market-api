@@ -15,9 +15,16 @@ class CartService(private val carts: CartStorePort, private val skus: SellableSk
     fun cart(accountId: UUID): CartView = carts.find(accountId)?.toView() ?: CartView(emptyList())
 
     fun add(accountId: UUID, command: AddCartItemCommand): CartView {
-        val sku = skus.find(command.skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
-        require(sku.salesStatus == ON_SALE) { "판매 중인 SKU만 장바구니에 담을 수 있습니다." }
+        require((command.skuId != null) xor (command.salesOfferId != null)) { "SKU ID 또는 판매 오퍼 ID 중 하나만 지정해야 합니다." }
+        val sku = command.salesOfferId?.let(skus::findOffer)
+            ?: command.skuId?.let { skus.find(it, command.channelCode) }
+            ?: throw ItemNotFoundException("판매 오퍼를 찾을 수 없습니다.")
+        require(sku.channelCode == command.channelCode.uppercase()) { "선택한 오퍼가 요청한 판매 채널과 일치하지 않습니다." }
+        require(sku.salesStatus == ON_SALE) { "판매 중인 오퍼만 장바구니에 담을 수 있습니다." }
         val current = carts.find(accountId) ?: CartState(accountId, emptyList())
+        require(current.items.isEmpty() || current.items.all { it.sku.channelCode == sku.channelCode }) {
+            "장바구니에는 한 판매 채널의 상품만 담을 수 있습니다. 현재 상품을 주문하거나 비워 주세요."
+        }
         val matching = current.items.firstOrNull { it.sku.id == sku.id }
         val updated = if (matching == null) {
             current.copy(items = current.items + CartItemState(null, sku, command.quantity))
@@ -49,7 +56,18 @@ class CartService(private val carts: CartStorePort, private val skus: SellableSk
 
     private fun CartState.toView() = CartView(
         items.map {
-            CartItemView(requireNotNull(it.id), it.sku.id, it.sku.code, it.sku.productName, it.sku.name, it.quantity, it.sku.price, it.sku.salesStatus)
+            CartItemView(
+                requireNotNull(it.id),
+                it.sku.id,
+                it.sku.code,
+                it.sku.productName,
+                it.sku.name,
+                it.quantity,
+                it.sku.price,
+                it.sku.salesStatus,
+                it.sku.salesOfferId,
+                it.sku.channelCode,
+            )
         },
     )
 

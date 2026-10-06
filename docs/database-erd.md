@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V34가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V35가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -187,6 +187,7 @@ erDiagram
     CATEGORY {
         BIGINT id PK "내부 카테고리 ID"
         BINARY public_id UK "API 공개 UUID"
+        BIGINT sales_channel_id FK "판매 채널 ID"
         BIGINT parent_id FK "상위 카테고리 ID, 최상위는 nullable"
         VARCHAR name "카테고리명"
         VARCHAR path "계층 경로"
@@ -235,6 +236,39 @@ erDiagram
         BIGINT sale_price "판매가"
         BIGINT list_price "정가, nullable"
         VARCHAR sales_status "판매 상태"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    SALES_CHANNEL {
+        BIGINT id PK "내부 판매 채널 ID"
+        BINARY public_id UK "API 공개 UUID"
+        VARCHAR code UK "채널 코드"
+        VARCHAR name "채널명"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    CHANNEL_PRODUCT_LISTING {
+        BIGINT id PK "채널 상품 전시 ID"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT sales_channel_id FK "판매 채널 ID"
+        BIGINT product_id FK "공용 상품 ID"
+        BIGINT category_id FK "채널 카테고리 ID"
+        VARCHAR display_status "채널 전시 상태"
+        INT display_order "채널 전시 순서"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    SALES_OFFER {
+        BIGINT id PK "판매 오퍼 ID"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT sales_channel_id FK "판매 채널 ID"
+        BIGINT product_sku_id FK "공용 SKU ID"
+        BIGINT sale_price "채널 판매가"
+        BIGINT list_price "채널 정가, nullable"
+        VARCHAR sales_status "채널 판매 상태"
         BIGINT version "낙관적 잠금 버전"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
@@ -315,6 +349,7 @@ erDiagram
         BINARY public_id UK "API 공개 UUID"
         BIGINT cart_id FK "소속 장바구니 ID"
         BIGINT sku_id FK "선택 SKU ID"
+        BIGINT sales_offer_id FK "선택 채널 판매 오퍼 ID"
         INT quantity "수량"
         BIGINT version "낙관적 잠금 버전"
         DATETIME created_at "생성 시각"
@@ -325,6 +360,7 @@ erDiagram
         BINARY public_id UK "API 공개 UUID"
         VARCHAR order_number UK "표시용 고유 주문번호"
         BIGINT account_id FK "실제 주문 계정 ID"
+        VARCHAR sales_channel_code "주문 판매 채널"
         BIGINT buyer_group_id FK "주문 귀속 구매자 그룹 ID"
         VARCHAR status "주문 상태"
         BIGINT subtotal_amount "상품 소계"
@@ -371,6 +407,7 @@ erDiagram
         BINARY public_id UK "API 공개 UUID"
         BIGINT order_id FK "소속 주문 ID"
         BIGINT sku_id FK "참조 SKU ID"
+        BIGINT sales_offer_id FK "주문 채널 판매 오퍼 ID"
         VARCHAR product_name "주문 당시 상품명 스냅샷"
         VARCHAR sku_name "주문 당시 SKU명 스냅샷"
         VARCHAR sku_code "주문 당시 SKU 코드 스냅샷"
@@ -490,6 +527,12 @@ erDiagram
     BUYER_GROUP ||--o| BUYER_GROUP_BUSINESS_PROFILE : describes
     ACCOUNT ||--o{ CONSENT_HISTORY : records
     CATEGORY ||--o{ CATEGORY : parent
+    SALES_CHANNEL ||--o{ CATEGORY : owns
+    SALES_CHANNEL ||--o{ CHANNEL_PRODUCT_LISTING : displays
+    PRODUCT ||--o{ CHANNEL_PRODUCT_LISTING : listed
+    CATEGORY ||--o{ CHANNEL_PRODUCT_LISTING : classifies
+    SALES_CHANNEL ||--o{ SALES_OFFER : sells
+    PRODUCT_SKU ||--o{ SALES_OFFER : offered
     CATEGORY ||--o{ PRODUCT : classifies
     BRAND ||--o{ PRODUCT : labels
     PRODUCT ||--o{ PRODUCT_IMAGE : displays
@@ -504,10 +547,12 @@ erDiagram
     ACCOUNT ||--o| CART : owns
     CART ||--o{ CART_ITEM : contains
     PRODUCT_SKU ||--o{ CART_ITEM : selected
+    SALES_OFFER ||--o{ CART_ITEM : priced
     ACCOUNT ||--o{ PURCHASE_ORDER : places
     BUYER_GROUP ||--o{ PURCHASE_ORDER : owns
     PURCHASE_ORDER ||--|{ ORDER_ITEM : contains
     PRODUCT_SKU ||--o{ ORDER_ITEM : snapshots
+    SALES_OFFER ||--o{ ORDER_ITEM : snapshots
     PURCHASE_ORDER ||--o{ ORDER_STATUS_HISTORY : tracks
     PURCHASE_ORDER ||--o| ORDER_PAYMENT : payment
     ORDER_PAYMENT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : tracks

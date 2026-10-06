@@ -258,9 +258,11 @@ class OrderShipmentMySqlIntegrationTest {
 
     private fun createCategory(): Long {
         val publicId = UUID.randomUUID()
+        val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
         jdbc.update(
-            "INSERT INTO category (public_id, name, path, depth, display_status) VALUES (?, 'Shipment test', ?, 0, 'VISIBLE')",
+            "INSERT INTO category (public_id, sales_channel_id, name, path, depth, display_status) VALUES (?, ?, 'Shipment test', ?, 0, 'VISIBLE')",
             publicId.toBytes(),
+            channelId,
             "shipment-${UUID.randomUUID()}",
         )
         return jdbc.queryForObject("SELECT id FROM category WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
@@ -284,6 +286,14 @@ class OrderShipmentMySqlIntegrationTest {
             productId,
             "SHIP-${UUID.randomUUID().toString().take(8)}",
         )
+        val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
+        val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
+        jdbc.update(
+            "INSERT INTO sales_offer (public_id, sales_channel_id, product_sku_id, sale_price, sales_status) VALUES (?, ?, ?, 1000, 'ON_SALE')",
+            UUID.randomUUID().toBytes(),
+            channelId,
+            skuInternalId,
+        )
         return publicId
     }
 
@@ -301,6 +311,11 @@ class OrderShipmentMySqlIntegrationTest {
         val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, customerId.toBytes())!!
         val buyerGroupInternalId = jdbc.queryForObject("SELECT buyer_group_id FROM buyer_group_member WHERE account_id = ? AND status = 'ACTIVE'", Long::class.java, accountInternalId)!!
         val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuId.toBytes())!!
+        val offerInternalId = jdbc.queryForObject(
+            "SELECT id FROM sales_offer WHERE product_sku_id = ?",
+            Long::class.java,
+            skuInternalId,
+        )!!
         val orderId = UUID.randomUUID()
         val now = Instant.now()
         jdbc.update(
@@ -317,12 +332,13 @@ class OrderShipmentMySqlIntegrationTest {
         val orderInternalId = jdbc.queryForObject("SELECT id FROM purchase_order WHERE public_id = ?", Long::class.java, orderId.toBytes())!!
         jdbc.update(
             """INSERT INTO order_item
-                (public_id, order_id, sku_id, product_name, sku_name, sku_code, unit_price, quantity, line_amount, reservation_key, status)
-                VALUES (?, ?, ?, 'Shipment test', 'Shipment test SKU', ?, 1000, 1, 1000, ?, 'RESERVED')
+                (public_id, order_id, sku_id, sales_offer_id, product_name, sku_name, sku_code, unit_price, quantity, line_amount, reservation_key, status)
+                VALUES (?, ?, ?, ?, 'Shipment test', 'Shipment test SKU', ?, 1000, 1, 1000, ?, 'RESERVED')
             """.trimIndent(),
             UUID.randomUUID().toBytes(),
             orderInternalId,
             skuInternalId,
+            offerInternalId,
             "SHIP-${UUID.randomUUID()}",
             reservationKey.toBytes(),
         )

@@ -41,7 +41,7 @@ class CartController(
     @ResponseStatus(HttpStatus.CREATED)
     fun add(@Valid @RequestBody request: AddCartItemRequest): CartResponse = carts.add(
         currentAccounts.activeAccountPublicId(),
-        AddCartItemCommand(request.skuId, request.quantity),
+        AddCartItemCommand(request.skuId, request.salesOfferId, request.channelCode, request.quantity),
     ).toResponse()
 
     @Operation(summary = "장바구니 상품 수량 변경", description = "장바구니 상품 수량 변경 기능을 수행하고 요청 조건에 따른 결과를 반환")
@@ -58,7 +58,7 @@ class CartController(
 
     private fun CartView.toResponse() = CartResponse(
         items.map {
-            CartItemResponse(it.id, it.skuId, it.skuCode, it.productName, it.skuName, it.quantity, it.unitPrice, it.salesStatus)
+            CartItemResponse(it.id, it.skuId, it.skuCode, it.productName, it.skuName, it.quantity, it.unitPrice, it.salesStatus, it.salesOfferId, it.channelCode)
         },
     )
 }

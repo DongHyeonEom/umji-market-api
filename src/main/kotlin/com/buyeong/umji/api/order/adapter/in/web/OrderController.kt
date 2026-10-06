@@ -125,6 +125,7 @@ class OrderController(
                 supplyAmount = snapshot.supplyAmount,
             )
         },
+        channelCode,
     )
 
     private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(
@@ -138,6 +139,6 @@ class OrderController(
         BankAccountInstructionsResponse(bankName, accountNumber, accountHolder)
 
     private fun OrderItemView.toResponse() = OrderItemResponse(
-        id, skuId, productName, skuName, skuCode, unitPrice, quantity, lineAmount, status,
+        id, skuId, productName, skuName, skuCode, unitPrice, quantity, lineAmount, status, salesOfferId,
     )
 }

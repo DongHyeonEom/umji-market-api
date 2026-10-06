@@ -15,6 +15,7 @@ import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationHistoryRepository
 import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderJpaEntityService
@@ -37,6 +38,7 @@ class JpaOrderStoreAdapter(
     private val buyerGroupMembers: BuyerGroupMemberRepository,
     private val buyerGroups: BuyerGroupJpaEntityService,
     private val catalog: CatalogJpaEntityService,
+    private val salesOffers: SalesOfferRepository,
     private val orders: OrderJpaEntityService,
     private val payments: OrderPaymentJpaEntityService,
     private val shipments: OrderShipmentJpaEntityService,
@@ -59,6 +61,7 @@ class JpaOrderStoreAdapter(
         val order = PurchaseOrderEntity().apply {
             this.account = account
             this.buyerGroup = buyerGroup
+            salesChannelCode = draft.channelCode
             orderNumber = nextOrderNumber(draft.orderedAt)
             status = draft.status
             orderedAt = draft.orderedAt
@@ -130,6 +133,7 @@ class JpaOrderStoreAdapter(
 
     private fun OrderItemDraft.toEntity() = OrderItemEntity().apply {
         sku = catalog.sku(skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
+        salesOffer = salesOffers.findByPublicId(salesOfferId) ?: throw ItemNotFoundException("판매 오퍼를 찾을 수 없습니다.")
         productName = this@toEntity.productName
         skuName = this@toEntity.skuName
         skuCode = this@toEntity.skuCode
@@ -144,6 +148,7 @@ class JpaOrderStoreAdapter(
         id = requireNotNull(publicId),
         orderNumber = orderNumber,
         status = status,
+        channelCode = salesChannelCode,
         subtotalAmount = subtotalAmount,
         totalAmount = totalAmount,
         orderedAt = orderedAt,
@@ -152,6 +157,7 @@ class JpaOrderStoreAdapter(
                 id = requireNotNull(item.publicId), skuId = requireNotNull(item.sku.publicId), reservationKey = item.reservationKey,
                 productName = item.productName, skuName = item.skuName, skuCode = item.skuCode,
                 unitPrice = item.unitPrice, quantity = item.quantity, lineAmount = item.lineAmount, status = item.status,
+                salesOfferId = requireNotNull(item.salesOffer.publicId),
             )
         },
         paymentMethod = payment.paymentMethod,

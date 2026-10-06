@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V34으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V35으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -58,16 +58,18 @@
 | V32 | 사용자 신규 사업자 그룹 등록 시 국세청 상태 확인 완료 시각 저장 |
 | V33 | 운영자 사전등록 사업자 그룹 상태조회 및 대표자 확인 상태 저장 |
 | V34 | 기존 사업자 상태확인 시각을 대표자 정보 확인 시각으로 backfill |
+| V35 | `sales_channel`, 채널별 `category`, `channel_product_listing`, `sales_offer` 추가 및 기존 상품·SKU·장바구니·주문 `WHOLESALE` backfill; 주문 채널·오퍼 참조 추가 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
 ## 도메인 데이터 규칙
 
-- `product`는 공통 상품 정보, `product_sku`는 가격·판매 상태를 소유함.<br>
-  재고도 SKU 단위임.<br>
+- `product`와 `product_sku`는 판매 채널 공용 상품·실물 SKU 원본이며, 실물 재고는 SKU 단위로 공유.<br>
+  채널별 카테고리 계층은 `category.sales_channel_id`, 전시·분류는 `channel_product_listing`, 채널별 가격·판매 상태는 `sales_offer`가 소유.<br>
+  기존 상품·SKU 및 기존 주문은 WHOLESALE로 backfill.<br>
 - SKU가 참조하는 옵션값은 같은 상품의 옵션에 속해야 함.<br>
-- 장바구니는 현재 SKU를 참조하며 가격을 확정하지 않음.<br>
-  주문 항목은 생성 당시 상품명·SKU명·코드·가격을 snapshot으로 보관함.<br>
+- 장바구니 항목은 공용 SKU와 선택 채널의 `sales_offer`를 함께 참조하며 offer 가격을 표시.<br>
+  주문은 단일 판매 채널로 생성하고 주문 항목의 상품명·SKU명·코드·가격 snapshot 및 offer 참조를 보관.<br>
 - 주문 생성 시 재고를 예약하고, 평일 15:00 배송 준비 전환에서 확정함.<br>
   READY_TO_SHIP 취소는 예약을 해제하고, PREPARING 취소 승인 시 확정 재고를 복구함.<br>
   예약 식별자는 주문 항목과 재고 예약에 같은 UUID를 보관하며 두 행 사이 DB FK는 없음.<br>

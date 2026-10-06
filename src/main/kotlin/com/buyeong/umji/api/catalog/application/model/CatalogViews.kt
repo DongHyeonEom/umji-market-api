@@ -2,9 +2,9 @@ package com.buyeong.umji.api.catalog.application.model
 
 import java.util.UUID
 
-data class CategoryView(val id: UUID, val name: String, val path: String, val depth: Int)
-data class ProductSummaryView(val id: UUID, val name: String, val brandName: String?)
-data class ProductSkuView(val id: UUID, val code: String, val name: String, val salePrice: Long, val listPrice: Long?)
+data class CategoryView(val id: UUID, val name: String, val path: String, val depth: Int, val channelCode: String = "WHOLESALE")
+data class ProductSummaryView(val id: UUID, val name: String, val brandName: String?, val channelCode: String = "WHOLESALE", val startingPrice: Long? = null)
+data class ProductSkuView(val id: UUID, val code: String, val name: String, val salePrice: Long, val listPrice: Long?, val salesOfferId: UUID? = null)
 data class ProductDetailView(
     val id: UUID,
     val name: String,
@@ -12,6 +12,7 @@ data class ProductDetailView(
     val categoryName: String,
     val brandName: String?,
     val skus: List<ProductSkuView>,
+    val channelCode: String = "WHOLESALE",
 )
 data class ProductPageView(
     val items: List<ProductSummaryView>,

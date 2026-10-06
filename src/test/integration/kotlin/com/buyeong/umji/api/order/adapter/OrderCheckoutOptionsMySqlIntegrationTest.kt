@@ -553,9 +553,11 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     private fun createCategory(): Long {
         val publicId = UUID.randomUUID()
+        val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
         jdbc.update(
-            "INSERT INTO category (public_id, name, path, depth, display_status) VALUES (?, 'Checkout test', ?, 0, 'VISIBLE')",
+            "INSERT INTO category (public_id, sales_channel_id, name, path, depth, display_status) VALUES (?, ?, 'Checkout test', ?, 0, 'VISIBLE')",
             publicId.toBytes(),
+            channelId,
             "checkout-${UUID.randomUUID()}",
         )
         return jdbc.queryForObject("SELECT id FROM category WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
@@ -579,6 +581,14 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             productId,
             "CHK-${UUID.randomUUID()}",
         )
+        val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
+        val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
+        jdbc.update(
+            "INSERT INTO sales_offer (public_id, sales_channel_id, product_sku_id, sale_price, sales_status) VALUES (?, ?, ?, 2500, 'ON_SALE')",
+            UUID.randomUUID().toBytes(),
+            channelId,
+            skuInternalId,
+        )
         return publicId
     }
 
@@ -598,11 +608,17 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             jdbc.update("INSERT INTO cart (public_id, account_id) VALUES (?, ?)", UUID.randomUUID().toBytes(), accountInternalId)
         }
         val cartId = jdbc.queryForObject("SELECT id FROM cart WHERE account_id = ?", Long::class.java, accountInternalId)!!
+        val offerId = jdbc.queryForObject(
+            "SELECT offer.id FROM sales_offer offer JOIN sales_channel channel ON channel.id = offer.sales_channel_id WHERE offer.product_sku_id = ? AND channel.code = 'WHOLESALE'",
+            Long::class.java,
+            skuInternalId,
+        )!!
         jdbc.update(
-            "INSERT INTO cart_item (public_id, cart_id, sku_id, quantity) VALUES (?, ?, ?, 2)",
+            "INSERT INTO cart_item (public_id, cart_id, sku_id, sales_offer_id, quantity) VALUES (?, ?, ?, ?, 2)",
             UUID.randomUUID().toBytes(),
             cartId,
             skuInternalId,
+            offerId,
         )
     }
 

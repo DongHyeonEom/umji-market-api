@@ -10,5 +10,6 @@ interface CartStorePort {
 }
 
 interface SellableSkuQueryPort {
-    fun find(skuId: UUID): SellableSku?
+    fun find(skuId: UUID, channelCode: String): SellableSku?
+    fun findOffer(salesOfferId: UUID): SellableSku?
 }

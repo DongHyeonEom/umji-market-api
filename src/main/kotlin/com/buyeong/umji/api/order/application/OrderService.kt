@@ -74,6 +74,7 @@ class OrderService(
         val lines = checkoutCart.linesForCheckout(accountPublicId)
         require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
         require(lines.all { it.salesStatus == ON_SALE }) { "판매 중지된 SKU가 포함되어 있습니다." }
+        require(lines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
 
         val orderedAt = Instant.now()
         val items = lines.map { line ->
@@ -88,6 +89,7 @@ class OrderService(
                 lineAmount = amount,
                 reservationKey = UUID.randomUUID(),
                 status = RESERVED,
+                salesOfferId = line.salesOfferId,
             )
         }
         val subtotal = items.sumOf { it.lineAmount }
@@ -101,6 +103,7 @@ class OrderService(
                 shippingAddress,
                 items,
                 if (selectedPreference) TaxInvoiceSnapshotDraft(requireNotNull(invoiceSupplier), requireNotNull(invoiceBuyer)) else null,
+                lines.first().channelCode,
             ),
         )
         if (updateDefaultTaxInvoicePreference && selectedPreference != defaultPreference) {

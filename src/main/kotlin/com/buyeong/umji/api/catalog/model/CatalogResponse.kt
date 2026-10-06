@@ -10,6 +10,7 @@ data class CategoryResponse(
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true) val name: String,
     @field:Schema(description = "Path 정보", example = "예시 값", type = "string", required = true) val path: String,
     @field:Schema(description = "Depth 정보", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class) val depth: Int,
+    @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", type = "string", required = true) val channelCode: String = "WHOLESALE",
 )
 
 @Schema(description = "ProductSummaryResponse API 데이터 모델")
@@ -17,6 +18,8 @@ data class ProductSummaryResponse(
     @field:Schema(description = "리소스 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = true) val id: UUID,
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true) val name: String,
     @field:Schema(description = "Brand Name 정보", example = "예시 값", type = "string", required = true) val brandName: String?,
+    @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", type = "string", required = true) val channelCode: String = "WHOLESALE",
+    @field:Schema(description = "채널 시작 판매가(원)", example = "1000", type = "integer", required = false) val startingPrice: Long? = null,
 )
 
 @Schema(description = "ProductSkuResponse API 데이터 모델")
@@ -26,6 +29,7 @@ data class ProductSkuResponse(
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true) val name: String,
     @field:Schema(description = "판매 가격(원)", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val salePrice: Long,
     @field:Schema(description = "정가(원)", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val listPrice: Long?,
+    @field:Schema(description = "채널별 판매 오퍼 공개 UUID", format = "uuid", type = "string", required = true) val salesOfferId: UUID? = null,
 )
 
 @Schema(description = "ProductDetailResponse API 데이터 모델")
@@ -38,6 +42,7 @@ data class ProductDetailResponse(
     @field:ArraySchema(
         schema = Schema(implementation = ProductSkuResponse::class),
     ) @field:Schema(description = "상품 SKU 목록", example = "[]", type = "array", required = true) val skus: List<ProductSkuResponse>,
+    @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", type = "string", required = true) val channelCode: String = "WHOLESALE",
 )
 
 @Schema(description = "상품 검색 결과와 페이지 정보")

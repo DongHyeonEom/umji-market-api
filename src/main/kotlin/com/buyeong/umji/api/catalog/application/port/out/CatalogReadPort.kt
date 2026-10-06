@@ -6,7 +6,7 @@ import com.buyeong.umji.api.catalog.application.model.ProductPageView
 import java.util.UUID
 
 interface CatalogReadPort {
-    fun categories(): List<CategoryView>
-    fun products(page: Int, size: Int): ProductPageView
-    fun product(productId: UUID): ProductDetailView?
+    fun categories(channelCode: String): List<CategoryView>
+    fun products(page: Int, size: Int, channelCode: String): ProductPageView
+    fun product(channelCode: String, productId: UUID): ProductDetailView?
 }

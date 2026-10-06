@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface CartRepository : JpaRepository<CartEntity, Long> {
-    @Query("select distinct cart from CartEntity cart left join fetch cart.items item left join fetch item.sku sku left join fetch sku.product where cart.account.id = :accountId")
+    @Query("select distinct cart from CartEntity cart left join fetch cart.items item left join fetch item.sku sku left join fetch sku.product left join fetch item.salesOffer offer left join fetch offer.salesChannel where cart.account.id = :accountId")
     fun findWithItemsByAccountId(@Param("accountId") accountId: Long): CartEntity?
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

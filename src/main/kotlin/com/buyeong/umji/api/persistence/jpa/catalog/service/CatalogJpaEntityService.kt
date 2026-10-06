@@ -17,8 +17,8 @@ class CatalogJpaEntityService(
     private val options: ProductOptionRepository,
     private val optionValues: ProductOptionValueRepository,
 ) {
-    fun displayedCategories(status: String): List<CategoryEntity> = categories.findAllByDisplayStatusAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(status)
-    fun categories(): List<CategoryEntity> = categories.findAllByDeletedAtIsNullOrderByDisplayOrderAscNameAsc()
+    fun displayedCategories(channelCode: String, status: String): List<CategoryEntity> = categories.findAllBySalesChannel_CodeAndDisplayStatusAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(channelCode, status)
+    fun categories(channelCode: String): List<CategoryEntity> = categories.findAllBySalesChannel_CodeAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(channelCode)
     fun category(id: UUID): CategoryEntity? = categories.findByPublicIdAndDeletedAtIsNull(id)
     fun brands(pageable: Pageable): Page<BrandEntity> = brands.findAllByDeletedAtIsNull(pageable)
     fun brand(id: UUID): BrandEntity? = brands.findByPublicIdAndDeletedAtIsNull(id)

@@ -10,6 +10,7 @@ import com.buyeong.umji.api.persistence.jpa.cart.CartEntity
 import com.buyeong.umji.api.persistence.jpa.cart.CartItemEntity
 import com.buyeong.umji.api.persistence.jpa.cart.CartJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -19,6 +20,7 @@ class JpaCartStoreAdapter(
     private val accounts: AccountJpaEntityService,
     private val carts: CartJpaEntityService,
     private val catalog: CatalogJpaEntityService,
+    private val offers: SalesOfferRepository,
 ) : CartStorePort {
     @Transactional
     override fun find(accountId: UUID): CartState? {
@@ -39,6 +41,7 @@ class JpaCartStoreAdapter(
             val existing = item.id?.let { id -> cart.items.firstOrNull { it.publicId == id } }
             val entity = existing ?: CartItemEntity().apply {
                 sku = catalog.sku(item.sku.id) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
+                salesOffer = offers.findByPublicId(item.sku.salesOfferId) ?: throw ItemNotFoundException("판매 오퍼를 찾을 수 없습니다.")
                 cart.add(this)
             }
             entity.quantity = item.quantity
@@ -50,7 +53,16 @@ class JpaCartStoreAdapter(
 
     private fun CartItemEntity.toState() = CartItemState(
         id = publicId,
-        sku = SellableSku(requireNotNull(sku.publicId), sku.skuCode, sku.product.name, sku.name, sku.salePrice, sku.salesStatus),
+        sku = SellableSku(
+            requireNotNull(sku.publicId),
+            requireNotNull(salesOffer.publicId),
+            salesOffer.salesChannel.code,
+            sku.skuCode,
+            sku.product.name,
+            sku.name,
+            salesOffer.salePrice,
+            salesOffer.salesStatus,
+        ),
         quantity = quantity,
     )
 }
