@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.operation.catalog.adapter.`in`.web
 
+import com.buyeong.umji.api.operation.catalog.application.OperationCatalogService
 import com.buyeong.umji.api.operation.catalog.application.model.BrandCommand
 import com.buyeong.umji.api.operation.catalog.application.model.CatalogResource
 import com.buyeong.umji.api.operation.catalog.application.model.CategoryCommand
@@ -11,10 +12,9 @@ import com.buyeong.umji.api.operation.catalog.application.model.OptionValueComma
 import com.buyeong.umji.api.operation.catalog.application.model.ProductCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductStatusCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductView
-import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView
-import com.buyeong.umji.api.operation.catalog.application.OperationCatalogService
+import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
 import com.buyeong.umji.api.operation.model.CreateCategoryRequest
 import com.buyeong.umji.api.operation.model.CreateChannelCategoryRequest
@@ -32,9 +32,9 @@ import com.buyeong.umji.api.operation.model.OperationProductPageResponse
 import com.buyeong.umji.api.operation.model.OperationProductResponse
 import com.buyeong.umji.api.operation.model.OperationProductSkuResponse
 import com.buyeong.umji.api.operation.model.OperationSalesOfferResponse
+import com.buyeong.umji.api.operation.model.UpdateChannelListingRequest
 import com.buyeong.umji.api.operation.model.UpdateProductRequest
 import com.buyeong.umji.api.operation.model.UpdateProductStatusRequest
-import com.buyeong.umji.api.operation.model.UpdateChannelListingRequest
 import com.buyeong.umji.api.operation.model.UpdateSalesOfferRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -103,7 +103,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
         @PathVariable skuId: UUID,
         @Valid @RequestBody request: UpdateSalesOfferRequest,
     ) = useCase.updateSalesOffer(
-        SalesOfferCommand(channelCode, skuId, request.salePrice, request.listPrice, request.salesStatus),
+        SalesOfferCommand(channelCode, skuId, request.salePrice, request.listPrice, request.salesStatus, request.unitsPerSale),
     ).toResponse()
 
     @Operation(summary = "브랜드 목록 조회", description = "브랜드 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
@@ -211,7 +211,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     private fun CreateProductOptionRequest.toCommand() = OptionCommand(name, displayOrder, values.map { OptionValueCommand(it.value, it.displayOrder) })
     private fun CreateProductSkuRequest.toCommand() = SkuCommand(skuCode, name, salePrice, listPrice, salesStatus, optionValueIds)
     private fun CatalogResource.toResponse() = OperationCatalogResourceResponse(id)
-    private fun SalesOfferView.toResponse() = OperationSalesOfferResponse(id, channelCode, skuId, salePrice, listPrice, salesStatus)
+    private fun SalesOfferView.toResponse() = OperationSalesOfferResponse(id, channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale)
     private fun ProductView.toResponse() = OperationProductResponse(
         id, categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder,
         images.map {

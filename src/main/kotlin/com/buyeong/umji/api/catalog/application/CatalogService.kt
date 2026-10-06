@@ -30,6 +30,7 @@ class CatalogService(private val catalog: CatalogJpaEntityService) {
                     listing.product.brand?.name,
                     channelCode,
                     offers.firstOrNull()?.salePrice,
+                    offers.firstOrNull()?.unitsPerSale ?: 1,
                 )
             },
             result.number,
@@ -59,6 +60,7 @@ class CatalogService(private val catalog: CatalogJpaEntityService) {
                     offer.salePrice,
                     offer.listPrice,
                     requireNotNull(offer.publicId),
+                    offer.unitsPerSale,
                 )
             },
             channelCode = channel,

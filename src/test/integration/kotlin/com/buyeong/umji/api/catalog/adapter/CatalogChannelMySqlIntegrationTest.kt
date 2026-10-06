@@ -1,7 +1,10 @@
 package com.buyeong.umji.api.catalog.adapter
 
 import com.buyeong.umji.api.catalog.application.CatalogService
+import com.buyeong.umji.api.operation.catalog.application.OperationCatalogService
+import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -22,6 +25,9 @@ class CatalogChannelMySqlIntegrationTest {
 
     @Autowired
     private lateinit var catalog: CatalogService
+
+    @Autowired
+    private lateinit var operationCatalog: OperationCatalogService
 
     @Test
     fun `categories listings and offer prices are isolated by channel while sku is shared`() {
@@ -68,6 +74,11 @@ class CatalogChannelMySqlIntegrationTest {
                 price,
             )
         }
+        operationCatalog.updateSalesOffer(SalesOfferCommand("WHOLESALE", skuId, 1000, null, "ON_SALE", 12))
+        operationCatalog.updateSalesOffer(SalesOfferCommand("WHOLESALE", skuId, 1000, null, "ON_SALE"))
+        assertThatThrownBy {
+            operationCatalog.updateSalesOffer(SalesOfferCommand("RETAIL", skuId, 1500, null, "ON_SALE", 2))
+        }.isInstanceOf(IllegalArgumentException::class.java)
 
         assertThat(catalog.categories("WHOLESALE").map { it.name })
             .contains("Wholesale test")
@@ -81,6 +92,9 @@ class CatalogChannelMySqlIntegrationTest {
         assertThat(retail.skus.single().salePrice).isEqualTo(1500L)
         assertThat(wholesale.skus.single().id).isEqualTo(retail.skus.single().id)
         assertThat(wholesale.skus.single().salesOfferId).isNotEqualTo(retail.skus.single().salesOfferId)
+        assertThat(wholesale.skus.single().unitsPerSale).isEqualTo(12)
+        assertThat(retail.skus.single().unitsPerSale).isEqualTo(1)
+        assertThat(catalog.products(0, 100, "WHOLESALE").items.first { it.id == productId }.startingUnitsPerSale).isEqualTo(12)
     }
 
     private fun createCategory(channelCode: String, name: String): Long {

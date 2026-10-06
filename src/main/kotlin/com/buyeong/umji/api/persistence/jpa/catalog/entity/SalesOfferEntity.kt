@@ -26,6 +26,9 @@ class SalesOfferEntity : DomainPublicEntity() {
     @Column(name = "list_price")
     var listPrice: Long? = null
 
+    @Column(name = "units_per_sale", nullable = false)
+    var unitsPerSale: Int = 1
+
     @Column(name = "sales_status", nullable = false, length = 30)
     lateinit var salesStatus: String
 }

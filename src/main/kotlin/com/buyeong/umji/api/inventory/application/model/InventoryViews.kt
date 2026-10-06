@@ -19,4 +19,19 @@ data class MovementState(
     val occurredAt: Instant,
 )
 data class MovementPageState(val items: List<MovementState>, val page: Int, val size: Int, val totalElements: Long, val totalPages: Int)
-data class StockView(val skuId: UUID, val skuCode: String, val onHand: Int, val reserved: Int, val available: Int, val safety: Int)
+data class StockView(
+    val skuId: UUID,
+    val skuCode: String,
+    val onHand: Int,
+    val reserved: Int,
+    val available: Int,
+    val safety: Int,
+    val unitsPerSale: Int = 1,
+) {
+    val onHandBoxes: Int get() = onHand / unitsPerSale
+    val onHandRemainder: Int get() = onHand % unitsPerSale
+    val reservedBoxes: Int get() = reserved / unitsPerSale
+    val reservedRemainder: Int get() = reserved % unitsPerSale
+    val availableBoxes: Int get() = available / unitsPerSale
+    val availableRemainder: Int get() = available % unitsPerSale
+}

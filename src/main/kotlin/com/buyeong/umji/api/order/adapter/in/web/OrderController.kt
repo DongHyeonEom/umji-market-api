@@ -1,20 +1,20 @@
 package com.buyeong.umji.api.order.adapter.`in`.web
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
+import com.buyeong.umji.api.order.application.CustomerOrderListingService
+import com.buyeong.umji.api.order.application.OrderService
 import com.buyeong.umji.api.order.application.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
-import com.buyeong.umji.api.order.application.CustomerOrderListingService
-import com.buyeong.umji.api.order.application.OrderService
 import com.buyeong.umji.api.order.model.BankAccountInstructionsResponse
 import com.buyeong.umji.api.order.model.CreateOrderRequest
 import com.buyeong.umji.api.order.model.OrderCheckoutOptionsResponse
 import com.buyeong.umji.api.order.model.OrderItemResponse
 import com.buyeong.umji.api.order.model.OrderPageResponse
 import com.buyeong.umji.api.order.model.OrderResponse
-import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotResponse
 import com.buyeong.umji.api.order.model.TaxInvoiceItemResponse
+import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -139,6 +139,6 @@ class OrderController(
         BankAccountInstructionsResponse(bankName, accountNumber, accountHolder)
 
     private fun OrderItemView.toResponse() = OrderItemResponse(
-        id, skuId, productName, skuName, skuCode, unitPrice, quantity, lineAmount, status, salesOfferId,
+        id, skuId, productName, skuName, skuCode, unitPrice, quantity, lineAmount, status, salesOfferId, unitsPerSale,
     )
 }

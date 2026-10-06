@@ -1,24 +1,24 @@
 package com.buyeong.umji.api.order.adapter
 
 import com.buyeong.umji.api.account.adapter.BusinessRegistrationVerificationJob
-import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
-import com.buyeong.umji.api.account.application.model.BusinessGroupRegistration
-import com.buyeong.umji.api.account.application.model.SharedAddressCommand
 import com.buyeong.umji.api.account.application.BuyerGroupMembershipService
 import com.buyeong.umji.api.account.application.BuyerGroupTaxInvoiceProfileService
 import com.buyeong.umji.api.account.application.CustomerAccountService
+import com.buyeong.umji.api.account.application.model.BusinessGroupRegistration
+import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
+import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.application.model.SharedAddressCommand
 import com.buyeong.umji.api.account.application.port.out.BusinessRegistrationStatus
 import com.buyeong.umji.api.account.application.port.out.BusinessRegistrationStatusPort
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.application.OperationAccountService
-import com.buyeong.umji.api.payment.application.PaymentService
-import com.buyeong.umji.api.shipment.application.ShipmentService
 import com.buyeong.umji.api.order.application.OrderCancellationService
 import com.buyeong.umji.api.order.application.OrderService
 import com.buyeong.umji.api.payment.adapter.TaxInvoiceSupplierAdapter
+import com.buyeong.umji.api.payment.application.PaymentService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.shipment.application.ShipmentService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.assertj.core.api.Assertions.assertThat
@@ -99,6 +99,48 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     @Autowired
     private lateinit var cancellations: OrderCancellationService
+
+    @Test
+    fun `wholesale box count reserves base sku units and preserves ordered pack size`() {
+        val accountId = createAccount()
+        createBusinessGroup(accountId)
+        val addressId = createAddress(accountId)
+        val skuId = createSku(createProduct(createCategory()))
+        createStock(skuId)
+        createCartWithItem(accountId, skuId)
+        val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuId.toBytes())!!
+        jdbc.update(
+            "UPDATE sales_offer SET units_per_sale = 12 WHERE product_sku_id = ? AND sales_channel_id = (SELECT id FROM sales_channel WHERE code = 'WHOLESALE')",
+            skuInternalId,
+        )
+        jdbc.update("UPDATE inventory_stock SET on_hand_quantity = 100 WHERE sku_id = ?", skuInternalId)
+
+        val order = orders.create(accountId, addressId, false, false)
+        assertThat(order.items.single().quantity).isEqualTo(2)
+        assertThat(order.items.single().unitsPerSale).isEqualTo(12)
+        assertThat(
+            jdbc.queryForObject("SELECT quantity FROM stock_reservation WHERE reservation_key = ?", Int::class.java, order.items.single().reservationKey.toBytes()),
+        ).isEqualTo(24)
+
+        jdbc.update(
+            "UPDATE sales_offer SET units_per_sale = 6 WHERE product_sku_id = ? AND sales_channel_id = (SELECT id FROM sales_channel WHERE code = 'WHOLESALE')",
+            skuInternalId,
+        )
+        assertThat(orders.detail(accountId, order.id).items.single().unitsPerSale).isEqualTo(12)
+        shipments.prepareOrder(order.id)
+        assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isEqualTo(76)
+        assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isZero()
+
+        val cancelledAccountId = createAccount()
+        createBusinessGroup(cancelledAccountId)
+        val cancelledAddressId = createAddress(cancelledAccountId)
+        createCartWithItem(cancelledAccountId, skuId)
+        val pendingOrder = orders.create(cancelledAccountId, cancelledAddressId, false, false)
+        assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isEqualTo(12)
+        cancellations.request(cancelledAccountId, pendingOrder.id)
+        assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isEqualTo(76)
+        assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isZero()
+    }
 
     @Test
     fun `flyway v13 persists invoice preference and order-specific bank account snapshots`() {
@@ -429,7 +471,10 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(ready?.writtenDate).isEqualTo(order.orderedAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate())
         assertThat(ready?.supplyDate).isEqualTo(ready?.writtenDate)
 
-        jdbc.update("UPDATE buyer_group_business_profile SET business_name = 'Changed later' WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)", groupId.toBytes())
+        jdbc.update(
+            "UPDATE buyer_group_business_profile SET business_name = 'Changed later' WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+            groupId.toBytes(),
+        )
         assertThat(orders.detail(ownerId, order.id).taxInvoiceSnapshot?.buyer?.businessName).isEqualTo("Group test business")
 
         val memberId = createAccount()
@@ -470,11 +515,13 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val personalGroup = groupMembership.register(personalAccountId, BuyerGroupRegistrationCommand("INDIVIDUAL", null))
         assertThat(personalGroup.type).isEqualTo("INDIVIDUAL")
         assertThat(groupMembership.current(personalAccountId)?.id).isEqualTo(personalGroup.id)
-        assertThat(jdbc.queryForObject(
-            "SELECT COUNT(*) FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
-            Int::class.java,
-            personalGroup.id.toBytes(),
-        )).isZero()
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                Int::class.java,
+                personalGroup.id.toBytes(),
+            ),
+        ).isZero()
 
         val businessAccountId = createAccount()
         Mockito.doNothing().`when`(businessRegistrationStatus).ensureNotClosed("1234567890")
@@ -489,16 +536,20 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         )
         assertThat(businessGroup.type).isEqualTo("BUSINESS")
         Mockito.verify(businessRegistrationStatus).ensureNotClosed("1234567890")
-        assertThat(jdbc.queryForObject(
-            "SELECT business_registration_verified_at IS NOT NULL FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
-            Boolean::class.java,
-            businessGroup.id.toBytes(),
-        )).isTrue()
-        assertThat(jdbc.queryForObject(
-            "SELECT COUNT(*) FROM buyer_group_address WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
-            Int::class.java,
-            businessGroup.id.toBytes(),
-        )).isZero()
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT business_registration_verified_at IS NOT NULL FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                Boolean::class.java,
+                businessGroup.id.toBytes(),
+            ),
+        ).isTrue()
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM buyer_group_address WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                Int::class.java,
+                businessGroup.id.toBytes(),
+            ),
+        ).isZero()
         assertThatThrownBy { groupMembership.register(businessAccountId, BuyerGroupRegistrationCommand("INDIVIDUAL", null)) }
             .isInstanceOf(IllegalArgumentException::class.java)
     }

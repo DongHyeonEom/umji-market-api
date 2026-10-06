@@ -2,13 +2,14 @@ package com.buyeong.umji.api.inventory.application
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.inventory.application.model.MovementPageState
-import com.buyeong.umji.api.inventory.application.model.ReservationState
 import com.buyeong.umji.api.inventory.application.model.MovementState
+import com.buyeong.umji.api.inventory.application.model.ReservationState
 import com.buyeong.umji.api.inventory.application.model.SkuReference
 import com.buyeong.umji.api.inventory.application.model.StockState
 import com.buyeong.umji.api.inventory.application.model.StockView
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import com.buyeong.umji.api.persistence.jpa.inventory.InventoryJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.inventory.InventoryMovementEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.InventoryStockEntity
@@ -24,12 +25,13 @@ import java.util.UUID
 class InventoryService(
     private val catalog: CatalogJpaEntityService,
     private val inventory: InventoryJpaEntityService,
+    private val salesOffers: SalesOfferRepository,
 ) {
     @Transactional(readOnly = true)
     fun stock(skuId: UUID): StockView {
         val sku = sku(skuId)
         val stock = inventory.stock(requireNotNull(entitySku(skuId).id))?.toState()
-        return (stock ?: StockState(sku, 0, 0, 0)).toView()
+        return (stock ?: StockState(sku, 0, 0, 0)).toView(unitsPerSale(skuId))
     }
 
     @Transactional(readOnly = true)
@@ -53,7 +55,7 @@ class InventoryService(
         require(stock.onHandQuantity >= stock.reservedQuantity) { "예약 재고보다 실재고를 낮출 수 없습니다." }
         val saved = inventory.saveStock(stock)
         inventory.saveMovement(movement(sku, ADJUSTMENT, quantityDelta, reason.trim(), null, memo))
-        return saved.toState().toView()
+        return saved.toState().toView(unitsPerSale(skuId))
     }
 
     @Transactional
@@ -65,13 +67,15 @@ class InventoryService(
         require(stock.onHandQuantity - stock.reservedQuantity >= quantity) { "가용 재고가 부족합니다." }
         stock.reservedQuantity += quantity
         val updated = inventory.saveStock(stock)
-        inventory.saveReservation(StockReservationEntity().apply {
-            this.reservationKey = reservationKey
-            this.sku = sku
-            this.quantity = quantity
-            status = RESERVED
-            this.expiresAt = expiresAt
-        })
+        inventory.saveReservation(
+            StockReservationEntity().apply {
+                this.reservationKey = reservationKey
+                this.sku = sku
+                this.quantity = quantity
+                status = RESERVED
+                this.expiresAt = expiresAt
+            },
+        )
         inventory.saveMovement(movement(sku, RESERVATION, -quantity, "ORDER_RESERVATION", reservationKey, null))
         return updated.toState().toView()
     }
@@ -123,12 +127,20 @@ class InventoryService(
     private fun sku(id: UUID) = entitySku(id).toReference()
     private fun entitySku(id: UUID) = catalog.sku(id) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
     private fun reservationEntity(key: UUID) = inventory.reservation(key) ?: throw ItemNotFoundException("재고 예약을 찾을 수 없습니다.")
-    private fun StockState.toView() = StockView(sku.id, sku.code, onHand, reserved, available, safety)
+    private fun StockState.toView(unitsPerSale: Int = 1) = StockView(sku.id, sku.code, onHand, reserved, available, safety, unitsPerSale)
+    private fun unitsPerSale(skuId: UUID) = salesOffers.findBySalesChannel_CodeAndProductSku_PublicId("WHOLESALE", skuId)?.unitsPerSale ?: 1
     private fun ProductSkuEntity.toReference() = SkuReference(requireNotNull(publicId), skuCode)
     private fun InventoryStockEntity.toState() = StockState(sku.toReference(), onHandQuantity, reservedQuantity, safetyStockQuantity)
     private fun StockReservationEntity.toState() = ReservationState(reservationKey, sku.toReference(), quantity, status, expiresAt, releasedAt)
     private fun com.buyeong.umji.api.persistence.jpa.inventory.InventoryMovementEntity.toState() = MovementState(
-        requireNotNull(id), sku.toReference(), movementType, quantityDelta, referenceType, referenceId, memo, occurredAt,
+        requireNotNull(id),
+        sku.toReference(),
+        movementType,
+        quantityDelta,
+        referenceType,
+        referenceId,
+        memo,
+        occurredAt,
     )
     private fun movement(sku: ProductSkuEntity, type: String, delta: Int, referenceType: String?, referenceId: UUID?, memo: String?) =
         InventoryMovementEntity().apply {

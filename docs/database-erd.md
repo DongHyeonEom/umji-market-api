@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V35가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V36가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -267,6 +267,7 @@ erDiagram
         BIGINT sales_channel_id FK "판매 채널 ID"
         BIGINT product_sku_id FK "공용 SKU ID"
         BIGINT sale_price "채널 판매가"
+        INT units_per_sale "판매 단위당 기준 SKU 수량"
         BIGINT list_price "채널 정가, nullable"
         VARCHAR sales_status "채널 판매 상태"
         BIGINT version "낙관적 잠금 버전"
@@ -413,6 +414,7 @@ erDiagram
         VARCHAR sku_code "주문 당시 SKU 코드 스냅샷"
         BIGINT unit_price "주문 당시 단가"
         INT quantity "주문 수량"
+        INT units_per_sale "주문 당시 판매 단위당 기준 SKU 수량"
         BIGINT line_amount "주문 항목 합계"
         BINARY reservation_key UK "연결 재고 예약 UUID"
         VARCHAR status "주문 항목 상태"

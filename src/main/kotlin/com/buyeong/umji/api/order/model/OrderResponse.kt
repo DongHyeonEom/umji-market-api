@@ -49,7 +49,13 @@ data class BankAccountInstructionsResponse(
 @Schema(description = "세금계산서 설정과 주문 유형별 입금 계좌 정보")
 data class OrderCheckoutOptionsResponse(
     @field:Schema(description = "계정 기본 세금계산서 발행 설정", example = "true", type = "boolean", required = true, implementation = Boolean::class) val defaultTaxInvoiceRequested: Boolean,
-    @field:Schema(description = "공급자와 그룹 공급받는자 필수 정보가 완성되어 발행 요청할 수 있는지 여부", example = "true", type = "boolean", required = true, implementation = Boolean::class) val taxInvoiceAvailable: Boolean,
+    @field:Schema(
+        description = "공급자와 그룹 공급받는자 필수 정보가 완성되어 발행 요청할 수 있는지 여부",
+        example = "true",
+        type = "boolean",
+        required = true,
+        implementation = Boolean::class,
+    ) val taxInvoiceAvailable: Boolean,
     @field:Schema(description = "Standard Bank Account 정보", example = "예시 값", type = "object", required = true) val standardBankAccount: BankAccountInstructionsResponse,
     @field:Schema(description = "Tax Invoice Bank Account 정보", example = "예시 값", type = "object", required = true) val taxInvoiceBankAccount: BankAccountInstructionsResponse,
 )
@@ -75,11 +81,18 @@ data class OrderItemResponse(
     @field:Schema(description = "상품명", example = "예시 값", type = "string", required = true) val productName: String,
     @field:Schema(description = "상품 옵션명", example = "예시 값", type = "string", required = true) val skuName: String,
     @field:Schema(description = "상품 옵션 코드", example = "예시 값", type = "string", required = true) val skuCode: String,
-    @field:Schema(description = "상품 한 개의 가격(원)", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val unitPrice: Long,
-    @field:Schema(description = "수량", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
+    @field:Schema(description = "판매 단위 1개의 주문 당시 가격(원). WHOLESALE은 박스당 가격", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class) val unitPrice: Long,
+    @field:Schema(description = "판매 단위 주문 수량. WHOLESALE은 박스 수, RETAIL은 낱개 수", example = "2", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
     @field:Schema(description = "수량을 반영한 항목 금액(원)", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val lineAmount: Long,
     @field:Schema(description = "현재 상태 코드", example = "ACTIVE", type = "string", required = true) val status: String,
     @field:Schema(description = "채널별 판매 오퍼 공개 UUID") val salesOfferId: UUID? = null,
+    @field:Schema(
+        description = "판매 단위당 기준 SKU 입수 수량. WHOLESALE은 박스 입수 수량",
+        example = "12",
+        type = "integer",
+        required = true,
+        implementation = Int::class,
+    ) val unitsPerSale: Int = 1,
 )
 
 @Schema(description = "주문 검색 결과 목록과 페이지 정보")
@@ -114,7 +127,9 @@ data class TaxInvoiceSnapshotResponse(
     @field:Schema(description = "공급받는자 업태", example = "도소매업", type = "string", required = true) val buyerIndustry: String,
     @field:Schema(description = "공급받는자 종목", example = "철물·공구", type = "string", required = true) val buyerItem: String,
     @field:Schema(description = "선택 공급받는자 이메일", example = "billing@example.com", type = "string", required = true) val buyerEmail: String?,
-    @field:ArraySchema(schema = Schema(implementation = TaxInvoiceItemResponse::class)) @field:Schema(description = "주문 품목별 공급가액 목록", example = "[]", type = "array", required = true) val items: List<TaxInvoiceItemResponse>,
+    @field:ArraySchema(
+        schema = Schema(implementation = TaxInvoiceItemResponse::class),
+    ) @field:Schema(description = "주문 품목별 공급가액 목록", example = "[]", type = "array", required = true) val items: List<TaxInvoiceItemResponse>,
     @field:Schema(description = "공급가액 합계(원)", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class) val supplyAmount: Long,
 )
 
@@ -123,5 +138,6 @@ data class TaxInvoiceItemResponse(
     @field:Schema(description = "품목명", example = "철물 상품 규격 A", type = "string", required = true) val itemName: String,
     @field:Schema(description = "주문 당시 SKU 코드", example = "SKU-001", type = "string", required = true) val skuCode: String,
     @field:Schema(description = "주문 수량", example = "2", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
-    @field:Schema(description = "공급가액(원), 주문 항목 lineAmount", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class) val supplyAmount: Long,
+    @field:Schema(description = "공급가액(원), 주문 항목 lineAmount", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class) val supplyAmount:
+    Long,
 )
