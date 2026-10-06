@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V30이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V31이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -104,6 +104,9 @@ erDiagram
         VARCHAR business_registration_number "사업자등록번호, nullable"
         VARCHAR representative_name "대표자명, nullable"
         VARCHAR business_phone "업체 연락처, nullable"
+        VARCHAR business_industry "세금계산서 업태, nullable"
+        VARCHAR business_item "세금계산서 종목, nullable"
+        VARCHAR tax_invoice_email "세금계산서 이메일, nullable"
         VARCHAR postal_code "우편번호, nullable"
         VARCHAR address1 "기본 주소, nullable"
         VARCHAR address2 "상세 주소, nullable"
@@ -324,6 +327,25 @@ erDiagram
         BIGINT subtotal_amount "상품 소계"
         BIGINT total_amount "주문 총액"
         BOOLEAN tax_invoice_requested "주문 당시 세금계산서 발행 선택"
+        VARCHAR tax_invoice_status "발행 준비 상태, nullable"
+        DATE tax_invoice_written_date "세금계산서 작성일자, nullable"
+        DATE tax_invoice_supply_date "세금계산서 제공일자, nullable"
+        VARCHAR tax_invoice_supplier_registration_number "공급자 사업자등록번호 snapshot, nullable"
+        VARCHAR tax_invoice_supplier_business_name "공급자 상호 snapshot, nullable"
+        VARCHAR tax_invoice_supplier_name "공급자 성명 snapshot, nullable"
+        VARCHAR tax_invoice_supplier_address "공급자 사업장주소 snapshot, nullable"
+        VARCHAR tax_invoice_supplier_industry "공급자 업태 snapshot, nullable"
+        VARCHAR tax_invoice_supplier_item "공급자 종목 snapshot, nullable"
+        VARCHAR tax_invoice_supplier_email "공급자 이메일 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_registration_number "공급받는자 사업자등록번호 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_business_name "공급받는자 상호 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_name "공급받는자 성명 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_postal_code "공급받는자 우편번호 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_address1 "공급받는자 사업자주소 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_address2 "공급받는자 상세주소 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_industry "공급받는자 업태 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_item "공급받는자 종목 snapshot, nullable"
+        VARCHAR tax_invoice_buyer_email "공급받는자 선택 이메일 snapshot, nullable"
         VARCHAR deposit_bank_name "입금 은행 스냅샷, nullable"
         VARCHAR deposit_account_number "입금 계좌번호 스냅샷, nullable"
         VARCHAR deposit_account_holder "입금 예금주 스냅샷, nullable"
@@ -553,6 +575,7 @@ erDiagram
 | V28 | Refresh Token에 MFA 완료 상태 추가 |
 | V29 | 기존 상위 관리자 token version 및 refresh session 무효화 |
 | V30 | 웹 로그인 시도 제한 집계 테이블 추가 |
+| V31 | 그룹 세금계산서 부가 정보 및 주문별 공급자·공급받는자 snapshot과 발행일자 컬럼 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

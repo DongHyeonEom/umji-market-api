@@ -15,6 +15,8 @@ import com.buyeong.umji.api.order.application.port.out.OrderCancellationPort
 import com.buyeong.umji.api.order.application.port.out.OrderShippingAddressPort
 import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import com.buyeong.umji.api.order.application.port.out.ShippingHolidayPort
+import com.buyeong.umji.api.order.application.port.out.TaxInvoiceBuyerProfilePort
+import com.buyeong.umji.api.order.application.port.out.TaxInvoiceSupplierPort
 import com.buyeong.umji.api.shipment.application.port.`in`.ShipmentUseCase
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -39,7 +41,9 @@ class OrderApplicationConfiguration {
         shippingAddresses: OrderShippingAddressPort,
         notifications: NotificationEventUseCase,
         bankAccounts: BankAccountInstructionsPort,
-    ) = OrderService(checkoutCart, inventory, orders, shippingAddresses, bankAccounts, notifications)
+        taxInvoiceSuppliers: TaxInvoiceSupplierPort,
+        taxInvoiceBuyers: TaxInvoiceBuyerProfilePort,
+    ) = OrderService(checkoutCart, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers)
 
     @Bean
     fun customerOrderListingUseCase(orders: OrderUseCase, shipments: ShipmentUseCase): CustomerOrderListingUseCase =

@@ -284,8 +284,11 @@ COMMIT;
 | --- | --- | --- |
 | `PUT` | `/api/operation/accounts/{id}/buyer-group` | 요청 본문의 `buyerGroupId`로 계정을 사업자 그룹에 명시적으로 연결 |
 | `PUT` | `/api/operation/buyer-groups/{groupId}/representative` | 활성 구성원 중 대표자를 지정·변경 |
+| `GET` | `/api/operation/buyer-groups/{groupId}/tax-invoice-profile` | 구매자 그룹 세금계산서 정보 조회 |
+| `PUT` | `/api/operation/buyer-groups/{groupId}/tax-invoice-profile` | 구매자 그룹 세금계산서 정보 수정 |
 
 성공 응답의 `buyerGroupId`는 새 그룹 공개 UUID.<br>
+구매자 그룹 세금계산서 정보 조회·수정은 `ADMIN_ACCOUNT_MANAGE` 권한 필요. 운영자 변경은 기존 운영 감사 로그에 대상 그룹 ID와 route만 기록하며, 사업자 정보 값은 감사 로그에 저장하지 않음.<br>
 
 ### 운영 변경 감사 로그
 

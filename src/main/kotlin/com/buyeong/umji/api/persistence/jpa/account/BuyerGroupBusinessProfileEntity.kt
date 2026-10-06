@@ -35,6 +35,15 @@ class BuyerGroupBusinessProfileEntity {
     @Column(name = "business_phone")
     var businessPhone: String? = null
 
+    @Column(name = "business_industry", length = 100)
+    var businessIndustry: String? = null
+
+    @Column(name = "business_item", length = 100)
+    var businessItem: String? = null
+
+    @Column(name = "tax_invoice_email", length = 255)
+    var taxInvoiceEmail: String? = null
+
     @Column(name = "postal_code")
     var postalCode: String? = null
 

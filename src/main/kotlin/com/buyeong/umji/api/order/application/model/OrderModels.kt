@@ -25,6 +25,7 @@ data class OrderDraft(
     val depositAccountHolder: String,
     val shippingAddress: ShippingAddressSnapshot,
     val items: List<OrderItemDraft>,
+    val taxInvoiceSnapshot: TaxInvoiceSnapshotDraft? = null,
 )
 
 data class ShippingAddressSnapshot(
@@ -43,6 +44,7 @@ data class BankAccountInstructions(
 
 data class OrderCheckoutOptions(
     val defaultTaxInvoiceRequested: Boolean,
+    val taxInvoiceAvailable: Boolean,
     val standardBankAccount: BankAccountInstructions,
     val taxInvoiceBankAccount: BankAccountInstructions,
 )
@@ -84,6 +86,7 @@ data class OrderView(
     val shippingPostalCode: String? = null,
     val shippingAddress1: String? = null,
     val shippingAddress2: String? = null,
+    val taxInvoiceSnapshot: TaxInvoiceSnapshot? = null,
 )
 
 data class OrderItemView(

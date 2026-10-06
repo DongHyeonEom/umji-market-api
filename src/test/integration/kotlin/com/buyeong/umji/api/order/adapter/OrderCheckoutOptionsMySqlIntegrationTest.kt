@@ -3,12 +3,15 @@ package com.buyeong.umji.api.order.adapter
 import com.buyeong.umji.api.account.application.model.SharedAddressCommand
 import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
 import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
+import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
 import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
 import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
 import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
 import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
+import com.buyeong.umji.api.order.application.port.out.TaxInvoiceSupplierPort
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -32,6 +35,13 @@ import java.util.UUID
         "umji.payment.bank-account.tax-invoice.bank-name=Tax Bank",
         "umji.payment.bank-account.tax-invoice.account-number=333-444",
         "umji.payment.bank-account.tax-invoice.account-holder=Tax Holder",
+        "umji.tax-invoice.supplier.business-registration-number=123-45-67890",
+        "umji.tax-invoice.supplier.business-name=Umji Market",
+        "umji.tax-invoice.supplier.representative-name=Seller",
+        "umji.tax-invoice.supplier.business-address=Seoul",
+        "umji.tax-invoice.supplier.business-industry=Wholesale",
+        "umji.tax-invoice.supplier.business-item=Tools",
+        "umji.tax-invoice.supplier.email=seller@example.com",
     ],
 )
 @ActiveProfiles("local")
@@ -45,6 +55,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     private lateinit var orders: OrderUseCase
 
     @Autowired
+    private lateinit var taxInvoiceSupplier: TaxInvoiceSupplierPort
+
+    @Autowired
     private lateinit var customerAccounts: CustomerAccountUseCase
 
     @Autowired
@@ -52,6 +65,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     @Autowired
     private lateinit var groupMembership: BuyerGroupMembershipUseCase
+
+    @Autowired
+    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileUseCase
 
     @Autowired
     private lateinit var operationAccounts: OperationAccountUseCase
@@ -80,6 +96,13 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         ).isEqualTo(1)
 
         val accountId = createAccount()
+        createBusinessGroup(accountId)
+        taxInvoiceProfiles.updateForAccount(
+            accountId,
+            BuyerGroupTaxInvoiceProfileCommand(
+                "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", null, "Retail", "Hardware", "buyer@example.com",
+            ),
+        )
         val addressId = createAddress(accountId)
         assertThat(customerAccounts.profile(accountId).id).isEqualTo(accountId)
         val categoryId = createCategory()
@@ -89,9 +112,13 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         createCartWithItem(accountId, skuId)
 
         val initialOptions = orders.checkoutOptions(accountId)
+        assertThat(taxInvoiceSupplier.supplier()).isNotNull()
+        val buyerProfile = taxInvoiceProfiles.forAccount(accountId)
+        assertThat(buyerProfile.complete).withFailMessage("Expected complete buyer profile, got $buyerProfile").isTrue()
         assertThat(initialOptions.defaultTaxInvoiceRequested).isFalse()
         assertThat(initialOptions.standardBankAccount.bankName).isEqualTo("Standard Bank")
         assertThat(initialOptions.taxInvoiceBankAccount.bankName).isEqualTo("Tax Bank")
+        assertThat(initialOptions.taxInvoiceAvailable).isTrue()
         assertThat(
             jdbc.queryForObject(
                 "SELECT default_tax_invoice_requested FROM account WHERE public_id = ?",
@@ -108,6 +135,8 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(invoiceOrder.depositAccountHolder).isEqualTo("Tax Holder")
         assertThat(invoiceOrder.shippingRecipientName).isEqualTo("Recipient")
         assertThat(invoiceOrder.shippingAddress1).isEqualTo("Seoul address")
+        assertThat(invoiceOrder.taxInvoiceSnapshot?.status).isEqualTo("WAITING_FOR_SHIPMENT")
+        assertThat(invoiceOrder.taxInvoiceSnapshot?.buyer?.businessName).isEqualTo("Group test business")
         assertPersistedOrderSnapshot(invoiceOrder.id, true, "Tax Bank", "333-444", "Tax Holder")
         customerAccounts.updateAddress(
             accountId,
@@ -324,6 +353,46 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             accountInternalId,
         )
         return requireNotNull(buyerGroups.ensureForAccount(accountId).publicId)
+    }
+
+    @Test
+    fun `buyer group tax invoice profile is shared and order snapshot becomes issuable on shipment start`() {
+        val ownerId = createAccount()
+        val groupId = createBusinessGroup(ownerId)
+        val command = BuyerGroupTaxInvoiceProfileCommand(
+            "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", "Suite 2", "Retail", "Hardware", "buyer@example.com",
+        )
+        val saved = taxInvoiceProfiles.updateForAccount(ownerId, command)
+        assertThat(saved.complete).isTrue()
+        assertThat(taxInvoiceProfiles.forGroup(groupId).email).isEqualTo("buyer@example.com")
+
+        val addressId = createAddress(ownerId)
+        val categoryId = createCategory()
+        val productId = createProduct(categoryId)
+        val skuId = createSku(productId)
+        createStock(skuId)
+        createCartWithItem(ownerId, skuId)
+        val order = orders.create(ownerId, addressId, true, false)
+        assertThat(order.taxInvoiceSnapshot?.status).isEqualTo("WAITING_FOR_SHIPMENT")
+        assertThat(order.taxInvoiceSnapshot?.writtenDate).isNull()
+        assertThat(order.taxInvoiceSnapshot?.supplyAmount).isEqualTo(order.items.sumOf { it.lineAmount })
+
+        val operatorId = createAccount()
+        shipments.prepareOrder(order.id)
+        shipments.registerTracking(order.id, "DAESIN", "INVOICE-${UUID.randomUUID()}", operatorId)
+        val ready = orders.detail(ownerId, order.id).taxInvoiceSnapshot
+        assertThat(ready?.status).isEqualTo("READY_FOR_ISSUANCE")
+        assertThat(ready?.writtenDate).isEqualTo(order.orderedAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate())
+        assertThat(ready?.supplyDate).isEqualTo(ready?.writtenDate)
+
+        jdbc.update("UPDATE buyer_group_business_profile SET business_name = 'Changed later' WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)", groupId.toBytes())
+        assertThat(orders.detail(ownerId, order.id).taxInvoiceSnapshot?.buyer?.businessName).isEqualTo("Group test business")
+
+        val memberId = createAccount()
+        buyerGroups.ensureForAccount(memberId)
+        buyerGroups.assignAccountToBusinessGroup(memberId, groupId)
+        assertThatThrownBy { taxInvoiceProfiles.updateForAccount(memberId, command) }
+            .isInstanceOf(com.buyeong.umji.api.exception.ForbiddenOperationException::class.java)
     }
 
     private fun createAccount(): UUID {

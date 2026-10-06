@@ -14,6 +14,7 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import java.time.Instant
+import java.time.LocalDate
 
 @Entity
 @Table(name = "purchase_order")
@@ -40,6 +41,63 @@ class PurchaseOrderEntity : DomainPublicEntity() {
 
     @Column(name = "tax_invoice_requested", nullable = false)
     var taxInvoiceRequested: Boolean = false
+
+    @Column(name = "tax_invoice_status", length = 30)
+    var taxInvoiceStatus: String? = null
+
+    @Column(name = "tax_invoice_written_date")
+    var taxInvoiceWrittenDate: LocalDate? = null
+
+    @Column(name = "tax_invoice_supply_date")
+    var taxInvoiceSupplyDate: LocalDate? = null
+
+    @Column(name = "tax_invoice_supplier_registration_number", length = 30)
+    var taxInvoiceSupplierRegistrationNumber: String? = null
+
+    @Column(name = "tax_invoice_supplier_business_name", length = 200)
+    var taxInvoiceSupplierBusinessName: String? = null
+
+    @Column(name = "tax_invoice_supplier_name", length = 100)
+    var taxInvoiceSupplierName: String? = null
+
+    @Column(name = "tax_invoice_supplier_address", length = 500)
+    var taxInvoiceSupplierAddress: String? = null
+
+    @Column(name = "tax_invoice_supplier_industry", length = 100)
+    var taxInvoiceSupplierIndustry: String? = null
+
+    @Column(name = "tax_invoice_supplier_item", length = 100)
+    var taxInvoiceSupplierItem: String? = null
+
+    @Column(name = "tax_invoice_supplier_email", length = 255)
+    var taxInvoiceSupplierEmail: String? = null
+
+    @Column(name = "tax_invoice_buyer_registration_number", length = 30)
+    var taxInvoiceBuyerRegistrationNumber: String? = null
+
+    @Column(name = "tax_invoice_buyer_business_name", length = 200)
+    var taxInvoiceBuyerBusinessName: String? = null
+
+    @Column(name = "tax_invoice_buyer_name", length = 100)
+    var taxInvoiceBuyerName: String? = null
+
+    @Column(name = "tax_invoice_buyer_postal_code", length = 20)
+    var taxInvoiceBuyerPostalCode: String? = null
+
+    @Column(name = "tax_invoice_buyer_address1", length = 255)
+    var taxInvoiceBuyerAddress1: String? = null
+
+    @Column(name = "tax_invoice_buyer_address2", length = 255)
+    var taxInvoiceBuyerAddress2: String? = null
+
+    @Column(name = "tax_invoice_buyer_industry", length = 100)
+    var taxInvoiceBuyerIndustry: String? = null
+
+    @Column(name = "tax_invoice_buyer_item", length = 100)
+    var taxInvoiceBuyerItem: String? = null
+
+    @Column(name = "tax_invoice_buyer_email", length = 255)
+    var taxInvoiceBuyerEmail: String? = null
 
     @Column(name = "deposit_bank_name")
     var depositBankName: String? = null
