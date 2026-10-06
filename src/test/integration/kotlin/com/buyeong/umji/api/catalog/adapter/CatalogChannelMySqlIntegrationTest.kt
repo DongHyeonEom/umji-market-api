@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.catalog.adapter
 
-import com.buyeong.umji.api.catalog.application.port.`in`.CatalogUseCase
+import com.buyeong.umji.api.catalog.application.CatalogService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,7 +21,7 @@ class CatalogChannelMySqlIntegrationTest {
     private lateinit var jdbc: JdbcTemplate
 
     @Autowired
-    private lateinit var catalog: CatalogUseCase
+    private lateinit var catalog: CatalogService
 
     @Test
     fun `categories listings and offer prices are isolated by channel while sku is shared`() {

@@ -1,4 +1,4 @@
-package com.buyeong.umji.api.operation.catalog.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.catalog
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.catalog.application.model.BrandCommand
@@ -21,7 +21,7 @@ import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SkuView
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView
-import com.buyeong.umji.api.operation.catalog.application.port.out.OperationCatalogPort
+
 import com.buyeong.umji.api.persistence.jpa.catalog.BrandEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CategoryEntity
@@ -38,31 +38,31 @@ import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesChannelRepos
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
-@Component
+@Service
 @Transactional
-class JpaOperationCatalogAdapter(
+class OperationCatalogJpaEntityService(
     private val catalog: CatalogJpaEntityService,
     private val channels: SalesChannelRepository,
     private val listings: ChannelProductListingRepository,
     private val offers: SalesOfferRepository,
-) : OperationCatalogPort {
+) {
     @Transactional(readOnly = true)
-    override fun categories(channelCode: String) = catalog.categories(channelCode).map {
+    fun categories(channelCode: String) = catalog.categories(channelCode).map {
         CategoryView(requireNotNull(it.publicId), it.parent?.publicId, it.name, it.path, it.depth, it.displayOrder, it.displayStatus)
     }
 
     @Transactional(readOnly = true)
-    override fun brands(
+    fun brands(
         page: Int,
         size: Int,
     ) = catalog.brands(PageRequest.of(page, size, Sort.by("name"))).content.map { BrandView(requireNotNull(it.publicId), it.name, it.displayStatus) }
 
     @Transactional(readOnly = true)
-    override fun products(
+    fun products(
         page: Int,
         size: Int,
     ): ProductPageView {
@@ -71,9 +71,9 @@ class JpaOperationCatalogAdapter(
     }
 
     @Transactional(readOnly = true)
-    override fun product(id: UUID) = catalog.product(id)?.toView(true)
+    fun product(id: UUID) = catalog.product(id)?.toView(true)
 
-    override fun createCategory(command: CategoryCommand): CatalogResource {
+    fun createCategory(command: CategoryCommand): CatalogResource {
         val parent = command.parentId?.let(::category)
         val e = CategoryEntity().apply {
             name = command.name
@@ -88,7 +88,7 @@ class JpaOperationCatalogAdapter(
         return CatalogResource(requireNotNull(catalog.save(e).publicId))
     }
 
-    override fun createChannelCategory(command: ChannelCategoryCommand): CatalogResource {
+    fun createChannelCategory(command: ChannelCategoryCommand): CatalogResource {
         val salesChannel = channel(command.channelCode)
         val parent = command.parentId?.let(::category)
         require(parent == null || parent.salesChannel.id == salesChannel.id) { "상위 카테고리는 같은 판매 채널에 속해야 합니다." }
@@ -104,7 +104,7 @@ class JpaOperationCatalogAdapter(
         return CatalogResource(requireNotNull(catalog.save(entity).publicId))
     }
 
-    override fun updateChannelListing(command: ChannelListingCommand): CatalogResource? {
+    fun updateChannelListing(command: ChannelListingCommand): CatalogResource? {
         val channel = channel(command.channelCode)
         val product = catalog.product(command.productId) ?: return null
         val category = category(command.categoryId)
@@ -120,7 +120,7 @@ class JpaOperationCatalogAdapter(
         return CatalogResource(requireNotNull(listings.save(listing).publicId))
     }
 
-    override fun updateSalesOffer(command: SalesOfferCommand): SalesOfferView? {
+    fun updateSalesOffer(command: SalesOfferCommand): SalesOfferView? {
         val channel = channel(command.channelCode)
         val sku = catalog.sku(command.skuId) ?: return null
         val offer = offers.findBySalesChannel_IdAndProductSku_Id(requireNotNull(channel.id), requireNotNull(sku.id))
@@ -133,7 +133,7 @@ class JpaOperationCatalogAdapter(
         offer.salesStatus = command.salesStatus
         return offers.save(offer).toView()
     }
-    override fun createBrand(
+    fun createBrand(
         command: BrandCommand,
     ): CatalogResource {
         require(!catalog.existsBrandName(command.name)) { "이미 존재하는 브랜드입니다." }
@@ -149,7 +149,7 @@ class JpaOperationCatalogAdapter(
             ),
         )
     }
-    override fun createProduct(
+    fun createProduct(
         command: ProductCommand,
     ): CatalogResource {
         val product = buildProduct(command)
@@ -163,31 +163,31 @@ class JpaOperationCatalogAdapter(
         }
         return CatalogResource(requireNotNull(saved.publicId))
     }
-    override fun updateProduct(id: UUID, command: ProductCommand): CatalogResource? {
+    fun updateProduct(id: UUID, command: ProductCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
         applyProduct(p, command)
         wholesaleListing(p, p.category, p.displayStatus, p.displayOrder)
         return CatalogResource(requireNotNull(p.publicId))
     }
-    override fun addImage(id: UUID, command: ImageCommand): CatalogResource? {
+    fun addImage(id: UUID, command: ImageCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
         return CatalogResource(requireNotNull(catalog.save(image(p, command)).publicId))
     }
-    override fun addOption(id: UUID, command: OptionCommand): CatalogResource? {
+    fun addOption(id: UUID, command: OptionCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
         return CatalogResource(requireNotNull(saveOption(p, command).publicId))
     }
-    override fun addSku(id: UUID, command: SkuCommand): CatalogResource? {
+    fun addSku(id: UUID, command: SkuCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
         val savedSku = catalog.save(sku(p, command))
         wholesaleOffer(savedSku, savedSku.salePrice, savedSku.listPrice, savedSku.salesStatus)
         return CatalogResource(requireNotNull(savedSku.publicId))
     }
-    override fun updateStatus(id: UUID, command: ProductStatusCommand): CatalogResource? {
+    fun updateStatus(id: UUID, command: ProductStatusCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
         p.displayStatus = command.displayStatus

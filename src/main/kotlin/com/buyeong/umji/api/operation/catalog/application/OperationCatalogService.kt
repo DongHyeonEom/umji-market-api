@@ -12,63 +12,70 @@ import com.buyeong.umji.api.operation.catalog.application.model.ProductCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductStatusCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
-import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
-import com.buyeong.umji.api.operation.catalog.application.port.out.OperationCatalogPort
+import com.buyeong.umji.api.persistence.jpa.catalog.OperationCatalogJpaEntityService
 import java.util.UUID
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
-class OperationCatalogService(private val catalog: OperationCatalogPort) : OperationCatalogUseCase {
-    override fun categories(channelCode: String) = catalog.categories(channel(channelCode))
-    override fun brands(page: Int, size: Int) = catalog.brands(page, size)
-    override fun products(page: Int, size: Int) = catalog.products(page, size)
-    override fun product(id: UUID) = catalog.product(id) ?: throw ItemNotFoundException("상품을 찾을 수 없습니다.")
-    override fun createCategory(
+@Service
+@Transactional
+class OperationCatalogService(private val catalog: OperationCatalogJpaEntityService) {
+    @Transactional(readOnly = true)
+    fun categories(channelCode: String) = catalog.categories(channel(channelCode))
+    @Transactional(readOnly = true)
+    fun brands(page: Int, size: Int) = catalog.brands(page, size)
+    @Transactional(readOnly = true)
+    fun products(page: Int, size: Int) = catalog.products(page, size)
+    @Transactional(readOnly = true)
+    fun product(id: UUID) = catalog.product(id) ?: throw ItemNotFoundException("상품을 찾을 수 없습니다.")
+    fun createCategory(
         command: CategoryCommand,
     ): CatalogResource {
         validateDisplay(command.displayStatus)
         return catalog.createCategory(command.copy(name = command.name.trim()))
     }
-    override fun createChannelCategory(command: ChannelCategoryCommand): CatalogResource {
+    fun createChannelCategory(command: ChannelCategoryCommand): CatalogResource {
         channel(command.channelCode)
         validateDisplay(command.displayStatus)
         return catalog.createChannelCategory(command.copy(channelCode = channel(command.channelCode), name = command.name.trim()))
     }
-    override fun updateChannelListing(command: ChannelListingCommand): CatalogResource {
+    fun updateChannelListing(command: ChannelListingCommand): CatalogResource {
         channel(command.channelCode)
         validateDisplay(command.displayStatus)
         return catalog.updateChannelListing(command.copy(channelCode = channel(command.channelCode))) ?: missing()
     }
-    override fun updateSalesOffer(command: SalesOfferCommand): com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView {
+    fun updateSalesOffer(command: SalesOfferCommand): com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView {
         val channelCode = channel(command.channelCode)
         require(command.salePrice >= 0) { "판매 가격은 0원 이상이어야 합니다." }
         require(command.listPrice == null || command.listPrice >= 0) { "정가는 0원 이상이어야 합니다." }
         validateSales(command.salesStatus)
         return catalog.updateSalesOffer(command.copy(channelCode = channelCode)) ?: missing()
     }
-    override fun createBrand(
+    fun createBrand(
         command: BrandCommand,
     ): CatalogResource {
         validateDisplay(command.displayStatus)
         return catalog.createBrand(command.copy(name = command.name.trim()))
     }
-    override fun createProduct(command: ProductCommand): CatalogResource {
+    fun createProduct(command: ProductCommand): CatalogResource {
         validateProduct(command)
         return catalog.createProduct(command.normalized())
     }
-    override fun updateProduct(id: UUID, command: ProductCommand): CatalogResource {
+    fun updateProduct(id: UUID, command: ProductCommand): CatalogResource {
         validateProduct(command)
         return catalog.updateProduct(id, command.normalized()) ?: missing()
     }
-    override fun addImage(
+    fun addImage(
         id: UUID,
         command: ImageCommand,
     ) = catalog.addImage(id, command.copy(storageKey = command.storageKey.trim(), altText = command.altText.clean())) ?: missing()
-    override fun addOption(id: UUID, command: OptionCommand) =
+    fun addOption(id: UUID, command: OptionCommand) =
         catalog.addOption(id, command.copy(name = command.name.trim(), values = command.values.map { it.copy(value = it.value.trim()) })) ?: missing()
-    override fun addSku(id: UUID, command: SkuCommand): CatalogResource {
+    fun addSku(id: UUID, command: SkuCommand): CatalogResource {
         validateSales(command.salesStatus)
         return catalog.addSku(id, command.normalized()) ?: missing()
     }
-    override fun updateStatus(
+    fun updateStatus(
         id: UUID,
         command: ProductStatusCommand,
     ): CatalogResource {

@@ -29,7 +29,7 @@ flowchart TD
     COMMON --> RESPONSE
 ```
 
-- 공개 조회 조건과 응답 구성은 catalog query adapter가 적용함.<br>
+- 공개 조회 조건과 응답 구성은 `CatalogService`가 적용하고 `CatalogJpaEntityService`가 조회함.<br>
 - 관리자 카탈로그 변경 흐름은 [operation.md](operation.md)의 관리자 카탈로그 흐름을 기준으로 함.<br>
 
 - `GET /api/categories?channel=WHOLESALE|RETAIL`
@@ -61,7 +61,7 @@ flowchart TD
 운영자 등록 상품·SKU는 공용 원본. 기존 상품 생성 API는 기존 운영 흐름 호환을 위해 `WHOLESALE` listing 및 SKU별 오퍼도 함께 생성.<br>
 채널별 listing과 오퍼 API는 카테고리·노출·순서·가격·판매 상태를 분리 변경. 오퍼 상태 변경은 공용 SKU 상태를 변경하지 않음.<br>
 별도 SKU 추가 시 옵션값은 해당 상품에 속한 값이어야 함. 상품의 실제 재고는 SKU별 단일 원장을 공유.<br>
-JPA Entity는 catalog persistence adapter 밖으로 전달하지 않음.<br>
+HTTP 응답은 response DTO로 변환하며 JPA Entity를 외부 계약에 직접 노출하지 않음.<br>
 
 ## 박스 단위 오퍼 후속 범위
 
