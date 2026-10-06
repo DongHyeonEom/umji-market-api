@@ -74,6 +74,7 @@ flowchart TD
 배송지 목록·수정 범위는 인증 계정이 속한 활성 구매자 그룹으로 제한.<br>
 주문 생성은 `shippingAddressId`를 필수 입력으로 받고 주문 요청의 구매자 그룹 배송지인지 확인.<br>
 세금계산서 정보 조회·수정은 인증 계정의 현재 활성 그룹을 사용하며 그룹 ID를 사용자 요청에서 받지 않음. 조회는 활성 구성원, 수정은 대표자만 허용.<br>
+`GET /api/account/groups/current/tax-invoice-profile` 응답은 `businessRegistrationVerificationStatus`, `businessRegistrationVerifiedAt`, `businessRegistrationConfirmedAt`, `complete`를 포함. 상태가 `ACTIVE` 또는 `TEMPORARILY_CLOSED`이면 화면에서 기존 사업자 정보를 입력·확인 단계로 노출. `complete`는 필수 정보·상태 확인·대표자 확인이 모두 완료된 경우에만 참.<br>
 운영자 수정 endpoint는 [operation.md](operation.md)의 `ADMIN_ACCOUNT_MANAGE` 권한을 요구.<br>
 
 운영자 계정 생성·동의·프로필·승인 및 role 변경 흐름은 [operation.md](operation.md)를 기준으로 함.<br>
@@ -122,7 +123,27 @@ flowchart TD
 사업자등록번호·상호·대표자·사업자등록 주소·업태·종목은 `buyer_group_business_profile`에서 관리. 그룹 공용 배송지는 별도 `buyer_group_address`에 저장하며 사업자등록 주소에서 자동 생성하지 않음.<br>
 사용자가 최초 사업자 그룹을 만드는 경우 사업자등록번호를 국세청 사업자등록 상태조회 API로 확인. 폐업 상태는 거부하고 계속사업자·휴업자는 허용. 상호·대표자·주소·업태·종목은 사용자가 입력·확인.<br>
 상태조회는 국세청 원천 정보에서 30분 간격으로 갱신되며 신규 개업 정보는 반영에 1~2일이 걸릴 수 있음. API 개요는 [공공데이터포털 국세청 사업자등록정보 상태조회](https://www.data.go.kr/data/15081808/openapi.do)를 참고.<br>
-운영자가 그룹 초기값으로 사업자 프로필을 입력한 경우 사용자 그룹 생성 검증은 다시 요구하지 않음. 활성 그룹에 소속된 사용자에게도 유형 선택·그룹 생성 흐름을 다시 노출하지 않고 기존 초대·가입 요청 처리를 유지.<br>
+운영자가 그룹 초기값으로 사업자 프로필을 입력한 경우 사용자 그룹 생성 검증은 다시 요구하지 않음. 사업자번호 상태 확인을 백그라운드에서 진행하며 성공 후에만 대표자가 사전 입력 정보를 확인·완성. 폐업 결과는 발행 불가 상태로 노출. 활성 그룹에 소속된 사용자에게도 유형 선택·그룹 생성 흐름을 다시 노출하지 않고 기존 초대·가입 요청 처리를 유지.<br>
+
+관리자 사전등록 사업자의 상태 확인 및 대표자 확인 흐름.<br>
+
+```mermaid
+flowchart TD
+    PRESET[운영자 그룹·사업자번호 등록] --> PENDING[상태조회 PENDING 저장]
+    PENDING --> WORKER[백그라운드 국세청 API 조회]
+    ERROR --> WORKER
+    UNKNOWN --> WORKER
+    WORKER --> RESULT{조회 결과}
+    RESULT -- 계속사업자 --> ACTIVE[ACTIVE 저장]
+    RESULT -- 휴업자 --> TEMP[TEMPORARILY_CLOSED 저장]
+    RESULT -- 폐업 --> CLOSED[CLOSED 저장·발행 차단]
+    RESULT -- 호출 오류 --> ERROR[ERROR 저장·발행 차단 후 재시도 대기]
+    RESULT -- 미확인 --> UNKNOWN[UNKNOWN 저장·발행 차단]
+    ACTIVE --> REVIEW[대표자에게 사전 정보 제공]
+    TEMP --> REVIEW
+    REVIEW --> CONFIRM[대표자가 필수 정보 입력·확인]
+    CONFIRM --> COMPLETE[확인 시각 저장·발행 가능]
+```
 
 ```mermaid
 flowchart TD

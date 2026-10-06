@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V32으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V34으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -56,6 +56,8 @@
 | V30 | 웹 로그인 실패 횟수 제한용 전화번호·원격 주소 hash와 15분 window 저장 |
 | V31 | 그룹 세금계산서 업태·종목·이메일, 주문별 공급자·공급받는자 snapshot 및 송장 등록 후 발행 준비 일자 추가 |
 | V32 | 사용자 신규 사업자 그룹 등록 시 국세청 상태 확인 완료 시각 저장 |
+| V33 | 운영자 사전등록 사업자 그룹 상태조회 및 대표자 확인 상태 저장 |
+| V34 | 기존 사업자 상태확인 시각을 대표자 정보 확인 시각으로 backfill |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 

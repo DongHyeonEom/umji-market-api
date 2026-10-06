@@ -112,6 +112,8 @@ class JpaBuyerGroupMembershipAdapter(
                     taxInvoiceEmail = business.email?.trim()?.ifBlank { null }
                     status = COMPLETED
                     businessRegistrationVerifiedAt = Instant.now()
+                    businessRegistrationVerificationStatus = "ACTIVE"
+                    businessRegistrationConfirmedAt = Instant.now()
                 },
             )
         }
