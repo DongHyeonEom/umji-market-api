@@ -3,7 +3,7 @@ package com.buyeong.umji.api.operation.audit.adapter.`in`.web
 import com.buyeong.umji.api.constant.Constant
 import com.buyeong.umji.api.inventory.model.InventoryStockResponse
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditEvent
-import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
+import com.buyeong.umji.api.operation.audit.application.OperationAuditService
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
 import org.aspectj.lang.ProceedingJoinPoint
@@ -25,7 +25,7 @@ import java.util.UUID
 @Aspect
 @Component
 class OperationAuditAspect(
-    private val audit: OperationAuditUseCase,
+    private val audit: OperationAuditService,
     transactionManager: PlatformTransactionManager,
 ) {
     private val transaction = TransactionTemplate(transactionManager).apply {

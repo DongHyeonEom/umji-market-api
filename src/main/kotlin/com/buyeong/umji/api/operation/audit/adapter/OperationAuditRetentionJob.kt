@@ -1,13 +1,13 @@
 package com.buyeong.umji.api.operation.audit.adapter
 
-import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
+import com.buyeong.umji.api.operation.audit.application.OperationAuditService
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
 
 @Component
-class OperationAuditRetentionJob(private val audit: OperationAuditUseCase) {
+class OperationAuditRetentionJob(private val audit: OperationAuditService) {
     @Scheduled(cron = "0 15 3 * * *", zone = "UTC")
     fun purgeExpired() {
         val cutoff = Instant.now().minus(RETENTION)

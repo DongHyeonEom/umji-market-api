@@ -2,7 +2,7 @@ package com.buyeong.umji.api.operation.audit.adapter
 
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditEvent
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditQuery
-import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
+import com.buyeong.umji.api.operation.audit.application.OperationAuditService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -24,7 +24,7 @@ class OperationAuditMySqlIntegrationTest {
     private lateinit var jdbc: JdbcTemplate
 
     @Autowired
-    private lateinit var audit: OperationAuditUseCase
+    private lateinit var audit: OperationAuditService
 
     @Test
     fun `flyway creates audit schema and mysql supports record search and retention deletion`() {

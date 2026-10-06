@@ -1,4 +1,4 @@
-package com.buyeong.umji.api.operation.account.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.account
 
 import com.buyeong.umji.api.operation.account.application.model.AccountData
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
@@ -6,7 +6,7 @@ import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.application.model.ConsentData
 import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
-import com.buyeong.umji.api.operation.account.application.port.out.OperationAccountPort
+
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BusinessProfileEntity
@@ -15,19 +15,19 @@ import com.buyeong.umji.api.persistence.jpa.account.ConsentHistoryEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-@Component
+@Service
 @Transactional
-class JpaOperationAccountAdapter(
+class OperationAccountJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val jdbc: JdbcTemplate,
     private val buyerGroups: BuyerGroupJpaEntityService,
-) : OperationAccountPort {
-    override fun create(command: NewAccount): AccountData {
+) {
+    fun create(command: NewAccount): AccountData {
         val entity = accounts.save(
             AccountEntity().apply {
                 name = command.name
@@ -43,15 +43,15 @@ class JpaOperationAccountAdapter(
     }
 
     @Transactional(readOnly = true)
-    override fun find(id: UUID): AccountData? = accounts.findByPublicId(id)?.let { data(it, true) }
+    fun find(id: UUID): AccountData? = accounts.findByPublicId(id)?.let { data(it, true) }
 
     @Transactional(readOnly = true)
-    override fun list(status: String?, page: Int, size: Int): List<AccountData> {
+    fun list(status: String?, page: Int, size: Int): List<AccountData> {
         val pageable = PageRequest.of(page, size, Sort.by("id").descending())
         return (if (status.isNullOrBlank()) accounts.findAll(pageable) else accounts.findAllByStatus(status, pageable)).content.map(::data)
     }
 
-    override fun updateStatus(id: UUID, status: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+    fun updateStatus(id: UUID, status: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
         if (entity.status != status) {
             entity.status = status
             entity.tokenVersion++
@@ -59,20 +59,20 @@ class JpaOperationAccountAdapter(
         data(entity)
     }
 
-    override fun updateProfile(id: UUID, profile: BusinessProfileData, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+    fun updateProfile(id: UUID, profile: BusinessProfileData, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
         saveProfile(entity, profile)
         entity.status = nextStatus
         data(entity)
     }
 
-    override fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+    fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
         buyerGroups.assignAccountToBusinessGroup(id, buyerGroupId)
         data(entity, true)
     }
 
-    override fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = buyerGroups.setRepresentative(groupId, accountId)
+    fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = buyerGroups.setRepresentative(groupId, accountId)
 
-    override fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+    fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
         val processor = accounts.findByPublicId(consent.processedBy)
             ?: throw IllegalStateException("동의 처리자 계정을 찾을 수 없습니다.")
         accounts.saveConsent(
@@ -91,26 +91,26 @@ class JpaOperationAccountAdapter(
     }
 
     @Transactional(readOnly = true)
-    override fun hasConsent(id: UUID, consentType: String): Boolean = accounts.findByPublicId(id)?.id?.let { accounts.hasConsent(it, consentType) } ?: false
+    fun hasConsent(id: UUID, consentType: String): Boolean = accounts.findByPublicId(id)?.id?.let { accounts.hasConsent(it, consentType) } ?: false
 
-    override fun approve(id: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+    fun approve(id: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
         entity.status = "ACTIVE"
         entity.tokenVersion++
         data(entity, true)
     }
 
     @Transactional(readOnly = true)
-    override fun managedRoles(): List<ManagedRole> = jdbc.query(
+    fun managedRoles(): List<ManagedRole> = jdbc.query(
         "SELECT code, name FROM role WHERE code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SHIPPING_MANAGER') ORDER BY code",
     ) { result, _ -> ManagedRole(result.getString("code"), result.getString("name")) }
 
     @Transactional(readOnly = true)
-    override fun roles(id: UUID): List<ManagedRole>? {
+    fun roles(id: UUID): List<ManagedRole>? {
         val accountId = internalAccountId(id) ?: return null
         return rolesFor(accountId)
     }
 
-    override fun grantRole(id: UUID, roleCode: String, grantedBy: UUID): List<ManagedRole>? {
+    fun grantRole(id: UUID, roleCode: String, grantedBy: UUID): List<ManagedRole>? {
         val targetId = internalAccountId(id) ?: return null
         val grantorId = internalAccountId(grantedBy) ?: throw IllegalStateException("권한 부여자를 찾을 수 없습니다.")
         val changed = jdbc.update(
@@ -125,7 +125,7 @@ class JpaOperationAccountAdapter(
         return rolesFor(targetId)
     }
 
-    override fun revokeRole(id: UUID, roleCode: String): List<ManagedRole>? {
+    fun revokeRole(id: UUID, roleCode: String): List<ManagedRole>? {
         val targetId = internalAccountId(id) ?: return null
         val changed = jdbc.update(
             """DELETE ar FROM account_role ar JOIN role r ON r.id = ar.role_id

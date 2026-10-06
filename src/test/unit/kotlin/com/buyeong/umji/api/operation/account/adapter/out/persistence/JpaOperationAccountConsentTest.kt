@@ -5,6 +5,7 @@ import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.ConsentHistoryEntity
+import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -17,7 +18,7 @@ import java.util.UUID
 
 class JpaOperationAccountConsentTest {
     private val accounts = mockk<AccountJpaEntityService>(relaxed = true)
-    private val adapter = JpaOperationAccountAdapter(accounts, mockk<JdbcTemplate>(relaxed = true), mockk<BuyerGroupJpaEntityService>(relaxed = true))
+    private val adapter = OperationAccountJpaEntityService(accounts, mockk<JdbcTemplate>(relaxed = true), mockk<BuyerGroupJpaEntityService>(relaxed = true))
 
     @Test
     fun `written consent stores the processing administrator and returns it in account data`() {

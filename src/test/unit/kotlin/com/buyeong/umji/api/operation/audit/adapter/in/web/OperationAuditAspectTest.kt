@@ -3,7 +3,7 @@ package com.buyeong.umji.api.operation.audit.adapter.`in`.web
 import com.buyeong.umji.api.constant.Constant
 import com.buyeong.umji.api.inventory.model.InventoryStockResponse
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditEvent
-import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
+import com.buyeong.umji.api.operation.audit.application.OperationAuditService
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
 import io.kotest.assertions.throwables.shouldThrow
@@ -32,7 +32,7 @@ import java.time.Instant
 import java.util.UUID
 
 class OperationAuditAspectTest : DescribeSpec({
-    val audit = mockk<OperationAuditUseCase>(relaxed = true)
+    val audit = mockk<OperationAuditService>(relaxed = true)
     val transactions = mockk<PlatformTransactionManager>(relaxed = true)
     val aspect = OperationAuditAspect(audit, transactions)
     val actorId = UUID.randomUUID()

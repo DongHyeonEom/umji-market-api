@@ -2,7 +2,7 @@ package com.buyeong.umji.api.operation.audit.adapter.`in`.web
 
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditEntry
 import com.buyeong.umji.api.operation.audit.application.model.OperationAuditQuery
-import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
+import com.buyeong.umji.api.operation.audit.application.OperationAuditService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Schema
@@ -23,7 +23,7 @@ import java.util.UUID
 @RequestMapping("/api/operation/audit-logs")
 @Validated
 @Tag(name = "운영 감사 로그", description = "운영자 변경 이력 검색 API")
-class OperationAuditController(private val audit: OperationAuditUseCase) {
+class OperationAuditController(private val audit: OperationAuditService) {
     @Operation(summary = "운영 감사 로그 검색", description = "운영 감사 로그 검색 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_AUDIT_READ')")

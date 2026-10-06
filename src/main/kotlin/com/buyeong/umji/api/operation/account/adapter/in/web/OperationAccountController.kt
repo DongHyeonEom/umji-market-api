@@ -7,7 +7,7 @@ import com.buyeong.umji.api.operation.account.application.model.BusinessProfileD
 import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
-import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
+import com.buyeong.umji.api.operation.account.application.OperationAccountService
 import com.buyeong.umji.api.operation.model.AssignBuyerGroupRequest
 import com.buyeong.umji.api.operation.model.BusinessProfileRequest
 import com.buyeong.umji.api.operation.model.CreateConsentRequest
@@ -45,7 +45,7 @@ import java.util.UUID
 @Validated
 @Tag(name = "운영 계정 관리", description = "운영자 계정·상태·역할·그룹·동의 관리 API")
 class OperationAccountController(
-    private val useCase: OperationAccountUseCase,
+    private val useCase: OperationAccountService,
     private val currentAccounts: CurrentAccountPort,
     private val webAuthentication: WebAuthenticationService,
 ) {
