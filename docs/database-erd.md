@@ -1,12 +1,13 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V36가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V37이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
 ## 표기
 
-- `PK`: 기본 키, `FK`: 외래 키, `UK`: unique 제약이 있는 컬럼임.<br>
+- 다이어그램의 테이블명 뒤 `·` 다음에는 테이블의 저장 목적을 표시함.<br>
+  `PK`: 기본 키, `FK`: 외래 키, `UK`: unique 제약이 있는 컬럼임.<br>
   `BINARY` 공개 ID는 UUID를 16바이트로 저장함.<br>
 - 관계도 각 필드 뒤의 따옴표 안 문구가 해당 필드의 설명임.<br>
   타입은 읽기 편하게 기본 타입명으로 표시하며, 길이·default·check 제약은 migration 파일을 기준으로 확인함.<br>
@@ -21,7 +22,7 @@
 
 ```mermaid
 erDiagram
-    ACCOUNT {
+    ACCOUNT["ACCOUNT · 계정·인증 기준 정보"] {
         BIGINT id PK "내부 계정 ID"
         BINARY public_id UK "API 공개 UUID"
         VARCHAR login_id "기존 로그인 ID, nullable"
@@ -39,7 +40,7 @@ erDiagram
         VARBINARY admin_totp_secret_encrypted "AES-GCM 암호화 TOTP secret, nullable"
         BOOLEAN admin_totp_enabled "관리자 TOTP 활성 여부"
     }
-    ROLE {
+    ROLE["ROLE · 서버 권한 역할"] {
         BIGINT id PK "내부 역할 ID"
         VARCHAR code UK "역할 코드"
         VARCHAR name "표시 이름"
@@ -47,24 +48,24 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PERMISSION {
+    PERMISSION["PERMISSION · 세부 API 권한"] {
         BIGINT id PK "내부 권한 ID"
         VARCHAR code UK "권한 코드"
         VARCHAR name "표시 이름"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    ACCOUNT_ROLE {
+    ACCOUNT_ROLE["ACCOUNT_ROLE · 계정별 역할 부여"] {
         BIGINT account_id PK,FK "계정 ID"
         BIGINT role_id PK,FK "역할 ID"
         DATETIME granted_at "역할 부여 시각"
         BIGINT granted_by "부여한 계정 ID, nullable, FK 제약 없음"
     }
-    ROLE_PERMISSION {
+    ROLE_PERMISSION["ROLE_PERMISSION · 역할별 권한 구성"] {
         BIGINT role_id PK,FK "역할 ID"
         BIGINT permission_id PK,FK "권한 ID"
     }
-    REFRESH_TOKEN {
+    REFRESH_TOKEN["REFRESH_TOKEN · 기기별 refresh token 세션"] {
         BIGINT id PK "내부 토큰 ID"
         BIGINT account_id FK "토큰 소유 계정 ID"
         BINARY token_hash UK "Refresh Token SHA-256 해시"
@@ -75,7 +76,7 @@ erDiagram
         DATETIME last_used_at "최근 사용 시각, nullable"
         BOOLEAN mfa_verified "세션의 MFA 완료 상태"
     }
-    WEB_LOGIN_ATTEMPT {
+    WEB_LOGIN_ATTEMPT["WEB_LOGIN_ATTEMPT · 웹 로그인 실패 횟수 제한 집계"] {
         BIGINT id PK "내부 시도 집계 ID"
         BINARY phone_hash "전화번호 SHA-256 hash"
         BINARY remote_address_hash "원격 주소 SHA-256 hash"
@@ -83,7 +84,7 @@ erDiagram
         INT failure_count "로그인 실패 횟수"
         DATETIME updated_at "마지막 수정 시각"
     }
-    BUYER_GROUP_ADDRESS {
+    BUYER_GROUP_ADDRESS["BUYER_GROUP_ADDRESS · 구매자 그룹 공용 배송지"] {
         BIGINT id PK "배송지 내부 ID"
         BINARY public_id UK "배송지 공개 UUID"
         BIGINT buyer_group_id FK "소유 구매자 그룹 ID"
@@ -97,7 +98,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUSINESS_PROFILE {
+    BUSINESS_PROFILE["BUSINESS_PROFILE · 사업자 등록·상태 확인 정보"] {
         BIGINT id PK "업체 프로필 내부 ID"
         BIGINT account_id FK,UK "소유 계정 ID, 계정당 하나"
         VARCHAR business_name "업체명"
@@ -111,7 +112,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUYER_GROUP {
+    BUYER_GROUP["BUYER_GROUP · 구매자 그룹 및 대표자"] {
         BIGINT id PK "구매자 그룹 내부 ID"
         BINARY public_id UK "API 공개 UUID"
         VARCHAR group_type "BUSINESS 또는 INDIVIDUAL"
@@ -121,7 +122,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUYER_GROUP_MEMBER {
+    BUYER_GROUP_MEMBER["BUYER_GROUP_MEMBER · 그룹 구성원과 역할·소속 상태"] {
         BIGINT id PK "그룹 구성원 내부 ID"
         BIGINT buyer_group_id FK "구매자 그룹 ID"
         BIGINT account_id FK "구성원 계정 ID"
@@ -130,7 +131,7 @@ erDiagram
         DATETIME joined_at "가입 시각"
         DATETIME created_at "생성 시각"
     }
-    BUYER_GROUP_BUSINESS_PROFILE {
+    BUYER_GROUP_BUSINESS_PROFILE["BUYER_GROUP_BUSINESS_PROFILE · 그룹 세금계산서 수취 정보"] {
         BIGINT id PK "사업자 프로필 내부 ID"
         BIGINT buyer_group_id FK,UK "사업자 그룹 ID"
         VARCHAR business_name "업체명"
@@ -150,7 +151,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUYER_GROUP_INVITATION {
+    BUYER_GROUP_INVITATION["BUYER_GROUP_INVITATION · 그룹 구성원 초대"] {
         BIGINT id PK "그룹 초대 내부 ID"
         BINARY public_id UK "초대 공개 UUID"
         BIGINT buyer_group_id FK "초대 대상 그룹 ID"
@@ -162,7 +163,7 @@ erDiagram
         DATETIME responded_at "응답 시각, nullable"
         VARCHAR pending_phone UK "대기 중 번호, 생성 컬럼"
     }
-    BUYER_GROUP_JOIN_REQUEST {
+    BUYER_GROUP_JOIN_REQUEST["BUYER_GROUP_JOIN_REQUEST · 그룹 가입 요청과 처리 결과"] {
         BIGINT id PK "가입 요청 내부 ID"
         BINARY public_id UK "가입 요청 공개 UUID"
         BIGINT buyer_group_id FK "가입 요청 그룹 ID"
@@ -173,7 +174,7 @@ erDiagram
         BIGINT responded_by_account_id FK "처리 대표 계정 ID, nullable"
         BIGINT pending_account_id UK "대기 중 요청 계정, 생성 컬럼"
     }
-    CONSENT_HISTORY {
+    CONSENT_HISTORY["CONSENT_HISTORY · 계정 개인정보·약관 동의 이력"] {
         BIGINT id PK "동의 이력 ID"
         BIGINT account_id FK "동의한 계정 ID"
         VARCHAR consent_type "동의 항목 코드"
@@ -184,7 +185,7 @@ erDiagram
         DATETIME consented_at "동의 시각"
         DATETIME created_at "이력 생성 시각"
     }
-    CATEGORY {
+    CATEGORY["CATEGORY · 판매 채널별 상품 카테고리"] {
         BIGINT id PK "내부 카테고리 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT sales_channel_id FK "판매 채널 ID"
@@ -200,7 +201,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BRAND {
+    BRAND["BRAND · 공용 상품 브랜드"] {
         BIGINT id PK "내부 브랜드 ID"
         BINARY public_id UK "API 공개 UUID"
         VARCHAR name UK "브랜드명"
@@ -211,7 +212,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PRODUCT {
+    PRODUCT["PRODUCT · 공용 상품 기본 정보"] {
         BIGINT id PK "내부 상품 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT category_id FK "카테고리 ID"
@@ -227,7 +228,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PRODUCT_SKU {
+    PRODUCT_SKU["PRODUCT_SKU · 판매·재고 기준 SKU"] {
         BIGINT id PK "내부 SKU ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT product_id FK "소속 상품 ID"
@@ -240,7 +241,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    SALES_CHANNEL {
+    SALES_CHANNEL["SALES_CHANNEL · 도매·소매 판매 채널"] {
         BIGINT id PK "내부 판매 채널 ID"
         BINARY public_id UK "API 공개 UUID"
         VARCHAR code UK "채널 코드"
@@ -249,7 +250,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    CHANNEL_PRODUCT_LISTING {
+    CHANNEL_PRODUCT_LISTING["CHANNEL_PRODUCT_LISTING · 채널별 상품 전시 설정"] {
         BIGINT id PK "채널 상품 전시 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT sales_channel_id FK "판매 채널 ID"
@@ -261,7 +262,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    SALES_OFFER {
+    SALES_OFFER["SALES_OFFER · 채널별 SKU 가격·판매 조건"] {
         BIGINT id PK "판매 오퍼 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT sales_channel_id FK "판매 채널 ID"
@@ -274,7 +275,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PRODUCT_IMAGE {
+    PRODUCT_IMAGE["PRODUCT_IMAGE · 상품 이미지 metadata"] {
         BIGINT id PK "내부 이미지 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT product_id FK "소속 상품 ID"
@@ -284,7 +285,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PRODUCT_OPTION {
+    PRODUCT_OPTION["PRODUCT_OPTION · 상품 옵션 종류"] {
         BIGINT id PK "내부 옵션 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT product_id FK "소속 상품 ID"
@@ -293,7 +294,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PRODUCT_OPTION_VALUE {
+    PRODUCT_OPTION_VALUE["PRODUCT_OPTION_VALUE · 상품 옵션 값"] {
         BIGINT id PK "내부 옵션값 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT product_option_id FK "소속 옵션 ID"
@@ -302,11 +303,11 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PRODUCT_SKU_OPTION_VALUE {
+    PRODUCT_SKU_OPTION_VALUE["PRODUCT_SKU_OPTION_VALUE · SKU별 옵션 값 연결"] {
         BIGINT product_sku_id PK,FK "SKU ID"
         BIGINT product_option_value_id PK,FK "SKU 조합에 포함된 옵션값 ID"
     }
-    INVENTORY_STOCK {
+    INVENTORY_STOCK["INVENTORY_STOCK · SKU 현재고·예약·안전재고"] {
         BIGINT id PK "재고 레코드 ID"
         BIGINT sku_id FK,UK "대상 SKU ID, SKU당 하나"
         INT on_hand_quantity "실재고 수량"
@@ -316,7 +317,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    INVENTORY_MOVEMENT {
+    INVENTORY_MOVEMENT["INVENTORY_MOVEMENT · 재고 증감 원장"] {
         BIGINT id PK "재고 이동 이력 ID"
         BIGINT sku_id FK "대상 SKU ID"
         VARCHAR movement_type "이동 유형"
@@ -327,7 +328,7 @@ erDiagram
         DATETIME occurred_at "업무상 발생 시각"
         DATETIME created_at "이력 저장 시각"
     }
-    STOCK_RESERVATION {
+    STOCK_RESERVATION["STOCK_RESERVATION · 주문 재고 예약·확정 상태"] {
         BIGINT id PK "예약 레코드 ID"
         BINARY reservation_key UK "예약 UUID"
         BIGINT sku_id FK "대상 SKU ID"
@@ -337,7 +338,7 @@ erDiagram
         DATETIME released_at "해제 시각, nullable"
         DATETIME created_at "예약 생성 시각"
     }
-    CART {
+    CART["CART · 계정별 장바구니"] {
         BIGINT id PK "장바구니 내부 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT account_id FK,UK "소유 계정 ID, 계정당 하나"
@@ -345,7 +346,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    CART_ITEM {
+    CART_ITEM["CART_ITEM · 장바구니 판매 항목·수량"] {
         BIGINT id PK "장바구니 항목 내부 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT cart_id FK "소속 장바구니 ID"
@@ -356,7 +357,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PURCHASE_ORDER {
+    PURCHASE_ORDER["PURCHASE_ORDER · 주문·구매자 그룹·배송지 snapshot"] {
         BIGINT id PK "주문 내부 ID"
         BINARY public_id UK "API 공개 UUID"
         VARCHAR order_number UK "표시용 고유 주문번호"
@@ -399,11 +400,11 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    ORDER_NUMBER_SEQUENCE {
+    ORDER_NUMBER_SEQUENCE["ORDER_NUMBER_SEQUENCE · 주문번호 발급 순번"] {
         DATE order_date PK "주문번호 발급 기준 날짜"
         BIGINT sequence_value "해당 날짜 마지막 발급 순번"
     }
-    ORDER_ITEM {
+    ORDER_ITEM["ORDER_ITEM · 주문 SKU·가격·수량 snapshot"] {
         BIGINT id PK "주문 항목 내부 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT order_id FK "소속 주문 ID"
@@ -420,7 +421,7 @@ erDiagram
         VARCHAR status "주문 항목 상태"
         DATETIME created_at "생성 시각"
     }
-    ORDER_STATUS_HISTORY {
+    ORDER_STATUS_HISTORY["ORDER_STATUS_HISTORY · 주문 상태 변경 이력"] {
         BIGINT id PK "주문 상태 이력 ID"
         BIGINT order_id FK "대상 주문 ID"
         VARCHAR from_status "변경 전 상태, 최초 이력은 nullable"
@@ -430,14 +431,14 @@ erDiagram
         DATETIME changed_at "업무상 변경 시각"
         DATETIME created_at "이력 저장 시각"
     }
-    ORDER_PAYMENT {
+    ORDER_PAYMENT["ORDER_PAYMENT · 주문 입금·환불 현재 상태"] {
         BIGINT id PK "Payment ID"
         BIGINT order_id FK,UK "One payment per order"
         VARCHAR payment_method "Extensible payment method code"
         VARCHAR status "입금 및 환불 상태 코드"
         DATETIME updated_at "Last status change"
     }
-    ORDER_PAYMENT_STATUS_HISTORY {
+    ORDER_PAYMENT_STATUS_HISTORY["ORDER_PAYMENT_STATUS_HISTORY · 입금·환불 상태 변경 이력"] {
         BIGINT id PK "Payment status history ID"
         BIGINT payment_id FK "Payment ID"
         VARCHAR from_status "Previous status, nullable on initial entry"
@@ -445,7 +446,7 @@ erDiagram
         BIGINT processed_by FK "Operator account ID, nullable"
         DATETIME changed_at "Processed at"
     }
-    ORDER_SHIPMENT {
+    ORDER_SHIPMENT["ORDER_SHIPMENT · 주문 배송·송장 현재 상태"] {
         BIGINT id PK "배송 정보 내부 ID"
         BIGINT order_id FK,UK "주문 ID, 주문당 하나"
         VARCHAR status "READY_TO_SHIP, PREPARING, IN_TRANSIT, DELIVERED"
@@ -455,7 +456,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    NOTIFICATION_OUTBOX {
+    NOTIFICATION_OUTBOX["NOTIFICATION_OUTBOX · 업무 이벤트 알림 발송 대기열"] {
         BIGINT id PK "내부 outbox ID"
         BINARY public_id UK "고유 event ID"
         VARCHAR event_type "알림 이벤트 코드"
@@ -471,7 +472,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    NOTIFICATION_DEVICE_TOKEN {
+    NOTIFICATION_DEVICE_TOKEN["NOTIFICATION_DEVICE_TOKEN · 계정별 FCM·APNs 기기 token"] {
         BIGINT id PK "내부 기기 token ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT account_id FK "token 소유 계정 ID"
@@ -484,7 +485,7 @@ erDiagram
         DATETIME updated_at "수정 시각"
         BIGINT version "낙관적 잠금 버전"
     }
-    ORDER_CANCELLATION_HISTORY {
+    ORDER_CANCELLATION_HISTORY["ORDER_CANCELLATION_HISTORY · 주문 취소·환불 처리 이력"] {
         BIGINT id PK "취소 요청 및 처리 이력 ID"
         BIGINT order_id FK "대상 주문 ID"
         BIGINT requested_by FK "요청 계정 ID"
@@ -493,13 +494,13 @@ erDiagram
         DATETIME requested_at "요청 시각"
         DATETIME processed_at "처리 시각, nullable"
     }
-    SHIPPING_HOLIDAY {
+    SHIPPING_HOLIDAY["SHIPPING_HOLIDAY · 배송 준비 제외 공휴일"] {
         DATE holiday_date PK "배송 휴무일"
         VARCHAR description "휴무 설명, nullable"
         BIGINT created_by FK "등록 운영자 ID, nullable"
         DATETIME created_at "생성 시각"
     }
-    OPERATION_AUDIT_LOG {
+    OPERATION_AUDIT_LOG["OPERATION_AUDIT_LOG · 운영자 주요 변경 감사 기록"] {
         BIGINT id PK "운영 감사 로그 ID"
         BINARY actor_public_id "운영자 공개 UUID, nullable"
         VARCHAR action "HTTP method와 route template"
