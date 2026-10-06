@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.account.integration
 
-import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationProfileEntity
-import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
 
 import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
 import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
@@ -12,7 +12,7 @@ import org.mockito.Mockito.`when`
 import java.util.Optional
 
 class BusinessRegistrationVerificationJobTest {
-    private val profiles = Mockito.mock(OrganizationProfileRepository::class.java)
+    private val profiles = Mockito.mock(OrganizationBusinessProfileRepository::class.java)
     private val registrationStatus = Mockito.mock(BusinessRegistrationStatusClient::class.java)
 
     @Test
@@ -53,7 +53,7 @@ class BusinessRegistrationVerificationJobTest {
         assertThat(profile.businessRegistrationVerifiedAt).isNotNull()
     }
 
-    private fun pendingProfile() = OrganizationProfileEntity().apply {
+    private fun pendingProfile() = OrganizationBusinessProfileEntity().apply {
         id = 1L
         businessRegistrationNumber = "1234567890"
     }

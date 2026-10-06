@@ -11,11 +11,11 @@
 최초 가입 계정은 그룹 onboarding 조회에서 현재 그룹과 전화번호가 일치하는 대기 초대를 확인하고, 초대 수락 후에만 그룹에 연결.<br>
 그룹이 없는 계정은 개인 조직을 만들거나 휴대폰 번호로 구매 조직을 찾아 가입 요청 가능. 구매자와 판매자는 각각 Organization을 만들고 여러 계정을 구성원으로 연결 가능. 그룹 이동 전 주문의 귀속은 유지.<br>
 그룹 조회·등록·초대·가입 요청 흐름은 `OrganizationMembershipService → OrganizationMembershipJpaEntityService`로 처리.<br>
-공급받는자 세금계산서 정보는 `organization_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 Organization 구성원이 공유.<br>
+공급받는자 세금계산서 정보는 `organization_business_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 Organization 구성원이 공유.<br>
 활성 그룹 구성원은 세금계산서 정보를 조회할 수 있고, 대표자와 `ADMIN_ACCOUNT_MANAGE` 운영자만 수정 가능. 개인 그룹은 세금계산서 정보를 등록하거나 발행 요청할 수 없음.<br>
 세금계산서 프로필 요청은 `OrganizationTaxInvoiceProfileService → OrganizationTaxInvoiceJpaEntityService` 흐름으로 처리.<br>
 공급받는자 정보 완성 기준은 활성 `BUSINESS` 그룹과 사업자등록번호·상호·성명·사업자주소·업태·종목 입력. 이메일은 선택 항목.<br>
-주문별 발행 선택과 계정별 기본 발행 선택은 기존 계약을 유지. 발행을 요청한 주문에는 주문 시점의 그룹 세금계산서 정보를 snapshot하고, 이후 프로필 변경은 기존 주문을 변경하지 않음.<br>
+주문별 발행 선택은 주문에 저장하고 기본 발행 선택은 구매 Organization 구성원이 공유. 기본값 변경은 대표자만 가능하며, 발행을 요청한 주문에는 주문 시점의 Organization 세금계산서 정보를 snapshot하고 이후 프로필 변경은 기존 주문을 변경하지 않음.<br>
 
 ## 사용자 계정·공용 배송지 흐름
 
@@ -28,7 +28,7 @@ flowchart TD
     ACTION -- 생성 --> CAP[capability와 조직 유형 검증]
     CAP --> CAPOK{BUYER 또는 SELLER capability 유효}
     CAPOK -- 아니오 --> INVALID[400 거부]
-    CAPOK -- 예 --> PROFILE[사업자 정보가 있으면 공통 organization_profile 검증]
+    CAPOK -- 예 --> PROFILE[사업자 정보가 있으면 공통 organization_business_profile 검증]
     PROFILE --> ORG[organization과 organization_capability 저장]
     ORG --> MEMBER[요청 계정을 대표 구성원으로 연결]
     ACTION -- 초대·가입 --> MEMBERAUTH[조직 capability·활성 구성원·대표자 권한 검증]
@@ -107,7 +107,7 @@ flowchart TD
 ## 구매 조직과 계정 관계
 
 Organization은 `BUSINESS` 또는 `INDIVIDUAL` 유형과 `BUYER`, `SELLER`, `OPERATOR` capability를 가짐. capability는 복수 지정 가능하며 주문·공용 배송지는 `BUYER` capability가 있는 조직의 공유 경계를 형성.<br>
-판매자도 `SELLER` capability Organization을 만들고 여러 계정을 구성원으로 연결 가능. 공통 사업자 정보는 `organization_profile` 단일 원본으로 관리.<br>
+판매자도 `SELLER` capability Organization을 만들고 여러 계정을 구성원으로 연결 가능. 공통 사업자 정보는 `organization_business_profile` 단일 원본으로 관리.<br>
 Organization은 여러 계정을 구성원으로 가질 수 있고, 계정은 한 번에 하나의 활성 Organization에만 소속.<br>
 도매·소매는 그룹 유형이 아니라 판매 채널 정책으로 판정. 사업자번호 없는 업체와 개인 대량구매자도 그룹을 이용 가능.<br>
 운영자는 계정을 사업자 그룹에 명시적으로 연결하며 사업자번호만으로 그룹을 자동 병합하지 않음.<br>
@@ -146,7 +146,7 @@ Organization은 여러 계정을 구성원으로 가질 수 있고, 계정은 �
 
 신규 가입 후 그룹이 없는 사용자는 개인/사업자 유형을 먼저 선택. 개인 선택도 내부적으로 `INDIVIDUAL` 구매자 그룹과 활성 구성원 관계를 생성.<br>
 사업자 선택은 그룹 표시 정보와 사업자등록 필수 항목 입력·확인 후 `BUSINESS` 그룹과 최초 대표자 관계를 같은 트랜잭션으로 생성.<br>
-사업자등록번호·상호·대표자·사업자등록 주소·업태·종목은 `organization_profile`에서 관리. 그룹 공용 배송지는 별도 `organization_address`에 저장하며 사업자등록 주소에서 자동 생성하지 않음.<br>
+사업자등록번호·상호·대표자·사업자등록 주소·업태·종목은 `organization_business_profile`에서 관리. 그룹 공용 배송지는 별도 `organization_address`에 저장하며 사업자등록 주소에서 자동 생성하지 않음.<br>
 사용자가 최초 사업자 그룹을 만드는 경우 사업자등록번호를 국세청 사업자등록 상태조회 API로 확인. 폐업 상태는 거부하고 계속사업자·휴업자는 허용. 상호·대표자·주소·업태·종목은 사용자가 입력·확인.<br>
 상태조회는 국세청 원천 정보에서 30분 간격으로 갱신되며 신규 개업 정보는 반영에 1~2일이 걸릴 수 있음. API 개요는 [공공데이터포털 국세청 사업자등록정보 상태조회](https://www.data.go.kr/data/15081808/openapi.do)를 참고.<br>
 운영자가 그룹 초기값으로 사업자 프로필을 입력한 경우 사용자 그룹 생성 검증은 다시 요구하지 않음. 사업자번호 상태 확인을 백그라운드에서 진행하며 성공 후에만 대표자가 사전 입력 정보를 확인·완성. 폐업 결과는 발행 불가 상태로 노출. 활성 그룹에 소속된 사용자에게도 유형 선택·그룹 생성 흐름을 다시 노출하지 않고 기존 초대·가입 요청 처리를 유지.<br>

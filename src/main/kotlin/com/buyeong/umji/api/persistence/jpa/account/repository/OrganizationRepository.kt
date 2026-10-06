@@ -2,7 +2,7 @@ package com.buyeong.umji.api.persistence.jpa.account.repository
 
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationAddressEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationInvitationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationJoinRequestEntity
@@ -23,14 +23,14 @@ interface OrganizationRepository : JpaRepository<OrganizationEntity, Long> {
             from organization
             left join organization_member on organization_member.organization_id = organization.id and organization_member.status = 'ACTIVE'
             left join account on account.id = organization_member.account_id
-            left join organization_profile on organization_profile.organization_id = organization.id
+            left join organization_business_profile on organization_business_profile.organization_id = organization.id
             where organization.status = 'ACTIVE'
               and (
                 account.phone_normalized = :phone
                 or case
-                    when regexp_replace(coalesce(organization_profile.business_phone, ''), '[^0-9]', '') like '82%'
-                    then concat('0', substring(regexp_replace(coalesce(organization_profile.business_phone, ''), '[^0-9]', ''), 3))
-                    else regexp_replace(coalesce(organization_profile.business_phone, ''), '[^0-9]', '')
+                    when regexp_replace(coalesce(organization_business_profile.business_phone, ''), '[^0-9]', '') like '82%'
+                    then concat('0', substring(regexp_replace(coalesce(organization_business_profile.business_phone, ''), '[^0-9]', ''), 3))
+                    else regexp_replace(coalesce(organization_business_profile.business_phone, ''), '[^0-9]', '')
                 end = :phone
               )
             order by organization.display_name
@@ -63,9 +63,9 @@ interface OrganizationJoinRequestRepository : JpaRepository<OrganizationJoinRequ
     fun findFirstByOrganization_IdAndAccount_IdAndStatus(organizationId: Long, accountId: Long, status: String): OrganizationJoinRequestEntity?
 }
 
-interface OrganizationProfileRepository : JpaRepository<OrganizationProfileEntity, Long> {
-    fun findByOrganization_Id(organizationId: Long): OrganizationProfileEntity?
-    fun findTop100ByBusinessRegistrationVerificationStatusOrderByIdAsc(status: String): List<OrganizationProfileEntity>
+interface OrganizationBusinessProfileRepository : JpaRepository<OrganizationBusinessProfileEntity, Long> {
+    fun findByOrganization_Id(organizationId: Long): OrganizationBusinessProfileEntity?
+    fun findTop100ByBusinessRegistrationVerificationStatusOrderByIdAsc(status: String): List<OrganizationBusinessProfileEntity>
 }
 
 interface OrganizationCapabilityRepository : JpaRepository<OrganizationCapabilityEntity, Long> {

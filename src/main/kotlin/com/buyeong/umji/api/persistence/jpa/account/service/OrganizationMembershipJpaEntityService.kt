@@ -7,13 +7,13 @@ import com.buyeong.umji.api.account.model.OrganizationSearchResult
 import com.buyeong.umji.api.account.model.OrganizationSummary
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationInvitationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationJoinRequestEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationMemberEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity
-import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationCapabilityRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationInvitationRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationJoinRequestRepository
@@ -33,7 +33,7 @@ class OrganizationMembershipJpaEntityService(
     private val invitations: OrganizationInvitationRepository,
     private val joinRequests: OrganizationJoinRequestRepository,
     private val organizationEntities: OrganizationJpaEntityService,
-    private val organizationProfiles: OrganizationProfileRepository,
+    private val organizationProfiles: OrganizationBusinessProfileRepository,
     private val capabilities: OrganizationCapabilityRepository,
 ) {
     fun current(accountId: UUID): OrganizationSummary? {
@@ -105,7 +105,7 @@ class OrganizationMembershipJpaEntityService(
         })
         if (business != null) {
             organizationProfiles.save(
-                OrganizationProfileEntity().apply {
+                OrganizationBusinessProfileEntity().apply {
                     organization = group
                     businessName = business.businessName.trim()
                     businessRegistrationNumber = business.businessRegistrationNumber

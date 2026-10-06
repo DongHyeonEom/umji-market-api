@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V38이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V40이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -33,7 +33,6 @@ erDiagram
         VARCHAR email "이메일, nullable"
         VARCHAR status "계정 상태"
         BIGINT token_version "토큰 무효화 버전"
-        BOOLEAN default_tax_invoice_requested "세금계산서 발행 기본값"
         DATETIME last_login_at "마지막 로그인 시각, nullable"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
@@ -119,6 +118,7 @@ erDiagram
         VARCHAR display_name "그룹 표시명"
         BIGINT representative_account_id FK "현재 대표 계정, nullable"
         VARCHAR status "그룹 상태"
+        BOOLEAN default_tax_invoice_requested "Organization 기본 세금계산서 발행 여부"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
@@ -137,7 +137,7 @@ erDiagram
         VARCHAR capability_code "BUYER, SELLER 또는 OPERATOR"
         DATETIME created_at "생성 시각"
     }
-    ORGANIZATION_PROFILE["ORGANIZATION_PROFILE · 그룹 세금계산서 수취 정보"] {
+    ORGANIZATION_BUSINESS_PROFILE["ORGANIZATION_BUSINESS_PROFILE · Organization 공통 사업자 정보"] {
         BIGINT id PK "사업자 프로필 내부 ID"
         BIGINT organization_id FK,UK "사업자 그룹 ID"
         VARCHAR business_name "업체명"
@@ -534,7 +534,7 @@ erDiagram
     ORGANIZATION ||--o{ ORGANIZATION_JOIN_REQUEST : receives
     ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : requests
     ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : decides
-    ORGANIZATION ||--o| ORGANIZATION_PROFILE : describes
+    ORGANIZATION ||--o| ORGANIZATION_BUSINESS_PROFILE : describes
     ACCOUNT ||--o{ CONSENT_HISTORY : records
     CATEGORY ||--o{ CATEGORY : parent
     SALES_CHANNEL ||--o{ CATEGORY : owns
@@ -587,7 +587,7 @@ erDiagram
   `account.phone_normalized`는 V6에서 추가된 unique 정규화 번호임.<br>
 - 구매자 그룹은 법적 사업자번호와 독립적인 주문 소유 범위임.<br>
   한 그룹에 여러 계정이 속할 수 있고, 계정 하나는 한 그룹에만 속함. `(organization_id, account_id)`와 `account_id`가 각각 unique임.<br>
-  `organization_profile.business_registration_number`는 nullable이며 unique가 아님.<br>
+  `organization_business_profile.business_registration_number`는 nullable이며 unique가 아님.<br>
 - `purchase_order.account_id`는 실제 주문한 계정, `purchase_order.organization_id`는 주문의 그룹 소유 범위임.<br>
   V18은 기존 계정마다 그룹 하나를 생성해 기존 주문을 backfill했으며, V19부터 `organization_id`는 필수임.<br>
   기존 `business_profile`은 유지하면서 그룹 프로필로 데이터를 복사함.<br>
@@ -637,6 +637,12 @@ erDiagram
 | V32 | 신규 사업자 그룹 등록 시 사업자 상태 확인 시각 추가 |
 | V33 | 운영자 사전등록 사업자 상태조회 및 대표자 확인 상태 추가 |
 | V34 | 기존 사업자 상태확인 시각의 대표자 확인 시각 backfill |
+| V35 | 판매 채널·채널별 카테고리·상품 노출·판매 offer 추가 및 기존 상품·주문 데이터 backfill |
+| V36 | 판매 단위 수량 및 주문 항목 snapshot 추가 |
+| V37 | `SALES_MANAGER` role 및 영업 permission 추가 |
+| V38 | Organization 구조 전환, capability 추가 및 기존 데이터 이관 |
+| V39 | `organization_profile`을 `organization_business_profile`로 명칭 변경 |
+| V40 | 세금계산서 기본 발행 설정을 `account`에서 `organization`으로 이동 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

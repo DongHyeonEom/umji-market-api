@@ -48,7 +48,7 @@ data class BankAccountInstructionsResponse(
 
 @Schema(description = "세금계산서 설정과 주문 유형별 입금 계좌 정보")
 data class OrderCheckoutOptionsResponse(
-    @field:Schema(description = "계정 기본 세금계산서 발행 설정", example = "true", type = "boolean", required = true, implementation = Boolean::class) val defaultTaxInvoiceRequested: Boolean,
+    @field:Schema(description = "Organization 기본 세금계산서 발행 설정", example = "true", type = "boolean", required = true, implementation = Boolean::class) val defaultTaxInvoiceRequested: Boolean,
     @field:Schema(
         description = "공급자와 그룹 공급받는자 필수 정보가 완성되어 발행 요청할 수 있는지 여부",
         example = "true",
@@ -66,7 +66,7 @@ data class CreateOrderRequest(
     UUID,
     @field:Schema(description = "세금계산서 발행 요청 여부", example = "true", type = "boolean", required = false, implementation = Boolean::class) val taxInvoiceRequested: Boolean? = null,
     @field:Schema(
-        description = "계정 기본 세금계산서 설정 갱신 여부",
+        description = "대표자가 Organization 기본 세금계산서 설정을 갱신할지 여부",
         example = "true",
         type = "boolean",
         required = false,

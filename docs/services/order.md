@@ -22,7 +22,7 @@ flowchart TD
     subgraph CHECKOUT[사용자 주문·계좌 안내]
         C01[인증된 사용자] --> C01A{활성 구매자 그룹 소속인가}
         C01A -- 아니오 --> C01B[개인·사업자 그룹 등록 흐름으로 이동]
-        C01A -- 예 --> C02[계정 기본 발행 설정·그룹 세금계산서 정보 조회]
+        C01A -- 예 --> C02[Organization 기본 발행 설정·사업자 세금계산서 정보 조회]
         C02 --> C03[그룹 공용 배송지 선택 및 발행 여부 토글]
         C03 --> C04{발행 요청 여부}
         C04 -- 아니오 --> C05[일반 계좌 안내]
@@ -188,8 +188,8 @@ flowchart TD
 초기 상태는 `PENDING_PAYMENT`임.<br>
 초기 결제수단은 `BANK_TRANSFER`, 결제 상태는 `WAITING_FOR_DEPOSIT`이며 사용자 주문 목록·상세에 결제 상태가 포함됨.<br>
 배송 상태는 `READY_TO_SHIP`으로 초기화.<br>
-계정별 세금계산서 발행 기본값은 초기 미발행이며, `GET /api/orders/checkout-options`에서 기본값과 발행·미발행 계좌 정보를 조회.<br>
-주문 생성 요청은 `taxInvoiceRequested` 값을 받아 주문에 저장하며, `updateDefaultTaxInvoicePreference=true`가 함께 전달된 경우 선택값을 계정 기본값에도 반영.<br>
+구매 Organization별 세금계산서 발행 기본값은 초기 미발행이며, `GET /api/orders/checkout-options`에서 기본값과 발행·미발행 계좌 정보를 조회.<br>
+주문 생성 요청은 `taxInvoiceRequested` 값을 주문에 저장하며, 대표자가 `updateDefaultTaxInvoicePreference=true`를 전달하면 선택값을 Organization 기본값에 반영. Organization 구성원은 같은 기본값을 공유.<br>
 공급자 필수 정보(사업자등록번호·상호·성명·사업장주소·업태·종목·이메일)는 `application.yml`의 환경변수 매핑을 통해 배포 환경에서 주입. 공급받는자 필수 정보(사업자등록번호·상호·성명·사업자주소·업태·종목)는 활성 `BUSINESS` 그룹 정보로 관리하며 이메일은 선택.<br>
 발행 요청은 공급자 설정과 인증 계정의 활성 `BUSINESS` 그룹 공급받는자 필수 정보가 모두 완성된 경우에만 허용.<br>
 발행 요청 주문에는 공급자·공급받는자·주문 항목 및 항목별 `lineAmount`를 snapshot. 송장 등록으로 배송이 시작되면 작성일자와 제공일자를 모두 `ordered_at`의 KST 날짜로 기록하고 발행 대기 정보를 노출.<br>

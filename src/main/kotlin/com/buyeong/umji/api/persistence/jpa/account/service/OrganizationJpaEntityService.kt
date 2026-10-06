@@ -1,11 +1,12 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
+import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
-import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationMemberEntity
-import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationCapabilityRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
@@ -19,7 +20,7 @@ class OrganizationJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val groups: OrganizationRepository,
     private val members: OrganizationMemberRepository,
-    private val organizationProfiles: OrganizationProfileRepository,
+    private val organizationProfiles: OrganizationBusinessProfileRepository,
     private val capabilities: OrganizationCapabilityRepository,
 ) {
     fun activeForAccount(accountId: Long): OrganizationEntity? =
@@ -28,7 +29,7 @@ class OrganizationJpaEntityService(
     fun activeForAccountPublicId(accountPublicId: UUID): OrganizationEntity? =
         accounts.findByPublicId(accountPublicId)?.id?.let(::activeForAccount)
 
-    fun profileForAccount(accountPublicId: UUID): OrganizationProfileEntity? =
+    fun profileForAccount(accountPublicId: UUID): OrganizationBusinessProfileEntity? =
         activeForAccountPublicId(accountPublicId)?.id?.let(organizationProfiles::findByOrganization_Id)
 
     fun hasCapability(organizationId: UUID, capability: String): Boolean =
@@ -40,11 +41,25 @@ class OrganizationJpaEntityService(
     fun activeBuyerForAccountPublicId(accountPublicId: UUID): OrganizationEntity? =
         activeForAccountPublicId(accountPublicId)?.takeIf { hasCapability(requireNotNull(it.publicId), BUYER) }
 
+    fun defaultTaxInvoiceRequestedForAccount(accountPublicId: UUID): Boolean =
+        activeBuyerForAccountPublicId(accountPublicId)?.defaultTaxInvoiceRequested ?: false
+
+    @Transactional
+    fun updateDefaultTaxInvoiceRequestedForAccount(accountPublicId: UUID, requested: Boolean) {
+        val organization = activeBuyerForAccountPublicId(accountPublicId)
+            ?: throw ItemNotFoundException("활성 구매 Organization을 찾을 수 없습니다.")
+        if (organization.representativeAccount?.publicId != accountPublicId) {
+            throw ForbiddenOperationException("Organization 대표자만 세금계산서 기본 발행 설정을 변경할 수 있습니다.")
+        }
+        organization.defaultTaxInvoiceRequested = requested
+        groups.save(organization)
+    }
+
     @Transactional
     fun updateBusinessProfileForAccount(accountPublicId: UUID, source: OrganizationProfileData) {
         val organization = ensureForAccount(accountPublicId)
         val profile = organizationProfiles.findByOrganization_Id(requireNotNull(organization.id))
-            ?: OrganizationProfileEntity().apply {
+            ?: OrganizationBusinessProfileEntity().apply {
                 this.organization = organization
                 businessName = source.businessName
                 status = source.status
@@ -172,7 +187,7 @@ class OrganizationJpaEntityService(
 
     private fun saveBusinessProfile(group: OrganizationEntity, profile: OrganizationProfileData) {
         val existing = organizationProfiles.findByOrganization_Id(requireNotNull(group.id))
-        val target = existing ?: OrganizationProfileEntity().apply { organization = group }
+        val target = existing ?: OrganizationBusinessProfileEntity().apply { organization = group }
         target.businessName = profile.businessName
         val registrationNumber = profile.businessRegistrationNumber?.trim()?.ifBlank { null }
         target.businessRegistrationNumber = registrationNumber

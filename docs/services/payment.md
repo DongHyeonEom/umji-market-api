@@ -78,9 +78,9 @@ stateDiagram-v2
 
 주문 생성 시 재고를 예약하는 현재 동작을 유지하며, 미입금 예약 자동 만료·해제는 초기 범위에서 수행하지 않음.<br>
 입금 계좌는 환경변수로 세금계산서 미발행 계좌와 발행 계좌를 각각 관리.<br>
-계정별 세금계산서 발행 기본값은 미발행으로 시작하며, 주문 화면에서 기본값을 토글할 수 있음.<br>
-고객이 토글을 바꾸고 계정 기본값 변경까지 확인한 경우 주문 생성 요청에 해당 선택을 함께 전달.<br>
-주문에는 당시 세금계산서 발행 선택과 안내 계좌 정보를 저장해 이후 계정 기본값이나 환경설정 계좌 변경이 기존 주문에 영향을 주지 않도록 함.<br>
+구매 Organization별 세금계산서 발행 기본값은 미발행으로 시작하며, 구성원은 주문 화면에서 현재 기본값을 확인 가능.<br>
+대표자가 기본값 변경까지 확인한 경우에만 주문 생성 요청에서 `updateDefaultTaxInvoicePreference=true`를 전달. 대표자만 Organization 기본값 변경 가능.<br>
+주문에는 당시 세금계산서 발행 선택과 안내 계좌 정보를 저장해 이후 Organization 기본값이나 환경설정 계좌 변경이 기존 주문에 영향을 주지 않도록 함.<br>
 기존 주문은 migration에서 세금계산서 미발행으로 초기화되며, 과거 안내 계좌 스냅샷은 없음.<br>
 
 주문 결제 상태 변경은 입금 확인 트랜잭션에서 수행.<br>
@@ -92,9 +92,9 @@ PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.<br
 - `GET /api/operation/payments?status=&page=&size=`: 입금 대기·부분 입금·일반 이슈·환불 대기 대상 목록.<br>
   상태 생략 시 미처리 입금 상태와 환불 대기 상태를 반환.<br>
 - `PATCH /api/operation/payments/{orderId}/status`: 운영자 입금 상태 변경.<br>
-- `GET /api/orders/checkout-options`: 계정 기본 발행 여부와 두 계좌 안내 정보 반환.<br>
+- `GET /api/orders/checkout-options`: 구매 Organization 기본 발행 여부와 두 계좌 안내 정보 반환.<br>
 - `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정.<br>
-  `updateDefaultTaxInvoicePreference=true`는 고객이 계정 기본값 변경을 확인한 경우에만 전달.<br>
+  `updateDefaultTaxInvoicePreference=true`는 대표자가 Organization 기본값 변경을 확인한 경우에만 전달.<br>
 - 사용자 주문 목록·상세 응답에 `paymentMethod`, `paymentStatus`, 독립 배송 `shippingStatus`, 택배사·송장번호, 주문 당시 `taxInvoiceRequested` 및 계좌 안내 스냅샷 포함.<br>
 
 환경변수는 `UMJI_BANK_STANDARD_NAME`, `UMJI_BANK_STANDARD_ACCOUNT_NUMBER`, `UMJI_BANK_STANDARD_ACCOUNT_HOLDER`와 `UMJI_BANK_TAX_INVOICE_NAME`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER`, `UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER`를 사용.<br>

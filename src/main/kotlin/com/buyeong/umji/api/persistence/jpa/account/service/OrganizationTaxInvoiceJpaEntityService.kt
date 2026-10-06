@@ -3,9 +3,9 @@ package com.buyeong.umji.api.persistence.jpa.account.service
 import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfile
 import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfileCommand
 import com.buyeong.umji.api.exception.ForbiddenOperationException
-import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
-import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
 import java.time.Instant
 import java.util.UUID
@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class OrganizationTaxInvoiceJpaEntityService(
     private val organizations: OrganizationJpaEntityService,
     private val groups: OrganizationRepository,
-    private val profiles: OrganizationProfileRepository,
+    private val profiles: OrganizationBusinessProfileRepository,
 ) {
     fun forAccount(accountPublicId: UUID): OrganizationTaxInvoiceProfile? =
         organizations.activeBuyerForAccountPublicId(accountPublicId)?.toProfile()
@@ -63,9 +63,9 @@ class OrganizationTaxInvoiceJpaEntityService(
         return save(lockedGroup, command).toModel(lockedGroup)
     }
 
-    private fun save(group: OrganizationEntity, command: OrganizationTaxInvoiceProfileCommand): OrganizationProfileEntity {
+    private fun save(group: OrganizationEntity, command: OrganizationTaxInvoiceProfileCommand): OrganizationBusinessProfileEntity {
         val organizationId = requireNotNull(group.id)
-        val profile = profiles.findByOrganization_Id(organizationId) ?: OrganizationProfileEntity().apply {
+        val profile = profiles.findByOrganization_Id(organizationId) ?: OrganizationBusinessProfileEntity().apply {
             organization = group
             businessName = group.displayName
             status = COMPLETED
@@ -115,7 +115,7 @@ class OrganizationTaxInvoiceJpaEntityService(
         )
     }
 
-    private fun OrganizationProfileEntity?.isComplete(): Boolean = this != null && listOf(
+    private fun OrganizationBusinessProfileEntity?.isComplete(): Boolean = this != null && listOf(
         businessRegistrationNumber,
         businessName,
         representativeName,
@@ -125,7 +125,7 @@ class OrganizationTaxInvoiceJpaEntityService(
         businessItem,
     ).all { !it.isNullOrBlank() }
 
-    private fun OrganizationProfileEntity.toModel(group: OrganizationEntity) = OrganizationTaxInvoiceProfile(
+    private fun OrganizationBusinessProfileEntity.toModel(group: OrganizationEntity) = OrganizationTaxInvoiceProfile(
         organizationId = requireNotNull(group.publicId),
         organizationType = group.organizationType,
         businessRegistrationNumber = businessRegistrationNumber,

@@ -1,0 +1,1 @@
+RENAME TABLE organization_profile TO organization_business_profile;

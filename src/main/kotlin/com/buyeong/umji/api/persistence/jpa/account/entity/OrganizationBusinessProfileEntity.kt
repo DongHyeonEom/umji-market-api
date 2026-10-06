@@ -13,8 +13,8 @@ import jakarta.persistence.Table
 import java.time.Instant
 
 @Entity
-@Table(name = "organization_profile")
-class OrganizationProfileEntity {
+@Table(name = "organization_business_profile")
+class OrganizationBusinessProfileEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null

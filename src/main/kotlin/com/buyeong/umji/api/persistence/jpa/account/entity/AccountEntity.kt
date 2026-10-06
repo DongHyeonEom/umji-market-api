@@ -46,9 +46,6 @@ class AccountEntity {
     @Column(name = "admin_totp_enabled", nullable = false)
     var adminTotpEnabled: Boolean = false
 
-    @Column(name = "default_tax_invoice_requested", nullable = false)
-    var defaultTaxInvoiceRequested: Boolean = false
-
     @Column(name = "last_login_at")
     var lastLoginAt: java.time.Instant? = null
 

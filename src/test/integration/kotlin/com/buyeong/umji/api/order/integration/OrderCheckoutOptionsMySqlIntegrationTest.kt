@@ -194,9 +194,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(initialOptions.taxInvoiceAvailable).isTrue()
         assertThat(
             jdbc.queryForObject(
-                "SELECT default_tax_invoice_requested FROM account WHERE public_id = ?",
+                "SELECT default_tax_invoice_requested FROM organization WHERE id = ?",
                 Boolean::class.java,
-                accountId.toBytes(),
+                organizations.activeForAccountPublicId(accountId)?.id,
             ),
         ).isFalse()
 
@@ -220,11 +220,11 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(orders.checkoutOptions(accountId).defaultTaxInvoiceRequested).isTrue()
 
         val standardAccountId = createAccount()
-        jdbc.update(
-            "UPDATE account SET default_tax_invoice_requested = TRUE WHERE public_id = ?",
-            standardAccountId.toBytes(),
-        )
         val standardAddressId = createAddress(standardAccountId)
+        jdbc.update(
+            "UPDATE organization SET default_tax_invoice_requested = TRUE WHERE id = ?",
+            organizations.activeForAccountPublicId(standardAccountId)?.id,
+        )
         createCartWithItem(standardAccountId, skuId)
         val standardOrder = orders.create(standardAccountId, standardAddressId, false, false)
         assertOutboxEvent(standardOrder.id, "ORDER_CREATED", null)
@@ -328,7 +328,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         organizations.assignAccountToOrganization(memberId, businessGroupId)
         val otherGroupId = createBusinessGroup(otherId)
         jdbc.update(
-            "UPDATE organization_profile SET business_registration_number = NULL WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
+            "UPDATE organization_business_profile SET business_registration_number = NULL WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
             businessGroupId.toBytes(),
         )
 
@@ -336,7 +336,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             .isEqualTo("BUSINESS")
         assertThat(
             jdbc.queryForObject(
-                "SELECT business_registration_number IS NULL FROM organization_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
+                "SELECT business_registration_number IS NULL FROM organization_business_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
                 Boolean::class.java,
                 businessGroupId.toBytes(),
             ),
@@ -413,7 +413,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(firstGroupId).isNotEqualTo(secondGroupId)
         assertThat(
             jdbc.queryForObject(
-                "SELECT COUNT(DISTINCT organization_id) FROM organization_profile WHERE business_registration_number = '987-65-43210'",
+                "SELECT COUNT(DISTINCT organization_id) FROM organization_business_profile WHERE business_registration_number = '987-65-43210'",
                 Int::class.java,
             ),
         ).isGreaterThanOrEqualTo(2)
@@ -513,12 +513,12 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         )
         if (verified) {
             jdbc.update(
-                "UPDATE organization_profile SET business_registration_number = '987-65-43210', business_registration_verification_status = 'ACTIVE', business_registration_verified_at = CURRENT_TIMESTAMP(3), business_registration_confirmed_at = CURRENT_TIMESTAMP(3) WHERE organization_id = ?",
+                "UPDATE organization_business_profile SET business_registration_number = '987-65-43210', business_registration_verification_status = 'ACTIVE', business_registration_verified_at = CURRENT_TIMESTAMP(3), business_registration_confirmed_at = CURRENT_TIMESTAMP(3) WHERE organization_id = ?",
                 group.id,
             )
         } else {
             jdbc.update(
-                "UPDATE organization_profile SET business_registration_number = '987-65-43210' WHERE organization_id = ?",
+                "UPDATE organization_business_profile SET business_registration_number = '987-65-43210' WHERE organization_id = ?",
                 group.id,
             )
         }
@@ -557,7 +557,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(ready?.supplyDate).isEqualTo(ready?.writtenDate)
 
         jdbc.update(
-            "UPDATE organization_profile SET business_name = 'Changed later' WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
+            "UPDATE organization_business_profile SET business_name = 'Changed later' WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
             organizationId.toBytes(),
         )
         assertThat(orders.detail(ownerId, order.id).taxInvoiceSnapshot?.buyer?.businessName).isEqualTo("Group test business")
@@ -602,7 +602,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(groupMembership.current(personalAccountId)?.id).isEqualTo(personalGroup.id)
         assertThat(
             jdbc.queryForObject(
-                "SELECT COUNT(*) FROM organization_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
+                "SELECT COUNT(*) FROM organization_business_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
                 Int::class.java,
                 personalGroup.id.toBytes(),
             ),
@@ -623,7 +623,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         Mockito.verify(businessRegistrationStatus).ensureNotClosed("1234567890")
         assertThat(
             jdbc.queryForObject(
-                "SELECT business_registration_verified_at IS NOT NULL FROM organization_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
+                "SELECT business_registration_verified_at IS NOT NULL FROM organization_business_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
                 Boolean::class.java,
                 businessGroup.id.toBytes(),
             ),

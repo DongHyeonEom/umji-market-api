@@ -323,6 +323,7 @@
 - [x] 사용자 그룹 기반 API 경로·요청·응답을 Organization 용어로 전환하고 구매자 조직의 세금계산서·국세청 확인은 capability 검증
 - [x] Organization 조회·수정·생성·구성원 연결 API와 서버 권한 검사 적용. 판매자도 Organization 생성 및 구성원 초대·가입 가능
 - [x] 기존 개인 조직·계정 인증·구매 조직 주문·배송지 계약 유지 및 관련 문서·OpenAPI 갱신
+- [x] Organization 기본 세금계산서 발행 설정으로 이동하고 주문별 발행 선택은 주문에 유지
 
 ### 서비스 자동화 테스트 개발 및 테스트
 
@@ -331,6 +332,7 @@
 - [ ] 운영자 Organization 등록·수정·계정 연결·권한 검사 검증
 - [ ] 복수 capability Organization, 단일 Organization 소속 계정, 구매자·판매자 다중 구성원 접근 범위 및 capability별 API 권한 검증
 - [ ] 개인 그룹과 기존 주문·주소·세금계산서 snapshot 회귀 검증
+- [ ] 기존 계정별 세금계산서 기본값의 Organization 이관 및 대표자 변경 권한·구성원 간 공유 검증
 
 ## 마지막 Task — 파일 및 object storage
 

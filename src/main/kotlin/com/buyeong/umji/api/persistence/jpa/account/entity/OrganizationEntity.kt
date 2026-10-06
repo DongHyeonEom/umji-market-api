@@ -36,6 +36,9 @@ class OrganizationEntity {
     @Column(nullable = false)
     lateinit var status: String
 
+    @Column(name = "default_tax_invoice_requested", nullable = false)
+    var defaultTaxInvoiceRequested: Boolean = false
+
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()
 

@@ -42,13 +42,11 @@ class OrderCheckoutJpaEntityService(
     private val cancellationHistory: OrderCancellationHistoryRepository,
 ) {
     fun defaultTaxInvoiceRequested(accountId: UUID): Boolean =
-        account(accountId).defaultTaxInvoiceRequested
+        organizations.defaultTaxInvoiceRequestedForAccount(accountId)
 
     @Transactional
     fun updateDefaultTaxInvoiceRequested(accountId: UUID, requested: Boolean) {
-        val account = account(accountId)
-        account.defaultTaxInvoiceRequested = requested
-        accounts.save(account)
+        organizations.updateDefaultTaxInvoiceRequestedForAccount(accountId, requested)
     }
 
     @Transactional

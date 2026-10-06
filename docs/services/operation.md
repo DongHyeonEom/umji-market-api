@@ -282,7 +282,7 @@ COMMIT;
 `ADMIN_ACCOUNT_MANAGE` 운영자는 계정을 활성 Organization에 명시적으로 연결.<br>
 같은 사업자번호를 가진 Organization도 자동 병합하지 않음. 구매 주문·배송지 API는 `BUYER` capability가 있는 Organization만 대상으로 처리.<br>
 Organization은 `BUYER`, `SELLER`, `OPERATOR` capability를 복수로 가질 수 있고 여러 계정을 구성원으로 연결 가능.<br>
-운영 계정 생성 요청의 `organizationCapability`는 최초 Organization capability이며 생략하면 `BUYER`. 사업자 프로필은 계정 row가 아닌 `organization_profile`에 저장.<br>
+운영 계정 생성 요청의 `organizationCapability`는 최초 Organization capability이며 생략하면 `BUYER`. 사업자 프로필은 계정 row가 아닌 `organization_business_profile`에 저장.<br>
 계정의 기존 구성원 이력은 보존. 기존 주문은 생성 시점 Organization에 유지하고 자동 이전하지 않음.<br>
 
 | Method | Endpoint | 동작 |
@@ -332,7 +332,7 @@ flowchart TD
     AUTH --> VALID{Organization·계정·capability 입력 유효}
     VALID -- 아니오 --> ERROR[400·404 거부]
     VALID -- 예 --> TYPE{구매·판매·운영 capability}
-    TYPE --> PROFILE[공통 organization_profile 검증]
+    TYPE --> PROFILE[공통 organization_business_profile 검증]
     PROFILE --> SAVE[Organization·capability·구성원·프로필 트랜잭션 저장]
     SAVE --> AUDIT[대상 계정 또는 Organization만 운영 감사 로그에 기록]
     AUDIT --> RESPONSE[Organization 식별자와 공개 응답 반환]
