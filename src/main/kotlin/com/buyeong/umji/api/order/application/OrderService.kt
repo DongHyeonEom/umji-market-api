@@ -9,8 +9,8 @@ import com.buyeong.umji.api.order.application.model.OrderItemDraft
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshotDraft
-import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
-import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
+import com.buyeong.umji.api.cart.application.CartService
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.payment.adapter.BankAccountInstructionsService
 import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderCheckoutJpaEntityService
@@ -25,8 +25,8 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional(readOnly = true)
 class OrderService(
-    private val checkoutCart: CheckoutCartPort,
-    private val inventory: InventoryReservationPort,
+    private val checkoutCart: CartService,
+    private val inventory: InventoryService,
     private val orders: OrderCheckoutJpaEntityService,
     private val shippingAddresses: CustomerAccountJpaEntityService,
     private val bankAccounts: BankAccountInstructionsService,
@@ -96,7 +96,11 @@ class OrderService(
         }
         val defaultPreference = currentDefaultPreference
         val bankAccount = if (selectedPreference) bankAccounts.taxInvoice() else bankAccounts.standard()
-        val lines = checkoutCart.linesForCheckout(accountPublicId)
+        val lines = checkoutCart.cart(accountPublicId).items.map {
+            com.buyeong.umji.api.order.application.model.CheckoutLine(
+                it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus, it.salesOfferId, it.channelCode,
+            )
+        }
         require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
         require(lines.all { it.salesStatus == ON_SALE }) { "판매 중지된 SKU가 포함되어 있습니다." }
         require(lines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
@@ -135,7 +139,7 @@ class OrderService(
             orders.updateDefaultTaxInvoiceRequested(accountPublicId, selectedPreference)
         }
         saved.items.forEach { item -> inventory.reserve(item.skuId, item.quantity, item.reservationKey, null) }
-        checkoutCart.clear(accountPublicId)
+        checkoutCart.clearForCheckout(accountPublicId)
         notifications.record(NotificationEventType.ORDER_CREATED, saved.id)
         return saved
     }
