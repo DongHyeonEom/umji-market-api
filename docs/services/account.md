@@ -10,8 +10,10 @@
 대표자는 전화번호 초대와 가입 요청 처리를 수행. 대표자 지정·변경은 운영자 권한으로 제한.<br>
 최초 가입 계정은 그룹 onboarding 조회에서 현재 그룹과 전화번호가 일치하는 대기 초대를 확인하고, 초대 수락 후에만 그룹에 연결.<br>
 그룹이 없는 계정은 개인 그룹을 만들거나 휴대폰 번호로 그룹을 찾아 가입 요청 가능. 그룹 이동 전 주문의 귀속은 유지.<br>
+그룹 조회·등록·초대·가입 요청 흐름은 `BuyerGroupMembershipService → BuyerGroupMembershipJpaEntityService`로 처리.<br>
 공급받는자 세금계산서 정보는 `buyer_group_business_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 그룹 구성원이 공유.<br>
 활성 그룹 구성원은 세금계산서 정보를 조회할 수 있고, 대표자와 `ADMIN_ACCOUNT_MANAGE` 운영자만 수정 가능. 개인 그룹은 세금계산서 정보를 등록하거나 발행 요청할 수 없음.<br>
+세금계산서 프로필 요청은 `BuyerGroupTaxInvoiceProfileService → BuyerGroupTaxInvoiceJpaEntityService` 흐름으로 처리.<br>
 공급받는자 정보 완성 기준은 활성 `BUSINESS` 그룹과 사업자등록번호·상호·성명·사업자주소·업태·종목 입력. 이메일은 선택 항목.<br>
 주문별 발행 선택과 계정별 기본 발행 선택은 기존 계약을 유지. 발행을 요청한 주문에는 주문 시점의 그룹 세금계산서 정보를 snapshot하고, 이후 프로필 변경은 기존 주문을 변경하지 않음.<br>
 

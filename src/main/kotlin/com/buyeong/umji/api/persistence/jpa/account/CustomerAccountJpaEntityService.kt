@@ -1,42 +1,33 @@
-package com.buyeong.umji.api.account.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.account
 
 import com.buyeong.umji.api.account.application.model.CustomerProfile
 import com.buyeong.umji.api.account.application.model.SharedAddress
 import com.buyeong.umji.api.account.application.model.SharedAddressCommand
-import com.buyeong.umji.api.account.application.port.out.CustomerAccountPort
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.order.application.model.ShippingAddressSnapshot
-import com.buyeong.umji.api.order.application.port.out.OrderShippingAddressPort
-import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupAddressEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupAddressRepository
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-@Component
-class JpaCustomerAccountAdapter(
+@Service
+@Transactional(readOnly = true)
+class CustomerAccountJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val buyerGroups: BuyerGroupJpaEntityService,
     private val addresses: BuyerGroupAddressRepository,
-) : CustomerAccountPort, OrderShippingAddressPort {
-    @Transactional(readOnly = true)
-    override fun profile(accountPublicId: UUID): CustomerProfile? = accounts.findByPublicId(accountPublicId)?.let { account ->
+) {
+    fun profile(accountPublicId: UUID): CustomerProfile? = accounts.findByPublicId(accountPublicId)?.let { account ->
         CustomerProfile(requireNotNull(account.publicId), account.name, account.phone, account.email, account.status)
     }
 
-    @Transactional(readOnly = true)
-    override fun addresses(accountPublicId: UUID): List<SharedAddress> {
+    fun addresses(accountPublicId: UUID): List<SharedAddress> {
         val group = buyerGroups.activeForAccountPublicId(accountPublicId) ?: return emptyList()
         return addresses.findAllByBuyerGroupId(requireNotNull(group.id)).map { it.toModel() }
     }
 
     @Transactional
-    override fun createAddress(accountPublicId: UUID, command: SharedAddressCommand): SharedAddress {
+    fun createAddress(accountPublicId: UUID, command: SharedAddressCommand): SharedAddress {
         val account = accounts.findByPublicId(accountPublicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = buyerGroups.lockActiveForAccountPublicId(accountPublicId)
         val groupId = requireNotNull(group.id)
@@ -48,7 +39,7 @@ class JpaCustomerAccountAdapter(
     }
 
     @Transactional
-    override fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommand): SharedAddress? {
+    fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommand): SharedAddress? {
         val group = buyerGroups.lockActiveForAccountPublicId(accountPublicId)
         val groupId = requireNotNull(group.id)
         val address = addresses.findByPublicIdAndBuyerGroup_Id(addressPublicId, groupId) ?: return null
@@ -63,7 +54,7 @@ class JpaCustomerAccountAdapter(
     }
 
     @Transactional
-    override fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddress? {
+    fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddress? {
         val group = buyerGroups.lockActiveForAccountPublicId(accountPublicId)
         val groupId = requireNotNull(group.id)
         val address = addresses.findByPublicIdAndBuyerGroup_Id(addressPublicId, groupId) ?: return null
@@ -72,7 +63,7 @@ class JpaCustomerAccountAdapter(
     }
 
     @Transactional
-    override fun deleteAddress(accountPublicId: UUID, addressPublicId: UUID): Boolean {
+    fun deleteAddress(accountPublicId: UUID, addressPublicId: UUID): Boolean {
         val group = buyerGroups.lockActiveForAccountPublicId(accountPublicId)
         val groupId = requireNotNull(group.id)
         val address = addresses.findByPublicIdAndBuyerGroup_Id(addressPublicId, groupId) ?: return false
@@ -84,8 +75,7 @@ class JpaCustomerAccountAdapter(
         return true
     }
 
-    @Transactional(readOnly = true)
-    override fun findForAccount(accountPublicId: UUID, addressPublicId: UUID): ShippingAddressSnapshot? {
+    fun findForAccount(accountPublicId: UUID, addressPublicId: UUID): ShippingAddressSnapshot? {
         val groupId = buyerGroups.activeForAccountPublicId(accountPublicId)?.id ?: return null
         val address = addresses.findByPublicIdAndBuyerGroup_Id(addressPublicId, groupId) ?: return null
         return ShippingAddressSnapshot(

@@ -1,6 +1,9 @@
 package com.buyeong.umji.api.account.adapter.`in`.web
 
 import com.buyeong.umji.api.account.model.BuyerGroupOnboardingResponse
+import com.buyeong.umji.api.account.application.CustomerAccountService
+import com.buyeong.umji.api.account.application.BuyerGroupMembershipService
+import com.buyeong.umji.api.account.application.BuyerGroupTaxInvoiceProfileService
 import com.buyeong.umji.api.account.model.BuyerGroupRegistrationRequest
 import com.buyeong.umji.api.account.model.CreateIndividualGroupRequest
 import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileRequest
@@ -40,9 +43,9 @@ import com.buyeong.umji.api.account.model.toResponse as membershipResponse
 @Tag(name = "사용자 계정", description = "사용자 프로필·배송지·구매자 그룹 가입 API")
 class CustomerAccountController(
     private val currentAccounts: CurrentAccountPort,
-    private val account: TransactionalCustomerAccountUseCase,
-    private val groups: TransactionalBuyerGroupMembershipUseCase,
-    private val taxInvoiceProfiles: TransactionalBuyerGroupTaxInvoiceProfileUseCase,
+    private val account: CustomerAccountService,
+    private val groups: BuyerGroupMembershipService,
+    private val taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileService,
 ) {
     @Operation(summary = "사용자 프로필조회", description = "사용자 프로필·배송지·구매자 그룹 가입 API. /profile 경로에서 사용자 프로필조회를 수행")
     @GetMapping("/profile")

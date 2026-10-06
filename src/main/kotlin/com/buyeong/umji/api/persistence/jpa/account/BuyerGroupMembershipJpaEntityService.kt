@@ -1,32 +1,19 @@
-package com.buyeong.umji.api.account.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.account
 
 import com.buyeong.umji.api.account.application.model.BuyerGroupInvitation
 import com.buyeong.umji.api.account.application.model.BuyerGroupJoinRequest
 import com.buyeong.umji.api.account.application.model.BuyerGroupSearchResult
 import com.buyeong.umji.api.account.application.model.BuyerGroupSummary
 import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.application.port.out.BuyerGroupMembershipPort
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupInvitationEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupInvitationRepository
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJoinRequestEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJoinRequestRepository
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupRepository
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupBusinessProfileEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupBusinessProfileRepository
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-@Component
-class JpaBuyerGroupMembershipAdapter(
+@Service
+@Transactional(readOnly = true)
+class BuyerGroupMembershipJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val groups: BuyerGroupRepository,
     private val members: BuyerGroupMemberRepository,
@@ -34,9 +21,8 @@ class JpaBuyerGroupMembershipAdapter(
     private val joinRequests: BuyerGroupJoinRequestRepository,
     private val buyerGroupEntities: BuyerGroupJpaEntityService,
     private val businessProfiles: BuyerGroupBusinessProfileRepository,
-) : BuyerGroupMembershipPort {
-    @Transactional(readOnly = true)
-    override fun current(accountId: UUID): BuyerGroupSummary? {
+) {
+    fun current(accountId: UUID): BuyerGroupSummary? {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val membership = members.findFirstByAccount_IdAndStatusOrderByJoinedAtDesc(requireNotNull(account.id), ACTIVE) ?: return null
         val group = membership.buyerGroup.takeIf { it.status == ACTIVE } ?: return null
@@ -44,7 +30,7 @@ class JpaBuyerGroupMembershipAdapter(
     }
 
     @Transactional
-    override fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary {
+    fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         require(members.findFirstByAccount_IdAndStatus(requireNotNull(account.id), ACTIVE) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
         val group = groups.saveAndFlush(
@@ -66,7 +52,7 @@ class JpaBuyerGroupMembershipAdapter(
     }
 
     @Transactional
-    override fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary {
+    fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary {
         val account = accounts.lockByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val accountInternalId = requireNotNull(account.id)
         require(members.findFirstByAccount_IdAndStatus(accountInternalId, ACTIVE) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
@@ -120,12 +106,11 @@ class JpaBuyerGroupMembershipAdapter(
         return group.toSummary(account)
     }
 
-    @Transactional(readOnly = true)
-    override fun search(phoneNormalized: String): List<BuyerGroupSearchResult> =
+    fun search(phoneNormalized: String): List<BuyerGroupSearchResult> =
         groups.searchByPhone(phoneNormalized).map { BuyerGroupSearchResult(requireNotNull(it.publicId), it.groupType, it.displayName) }
 
     @Transactional
-    override fun invite(accountId: UUID, phoneNormalized: String): BuyerGroupInvitation {
+    fun invite(accountId: UUID, phoneNormalized: String): BuyerGroupInvitation {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = representativeGroup(account) ?: throw ItemNotFoundException("대표자 권한이 있는 활성 그룹을 찾을 수 없습니다.")
         lockGroup(requireNotNull(group.id))
@@ -146,8 +131,7 @@ class JpaBuyerGroupMembershipAdapter(
         return invitation.toModel()
     }
 
-    @Transactional(readOnly = true)
-    override fun invitations(accountId: UUID): List<BuyerGroupInvitation> {
+    fun invitations(accountId: UUID): List<BuyerGroupInvitation> {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val phone = account.phoneNormalized ?: return emptyList()
         return invitations.findAllByPhoneNormalizedAndStatus(phone, PENDING)
@@ -156,7 +140,7 @@ class JpaBuyerGroupMembershipAdapter(
     }
 
     @Transactional
-    override fun respondInvitation(accountId: UUID, invitationId: UUID, accept: Boolean) {
+    fun respondInvitation(accountId: UUID, invitationId: UUID, accept: Boolean) {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val phone = account.phoneNormalized ?: throw IllegalStateException("계정 휴대폰 번호를 확인할 수 없습니다.")
         val invitation = invitations.findAllByPhoneNormalizedAndStatus(phone, PENDING)
@@ -174,7 +158,7 @@ class JpaBuyerGroupMembershipAdapter(
     }
 
     @Transactional
-    override fun requestToJoin(accountId: UUID, groupId: UUID) {
+    fun requestToJoin(accountId: UUID, groupId: UUID) {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = groups.findByPublicId(groupId)?.takeIf { it.status == ACTIVE }
             ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
@@ -197,15 +181,14 @@ class JpaBuyerGroupMembershipAdapter(
         )
     }
 
-    @Transactional(readOnly = true)
-    override fun pendingJoinRequests(accountId: UUID): List<BuyerGroupJoinRequest> {
+    fun pendingJoinRequests(accountId: UUID): List<BuyerGroupJoinRequest> {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = representativeGroup(account) ?: return emptyList()
         return joinRequests.findAllByBuyerGroup_IdAndStatusOrderByRequestedAtAsc(requireNotNull(group.id), PENDING).map { it.toModel() }
     }
 
     @Transactional
-    override fun respondJoinRequest(accountId: UUID, requestId: UUID, approve: Boolean) {
+    fun respondJoinRequest(accountId: UUID, requestId: UUID, approve: Boolean) {
         val representative = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val request = joinRequests.findFirstByPublicIdAndStatus(requestId, PENDING)
             ?: throw ItemNotFoundException("대기 중인 가입 요청을 찾을 수 없습니다.")

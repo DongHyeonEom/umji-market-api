@@ -5,24 +5,28 @@ import com.buyeong.umji.api.account.application.model.BuyerGroupJoinRequest
 import com.buyeong.umji.api.account.application.model.BuyerGroupSearchResult
 import com.buyeong.umji.api.account.application.model.BuyerGroupSummary
 import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
 import com.buyeong.umji.api.account.application.port.out.BusinessRegistrationStatusPort
-import com.buyeong.umji.api.account.application.port.out.BuyerGroupMembershipPort
 import com.buyeong.umji.api.util.PhoneNumberHelper
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMembershipJpaEntityService
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.stereotype.Service
 import java.util.UUID
 
+@Service
 class BuyerGroupMembershipService(
-    private val groups: BuyerGroupMembershipPort,
+    private val groups: BuyerGroupMembershipJpaEntityService,
     private val registrationStatus: BusinessRegistrationStatusPort,
-) : BuyerGroupMembershipUseCase {
-    override fun current(accountId: UUID): BuyerGroupSummary? = groups.current(accountId)
+) {
+    @Transactional(readOnly = true)
+    fun current(accountId: UUID): BuyerGroupSummary? = groups.current(accountId)
 
-    override fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary {
+    @Transactional
+    fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary {
         require(name.isNotBlank() && name.length <= 200) { "그룹 이름은 1자 이상 200자 이하여야 합니다." }
         return groups.createIndividualGroup(accountId, name.trim())
     }
 
-    override fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary {
+    fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary {
         require(groups.current(accountId) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
         require(command.type == INDIVIDUAL || command.type == BUSINESS) { "그룹 유형은 INDIVIDUAL 또는 BUSINESS여야 합니다." }
         if (command.type == INDIVIDUAL) {
@@ -45,22 +49,29 @@ class BuyerGroupMembershipService(
         return groups.register(accountId, command.copy(type = BUSINESS, business = business.copy(businessRegistrationNumber = business.businessRegistrationNumber.replace("-", ""))))
     }
 
-    override fun search(phone: String): List<BuyerGroupSearchResult> =
+    @Transactional(readOnly = true)
+    fun search(phone: String): List<BuyerGroupSearchResult> =
         groups.search(PhoneNumberHelper.normalizeMobilePhoneNumber(phone))
 
-    override fun invite(accountId: UUID, phone: String): BuyerGroupInvitation =
+    @Transactional
+    fun invite(accountId: UUID, phone: String): BuyerGroupInvitation =
         groups.invite(accountId, PhoneNumberHelper.normalizeMobilePhoneNumber(phone))
 
-    override fun invitations(accountId: UUID): List<BuyerGroupInvitation> = groups.invitations(accountId)
+    @Transactional(readOnly = true)
+    fun invitations(accountId: UUID): List<BuyerGroupInvitation> = groups.invitations(accountId)
 
-    override fun respondInvitation(accountId: UUID, invitationId: UUID, accept: Boolean) =
+    @Transactional
+    fun respondInvitation(accountId: UUID, invitationId: UUID, accept: Boolean) =
         groups.respondInvitation(accountId, invitationId, accept)
 
-    override fun requestToJoin(accountId: UUID, groupId: UUID) = groups.requestToJoin(accountId, groupId)
+    @Transactional
+    fun requestToJoin(accountId: UUID, groupId: UUID) = groups.requestToJoin(accountId, groupId)
 
-    override fun pendingJoinRequests(accountId: UUID): List<BuyerGroupJoinRequest> = groups.pendingJoinRequests(accountId)
+    @Transactional(readOnly = true)
+    fun pendingJoinRequests(accountId: UUID): List<BuyerGroupJoinRequest> = groups.pendingJoinRequests(accountId)
 
-    override fun respondJoinRequest(accountId: UUID, requestId: UUID, approve: Boolean) =
+    @Transactional
+    fun respondJoinRequest(accountId: UUID, requestId: UUID, approve: Boolean) =
         groups.respondJoinRequest(accountId, requestId, approve)
 
     private companion object {

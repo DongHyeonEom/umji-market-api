@@ -1,31 +1,25 @@
-package com.buyeong.umji.api.account.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.account
 
 import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfile
 import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
-import com.buyeong.umji.api.account.application.port.out.BuyerGroupTaxInvoiceProfilePort
 import com.buyeong.umji.api.exception.ForbiddenOperationException
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupBusinessProfileEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupBusinessProfileRepository
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupRepository
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-@Component
-class JpaBuyerGroupTaxInvoiceProfileAdapter(
+@Service
+@Transactional(readOnly = true)
+class BuyerGroupTaxInvoiceJpaEntityService(
     private val buyerGroups: BuyerGroupJpaEntityService,
     private val groups: BuyerGroupRepository,
     private val profiles: BuyerGroupBusinessProfileRepository,
-) : BuyerGroupTaxInvoiceProfilePort {
-    @Transactional(readOnly = true)
-    override fun forAccount(accountPublicId: UUID): BuyerGroupTaxInvoiceProfile? =
+) {
+    fun forAccount(accountPublicId: UUID): BuyerGroupTaxInvoiceProfile? =
         buyerGroups.activeForAccountPublicId(accountPublicId)?.toProfile()
 
     @Transactional
-    override fun updateForAccount(
+    fun updateForAccount(
         accountPublicId: UUID,
         command: BuyerGroupTaxInvoiceProfileCommand,
     ): BuyerGroupTaxInvoiceProfile? {
@@ -51,12 +45,11 @@ class JpaBuyerGroupTaxInvoiceProfileAdapter(
         return profile.toModel(group)
     }
 
-    @Transactional(readOnly = true)
-    override fun forGroup(groupPublicId: UUID): BuyerGroupTaxInvoiceProfile? =
+    fun forGroup(groupPublicId: UUID): BuyerGroupTaxInvoiceProfile? =
         groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE }?.toProfile()
 
     @Transactional
-    override fun updateForGroup(
+    fun updateForGroup(
         groupPublicId: UUID,
         command: BuyerGroupTaxInvoiceProfileCommand,
     ): BuyerGroupTaxInvoiceProfile? {

@@ -3,35 +3,43 @@ package com.buyeong.umji.api.account.application
 import com.buyeong.umji.api.account.application.model.CustomerProfile
 import com.buyeong.umji.api.account.application.model.SharedAddress
 import com.buyeong.umji.api.account.application.model.SharedAddressCommand
-import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
-import com.buyeong.umji.api.account.application.port.out.CustomerAccountPort
+import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.stereotype.Service
 import java.util.UUID
 
+@Service
 class CustomerAccountService(
-    private val accounts: CustomerAccountPort,
-) : CustomerAccountUseCase {
-    override fun profile(accountPublicId: UUID): CustomerProfile =
+    private val accounts: CustomerAccountJpaEntityService,
+) {
+    @Transactional(readOnly = true)
+    fun profile(accountPublicId: UUID): CustomerProfile =
         accounts.profile(accountPublicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
 
-    override fun addresses(accountPublicId: UUID): List<SharedAddress> = accounts.addresses(accountPublicId)
+    @Transactional(readOnly = true)
+    fun addresses(accountPublicId: UUID): List<SharedAddress> = accounts.addresses(accountPublicId)
 
-    override fun createAddress(accountPublicId: UUID, command: SharedAddressCommand): SharedAddress {
+    @Transactional
+    fun createAddress(accountPublicId: UUID, command: SharedAddressCommand): SharedAddress {
         validate(command)
         return accounts.createAddress(accountPublicId, command)
     }
 
-    override fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommand): SharedAddress {
+    @Transactional
+    fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommand): SharedAddress {
         validate(command)
         return accounts.updateAddress(accountPublicId, addressPublicId, command)
             ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
     }
 
-    override fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddress =
+    @Transactional
+    fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddress =
         accounts.setDefaultAddress(accountPublicId, addressPublicId)
             ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
 
-    override fun deleteAddress(accountPublicId: UUID, addressPublicId: UUID) {
+    @Transactional
+    fun deleteAddress(accountPublicId: UUID, addressPublicId: UUID) {
         if (!accounts.deleteAddress(accountPublicId, addressPublicId)) {
             throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
         }
