@@ -342,5 +342,5 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 ## 구조
 
 계정과 카탈로그는 각각 `operation/account`, `operation/catalog`에 배치.<br>
-HTTP 모델은 web adapter에서 application 명령·응답 모델로 바꾸고, persistence adapter에서만 JPA Entity를 사용함.<br>
+Controller가 HTTP 모델을 도메인 Service 호출로 변환하며, 도메인 Service가 영속성 service와 Repository를 호출함.<br>
 감사 로그 저장·조회·보존 정책 적용은 이 문서의 기준을 사용함.<br>

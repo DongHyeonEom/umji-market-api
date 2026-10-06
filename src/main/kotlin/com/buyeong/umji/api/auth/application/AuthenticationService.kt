@@ -10,8 +10,7 @@ import com.buyeong.umji.api.auth.application.model.RefreshSessionRecord
 import com.buyeong.umji.api.auth.application.model.RefreshTokenCommand
 import com.buyeong.umji.api.auth.application.model.RevokeRefreshTokenCommand
 import com.buyeong.umji.api.auth.application.port.out.AccessTokenIssuerPort
-import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
-import com.buyeong.umji.api.auth.application.port.out.RefreshSessionPort
+import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.util.PhoneNumberHelper
 import java.security.MessageDigest
@@ -19,10 +18,14 @@ import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
 import java.util.Base64
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
+@Service
+@Transactional
 class AuthenticationService(
-    private val accounts: AccountAuthenticationPort,
-    private val refreshSessions: RefreshSessionPort,
+    private val accounts: AuthenticationJpaEntityService,
+    private val refreshSessions: AuthenticationJpaEntityService,
     private val accessTokens: AccessTokenIssuerPort,
 ) {
     fun login(command: PhoneLoginCommand): LoginResult {

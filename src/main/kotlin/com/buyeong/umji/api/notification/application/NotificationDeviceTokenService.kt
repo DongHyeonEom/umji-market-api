@@ -2,17 +2,20 @@ package com.buyeong.umji.api.notification.application
 
 import com.buyeong.umji.api.notification.application.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.application.model.NotificationDeviceTokenRegistration
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationDeviceTokenUseCase
 import com.buyeong.umji.api.notification.application.port.out.NotificationDeviceTokenStorePort
 import java.security.MessageDigest
 import java.time.Clock
 import java.util.UUID
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
+@Service
+@Transactional
 class NotificationDeviceTokenService(
     private val tokens: NotificationDeviceTokenStorePort,
     private val clock: Clock,
-) : NotificationDeviceTokenUseCase {
-    override fun register(
+) {
+    fun register(
         accountId: UUID,
         platform: NotificationDevicePlatform,
         token: String,
@@ -27,7 +30,7 @@ class NotificationDeviceTokenService(
         return tokens.register(accountId, platform, token, hash, clock.instant())
     }
 
-    override fun revoke(accountId: UUID, tokenId: UUID) = tokens.revoke(accountId, tokenId)
+    fun revoke(accountId: UUID, tokenId: UUID) = tokens.revoke(accountId, tokenId)
 
     private companion object {
         const val MAX_TOKEN_LENGTH = 4096

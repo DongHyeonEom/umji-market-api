@@ -1,15 +1,20 @@
 package com.buyeong.umji.api.order.application
 
 import com.buyeong.umji.api.notification.application.model.NotificationEventType
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
+import com.buyeong.umji.api.notification.application.NotificationEventService
 import com.buyeong.umji.api.order.application.model.CheckoutLine
+import com.buyeong.umji.api.cart.application.CartService
+import com.buyeong.umji.api.cart.application.model.CartItemView
+import com.buyeong.umji.api.cart.application.model.CartView
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.model.ShippingAddressSnapshot
-import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
-import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
-import com.buyeong.umji.api.order.application.port.out.OrderShippingAddressPort
-import com.buyeong.umji.api.order.application.port.out.OrderStorePort
+import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.OrderCheckoutJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.payment.adapter.TaxInvoiceSupplierAdapter
+import com.buyeong.umji.api.payment.adapter.BankAccountInstructionsService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -18,12 +23,15 @@ import io.mockk.verify
 import java.util.UUID
 
 class OrderServiceTest : DescribeSpec({
-    val carts = mockk<CheckoutCartPort>()
-    val inventory = mockk<InventoryReservationPort>(relaxed = true)
-    val orders = mockk<OrderStorePort>()
-    val shippingAddresses = mockk<OrderShippingAddressPort>()
-    val notifications = mockk<NotificationEventUseCase>(relaxed = true)
-    val service = OrderService(carts, inventory, orders, shippingAddresses, notifications = notifications)
+    val carts = mockk<CartService>()
+    val inventory = mockk<InventoryService>(relaxed = true)
+    val orders = mockk<OrderCheckoutJpaEntityService>()
+    val shippingAddresses = mockk<CustomerAccountJpaEntityService>()
+    val notifications = mockk<NotificationEventService>(relaxed = true)
+    val taxInvoiceSuppliers = mockk<TaxInvoiceSupplierAdapter>(relaxed = true)
+    val taxInvoiceBuyers = mockk<BuyerGroupTaxInvoiceJpaEntityService>(relaxed = true)
+    val bankAccounts = mockk<BankAccountInstructionsService>(relaxed = true)
+    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers)
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()
@@ -33,7 +41,7 @@ class OrderServiceTest : DescribeSpec({
         it("가격 스냅샷을 저장하고 재고를 예약한 뒤 장바구니를 비운다") {
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
                 ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
-            every { carts.linesForCheckout(accountId) } returns listOf(CheckoutLine(skuId, "SKU-001", "테스트 상품", "규격 A", 12000, 3, "ON_SALE", offerId, "RETAIL"))
+            every { carts.cart(accountId) } returns CartView(listOf(CartItemView(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", 3, 12000, "ON_SALE", offerId, "RETAIL")))
             every { orders.save(any()) } answers {
                 val draft = firstArg<com.buyeong.umji.api.order.application.model.OrderDraft>()
                 draft.channelCode shouldBe "RETAIL"
@@ -50,7 +58,7 @@ class OrderServiceTest : DescribeSpec({
                     },
                 )
             }
-            every { carts.clear(accountId) } returns Unit
+            every { carts.clearForCheckout(accountId) } returns Unit
 
             val result = service.create(accountId, addressId)
 
@@ -60,7 +68,7 @@ class OrderServiceTest : DescribeSpec({
             result.items.single().quantity shouldBe 3
             verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, result.id, null) }
             verify(exactly = 1) { inventory.reserve(skuId, 3, any(), null) }
-            verify(exactly = 1) { carts.clear(accountId) }
+            verify(exactly = 1) { carts.clearForCheckout(accountId) }
         }
     }
 })

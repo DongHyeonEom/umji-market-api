@@ -1,14 +1,14 @@
 package com.buyeong.umji.api.account.application
 
 import com.buyeong.umji.api.account.application.model.SharedAddressCommand
-import com.buyeong.umji.api.account.application.port.out.CustomerAccountPort
+import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.mockk
 import java.util.UUID
 
 class CustomerAccountServiceTest : DescribeSpec({
-    val accounts = mockk<CustomerAccountPort>()
+    val accounts = mockk<CustomerAccountJpaEntityService>()
     val service = CustomerAccountService(accounts)
     val accountId = UUID.randomUUID()
 

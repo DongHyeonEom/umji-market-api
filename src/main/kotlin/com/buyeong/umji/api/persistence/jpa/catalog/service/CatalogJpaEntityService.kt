@@ -2,9 +2,13 @@ package com.buyeong.umji.api.persistence.jpa.catalog
 
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 
 @Service
 @Transactional(readOnly = true)
@@ -16,6 +20,8 @@ class CatalogJpaEntityService(
     private val images: ProductImageRepository,
     private val options: ProductOptionRepository,
     private val optionValues: ProductOptionValueRepository,
+    private val listings: ChannelProductListingRepository,
+    private val offers: SalesOfferRepository,
 ) {
     fun displayedCategories(channelCode: String, status: String): List<CategoryEntity> = categories.findAllBySalesChannel_CodeAndDisplayStatusAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(channelCode, status)
     fun categories(channelCode: String): List<CategoryEntity> = categories.findAllBySalesChannel_CodeAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(channelCode)
@@ -43,6 +49,13 @@ class CatalogJpaEntityService(
     fun options(productId: Long): List<ProductOptionEntity> = options.findAllByProductIdOrderByDisplayOrderAscIdAsc(productId)
     fun optionValues(optionId: Long): List<ProductOptionValueEntity> = optionValues.findAllByOptionIdOrderByDisplayOrderAscIdAsc(optionId)
     fun optionValues(ids: Collection<UUID>): List<ProductOptionValueEntity> = optionValues.findAllByPublicIdIn(ids)
+    fun channelCategories(channelCode: String, status: String) = listings.findCategories(channelCode, status)
+    fun publicListings(channelCode: String, displayStatus: String, salesStatus: String, page: Int, size: Int) =
+        listings.findPublicListings(channelCode, displayStatus, salesStatus, PageRequest.of(page, size, Sort.by("displayOrder").ascending().and(Sort.by("id").descending())))
+    fun publicListing(channelCode: String, productId: UUID, displayStatus: String, salesStatus: String) =
+        listings.findPublicListing(channelCode, productId, displayStatus, salesStatus)
+    fun activeSalesOffers(channelCode: String, salesStatus: String, productId: Long) =
+        offers.findAllBySalesChannel_CodeAndSalesStatusAndProductSku_Product_IdOrderBySalePriceAsc(channelCode, salesStatus, productId)
 
     @Transactional fun save(category: CategoryEntity): CategoryEntity = categories.save(category)
 

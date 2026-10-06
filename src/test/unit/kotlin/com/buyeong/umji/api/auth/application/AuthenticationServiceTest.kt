@@ -6,8 +6,7 @@ import com.buyeong.umji.api.auth.application.model.PhoneLoginCommand
 import com.buyeong.umji.api.auth.application.model.RefreshSessionRecord
 import com.buyeong.umji.api.auth.application.model.RefreshTokenCommand
 import com.buyeong.umji.api.auth.application.port.out.AccessTokenIssuerPort
-import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
-import com.buyeong.umji.api.auth.application.port.out.RefreshSessionPort
+import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -24,8 +23,8 @@ import java.time.Instant
 import java.util.UUID
 
 class AuthenticationServiceTest : DescribeSpec({
-    val accounts = mockk<AccountAuthenticationPort>(relaxed = true)
-    val sessions = mockk<RefreshSessionPort>(relaxed = true)
+    val accounts = mockk<AuthenticationJpaEntityService>(relaxed = true)
+    val sessions = accounts
     val tokenIssuer = mockk<AccessTokenIssuerPort>()
     val service = AuthenticationService(accounts, sessions, tokenIssuer)
     val accountId = UUID.randomUUID()

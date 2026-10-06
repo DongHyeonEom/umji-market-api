@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.operation.shipment.adapter.`in`.web
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
+import com.buyeong.umji.api.shipment.application.ShipmentService
 import com.buyeong.umji.api.shipment.model.ShipmentResponse
 import com.buyeong.umji.api.shipment.model.ShipmentTrackingRequest
 import com.buyeong.umji.api.shipment.model.toResponse
@@ -22,7 +23,7 @@ import java.util.UUID
 @Tag(name = "운영 배송 관리", description = "주문 송장 등록과 배송 완료 상태 관리 API")
 class OperationShipmentController(
     private val currentAccounts: CurrentAccountPort,
-    private val shipments: TransactionalShipmentUseCase,
+    private val shipments: ShipmentService,
 ) {
     @Operation(summary = "주문 송장 정보 등록", description = "주문 송장 정보 등록 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PutMapping("/tracking")

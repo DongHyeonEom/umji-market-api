@@ -6,27 +6,32 @@ import com.buyeong.umji.api.operation.account.application.model.BusinessProfileD
 import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.application.model.ManagedRole
 import com.buyeong.umji.api.operation.account.application.model.NewAccount
-import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
-import com.buyeong.umji.api.operation.account.application.port.out.OperationAccountPort
+import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
 import java.util.UUID
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
-class OperationAccountService(private val accounts: OperationAccountPort) : OperationAccountUseCase {
-    override fun create(command: NewAccount) = accounts.create(command)
-    override fun list(status: String?, page: Int, size: Int) = accounts.list(status, page, size)
-    override fun detail(id: UUID) = accounts.find(id) ?: missing()
-    override fun status(id: UUID, status: String): AccountData {
+@Service
+@Transactional
+class OperationAccountService(private val accounts: OperationAccountJpaEntityService) {
+    fun create(command: NewAccount) = accounts.create(command)
+    @Transactional(readOnly = true)
+    fun list(status: String?, page: Int, size: Int) = accounts.list(status, page, size)
+    @Transactional(readOnly = true)
+    fun detail(id: UUID) = accounts.find(id) ?: missing()
+    fun status(id: UUID, status: String): AccountData {
         require(status in STATUSES) { "유효하지 않은 계정 상태입니다." }
         require(status != ACTIVE) { "개인정보 동의 확인 후 승인 API를 이용해야 합니다." }
         return accounts.updateStatus(id, status) ?: missing()
     }
-    override fun profile(id: UUID, profile: BusinessProfileData): AccountData {
+    fun profile(id: UUID, profile: BusinessProfileData): AccountData {
         val account = accounts.find(id) ?: missing()
         val nextStatus = if (account.status == PENDING_PROFILE) PENDING_REVIEW else account.status
         return accounts.updateProfile(id, profile, nextStatus) ?: missing()
     }
-    override fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData = accounts.assignBuyerGroup(id, buyerGroupId) ?: missing()
-    override fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = accounts.setBuyerGroupRepresentative(groupId, accountId)
-    override fun consent(id: UUID, consent: ConsentCommand): AccountData {
+    fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData = accounts.assignBuyerGroup(id, buyerGroupId) ?: missing()
+    fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = accounts.setBuyerGroupRepresentative(groupId, accountId)
+    fun consent(id: UUID, consent: ConsentCommand): AccountData {
         require(consent.consentMethod in METHODS) { "유효하지 않은 동의 방식입니다." }
         val account = accounts.find(id) ?: missing()
         val nextStatus = if (account.status == PENDING_CONSENT) {
@@ -36,17 +41,19 @@ class OperationAccountService(private val accounts: OperationAccountPort) : Oper
         }
         return accounts.addConsent(id, consent, nextStatus) ?: missing()
     }
-    override fun approve(id: UUID): AccountData {
+    fun approve(id: UUID): AccountData {
         require(accounts.hasConsent(id, PERSONAL_INFORMATION)) { "개인정보 동의 이력이 필요합니다." }
         return accounts.approve(id) ?: missing()
     }
-    override fun managedRoles(): List<ManagedRole> = accounts.managedRoles()
-    override fun roles(id: UUID): List<ManagedRole> = accounts.roles(id) ?: missing()
-    override fun grantRole(id: UUID, roleCode: String, grantedBy: UUID): List<ManagedRole> {
+    @Transactional(readOnly = true)
+    fun managedRoles(): List<ManagedRole> = accounts.managedRoles()
+    @Transactional(readOnly = true)
+    fun roles(id: UUID): List<ManagedRole> = accounts.roles(id) ?: missing()
+    fun grantRole(id: UUID, roleCode: String, grantedBy: UUID): List<ManagedRole> {
         require(roleCode in MANAGED_ROLE_CODES) { "부여할 수 없는 role입니다." }
         return accounts.grantRole(id, roleCode, grantedBy) ?: missing()
     }
-    override fun revokeRole(id: UUID, roleCode: String): List<ManagedRole> {
+    fun revokeRole(id: UUID, roleCode: String): List<ManagedRole> {
         require(roleCode in MANAGED_ROLE_CODES) { "회수할 수 없는 role입니다." }
         return accounts.revokeRole(id, roleCode) ?: missing()
     }

@@ -6,9 +6,7 @@ import com.buyeong.umji.api.auth.application.model.WebLoginCommand
 import com.buyeong.umji.api.auth.application.model.WebPasswordCommand
 import com.buyeong.umji.api.auth.application.port.out.AccessTokenIssuerPort
 import com.buyeong.umji.api.auth.application.port.out.CredentialEncoderPort
-import com.buyeong.umji.api.auth.application.port.out.RefreshSessionPort
 import com.buyeong.umji.api.auth.application.port.out.TotpPort
-import com.buyeong.umji.api.auth.application.port.out.WebCredentialPort
 import com.buyeong.umji.api.auth.application.port.out.WebLoginAttemptPort
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import io.kotest.assertions.throwables.shouldThrow
@@ -22,10 +20,10 @@ import io.mockk.verify
 import java.util.UUID
 
 class WebAuthenticationServiceTest : DescribeSpec({
-    val credentials = mockk<WebCredentialPort>(relaxed = true)
+    val credentials = mockk<com.buyeong.umji.api.persistence.jpa.auth.WebCredentialJpaEntityService>(relaxed = true)
     val encoder = mockk<CredentialEncoderPort>()
     val totp = mockk<TotpPort>()
-    val sessions = mockk<RefreshSessionPort>(relaxed = true)
+    val sessions = mockk<com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService>(relaxed = true)
     val accessTokens = mockk<AccessTokenIssuerPort>()
     val attempts = mockk<WebLoginAttemptPort>(relaxed = true)
     val service = WebAuthenticationService(credentials, encoder, totp, sessions, accessTokens, attempts)

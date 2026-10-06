@@ -2,78 +2,76 @@
 
 ## 기준
 
-서비스의 최상위 기준은 헥사고날 아키텍처(Ports and Adapters)와 클린 아키텍처임.<br>
-의존성은 바깥 adapter에서 안쪽 application·domain을 향함.<br>
-안쪽 계층은 Spring MVC, Spring Data JPA, DB 구현, HTTP DTO를 참조하지 않음.<br>
-
-## 요청과 의존 흐름
+서비스는 Controller·Service·Persistence의 계층형 구조를 사용함.<br>
+주요 요청 흐름은 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`.<br>
+의존성은 호출 방향을 따라 바깥 계층에서 안쪽 업무 계층 및 영속성 계층으로 향함.<br>
 
 ```mermaid
 flowchart LR
-    Client["앱 / React WebView"] --> Controller["HTTP Controller<br/>입력 Adapter"]
-    Controller --> InputPort["입력 Port<br/>UseCase"]
-    InputPort --> Application["Application Service<br/>유스케이스 흐름"]
-    Application --> Domain["Domain Model<br/>핵심 규칙"]
-    Application --> OutputPort["출력 Port<br/>Repository / Gateway"]
-    OutputPort -->|런타임 호출| JpaAdapter["JPA Adapter"]
-    JpaAdapter --> SpringData["Spring Data Repository"]
-    SpringData --> Database[("MySQL")]
-    OutputPort -->|런타임 호출| ExternalAdapter["외부 서비스 Adapter"]
-    ExternalAdapter --> External["외부 API"]
-    JpaAdapter -. "Port 구현 / 안쪽에 의존" .-> OutputPort
-    ExternalAdapter -. "Port 구현 / 안쪽에 의존" .-> OutputPort
+    Client["앱 / React WebView"] --> Controller["Controller<br/>HTTP 검증·변환"]
+    Controller --> Service["도메인 Service<br/>업무 흐름·인가·트랜잭션"]
+    Service --> JpaService["JpaEntityService<br/>DB 조회·저장 조정"]
+    JpaService --> Repository["Spring Data Repository"]
+    Repository --> Entity["JPA Entity"]
+    Entity --> Database[("MySQL")]
+    Service --> Integration["외부 연동 구체 구현"]
+    Integration --> External["외부 API"]
 ```
 
-실선은 런타임 요청·호출 흐름이고 점선은 구현 의존 방향임.<br>
-Application은 출력 Port를 호출하며, adapter가 DB나 외부 API에 연결함.<br>
+## 계층 책임
+
+| 계층 | 책임 |
+| --- | --- |
+| Controller | HTTP 입력 검증, 인증 사용자 식별, 도메인 Service 호출, HTTP 응답 변환 |
+| 도메인 Service | 유스케이스 조정, 업무 규칙, 권한 확인, 트랜잭션 경계, 도메인 간 Service 호출 |
+| JpaEntityService | JPA Repository 호출 조정, Entity 조회·저장·관계 관리 |
+| Spring Data Repository | DB query 실행 |
+| JPA Entity | 테이블 영속 모델 |
+| 외부 연동 구현 | 외부 API·SDK 호출, 결과 변환 및 오류 처리 |
+
+UseCase·Port를 위한 서비스 계약 인터페이스와 위임 전용 adapter/wrapper를 두지 않음.<br>
+도메인 Service는 구체 Kotlin class로 선언하고 필요한 하위 Service 또는 `JpaEntityService`를 생성자 주입함.<br>
+Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider 요구로 필요한 인터페이스는 유지 가능.<br>
+HTTP 요청·응답 DTO는 외부 계약으로 유지하며 JPA Entity를 응답에 직접 노출하지 않음.<br>
 
 ## 패키지 구조
 
+도메인별 기능 구분을 유지하고, 계층 이름은 패키지 경계보다 호출 책임을 기준으로 적용함.<br>
+
 ```text
 {domain}/
-  domain/                    # 필요한 도메인 모델과 규칙
-  application/
-    model/                   # 프레임워크 독립 명령·조회 모델
-    port/in/                 # 입력 UseCase
-    port/out/                # 저장소·외부 연동 계약
-    *Service.kt              # 유스케이스 구현
-  adapter/
-    in/web/                  # HTTP Controller, 요청/응답 변환
-    in/security/             # Spring Security 입력 연동
-    out/persistence/         # JPA Entity ↔ application/domain 변환
-    out/{integration}/       # 외부 시스템 연동
+  adapter/in/web/       # Controller 및 HTTP DTO
+  service/              # 도메인 Service
+  persistence/jpa/      # JpaEntityService, Repository, Entity
+  integration/          # 외부 연동 구체 구현과 설정
 ```
 
-모든 도메인에 불필요한 계층을 기계적으로 만들지 않음.<br>
-Port는 실제 경계가 필요한 곳에 두고, 이름보다 의존 방향을 준수.<br>
-JPA Entity와 Spring Data Repository는 `persistence/jpa/{aggregate}` 구현 내부에 배치.<br>
+현재 `application/port`, `adapter/out` 등 이전 구조의 파일은 이 기준에 따라 도메인별로 이전함.<br>
+이전 완료 후 더 이상 사용되지 않는 Port·UseCase interface와 위임 wrapper를 제거함.<br>
 
-현재 adapter/application 경계를 적용한 도메인은 인증, 사용자 계정·그룹·공용 배송지, 카탈로그, 장바구니, 주문, 결제, 재고, 알림 outbox, 관리자 계정·그룹 운영, 관리자 카탈로그, 운영 감사 로그임.<br>
-파일 업로드와 push 발송 worker는 아직 구현되지 않았음.<br>
+## 서비스 경계
+
+엄지마켓은 Flutter 앱 셸, React WebView, Kotlin/Spring Boot API, MySQL로 구성된 단일 API 서비스임.<br>
+사용자와 관리자 기능은 role/permission 기반 서버 권한 검사로 구분하며, 모든 관리자 API에서 권한 검사를 수행함.<br>
+계층형 구조는 모듈 또는 배포 서비스 분리를 뜻하지 않음.<br>
 
 ## 도메인 책임
 
 | 도메인 | 책임 |
 | --- | --- |
-| auth | 휴대폰 로그인, Access/Refresh Token 및 현재 인증 계정 |
-| account | 사용자 프로필·구매자 그룹·그룹 공용 배송지·그룹 onboarding |
-| catalog | 공개 카탈로그 조회 |
+| auth | 휴대폰 로그인, Access/Refresh Token, 현재 인증 계정 |
+| account | 사용자 프로필, 구매자 그룹, 그룹 공용 배송지, 그룹 onboarding |
+| catalog | 공용 상품·SKU와 채널별 카탈로그 |
 | cart | 사용자 장바구니 |
 | order | 주문·주문 항목 및 상태 이력 |
 | inventory | SKU 재고·예약·변동 이력 |
 | operation | 관리자 계정·상품 운영 |
 | payment | 수동 계좌이체 안내와 운영자 입금 확인 |
 | file | 구현 전 |
-| notification | 업무 이벤트 outbox 기록. push token 관리·FCM/APNs 발송 worker 미구현 |
+| notification | 업무 이벤트 outbox 및 기기 token 관리, 발송 worker |
 
-관리자 URL prefix는 `/api/operation/**`임.<br>
-인증 `REQUIRED` 모드에서는 인증된 요청에 endpoint별 permission을 검사함.<br>
-로컬 `BYPASS`는 보안 검사를 생략하며 운영 환경에서 사용 금지.<br>
-권한 매트릭스는 [operation.md](services/operation.md)를 기준으로 함.<br>
+## DB와 서비스 배포
 
-## DB와 서비스 분리
-
-현재는 하나의 API와 MySQL을 사용함.<br>
-헥사고날 구조는 내부 코드의 변경·테스트 경계를 만들며, 그 자체가 MSA 분리를 뜻하지 않음.<br>
-독립 배포·확장 요구와 데이터 소유권이 분명해질 때 모듈/서비스 분리를 검토함.<br>
-Flyway 현황은 [database.md](database.md), 관계도는 [database-erd.md](database-erd.md)를 기준으로 함.<br>
+단일 API와 MySQL을 사용함.<br>
+신규·변경 스키마는 Flyway로 관리하고 적용된 migration은 수정하지 않음.<br>
+스키마 현황은 [database.md](database.md), 관계도는 [database-erd.md](database-erd.md)를 기준으로 함.<br>

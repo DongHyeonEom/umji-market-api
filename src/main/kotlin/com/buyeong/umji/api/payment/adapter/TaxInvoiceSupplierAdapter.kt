@@ -1,12 +1,11 @@
 package com.buyeong.umji.api.payment.adapter
 
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSupplier
-import com.buyeong.umji.api.order.application.port.out.TaxInvoiceSupplierPort
 import org.springframework.stereotype.Component
 
 @Component
-class TaxInvoiceSupplierAdapter(private val properties: TaxInvoiceSupplierProperties) : TaxInvoiceSupplierPort {
-    override fun supplier(): TaxInvoiceSupplier? {
+class TaxInvoiceSupplierAdapter(private val properties: TaxInvoiceSupplierProperties) {
+    fun supplier(): TaxInvoiceSupplier? {
         val values = listOf(
             properties.businessRegistrationNumber,
             properties.businessName,

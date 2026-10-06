@@ -248,7 +248,7 @@
 ### 서비스 개발 완료 기준
 
 - [ ] service md Mermaid 알고리즘 흐름 선행 작성·갱신 및 코드와 일치
-- [ ] 입력·출력 Port와 adapter 경계, 도메인 규칙 및 오류 계약 반영
+- [ ] 계층 간 호출 책임, 도메인 규칙 및 오류 계약 반영
 - [ ] DB 변경 시 신규 Flyway migration 작성
 - [ ] 해당 도메인 문서와 `implementation-status.md` 갱신
 
@@ -284,6 +284,20 @@
 
 - [x] 계속사업자·휴업자·폐업·조회 실패 상태전이와 저장된 대기 작업 처리 자동화 검증
 - [x] 대표자 확인 전·후 발행 가능 여부와 사업자번호 변경 차단 자동화 검증
+
+## Task 11 — 계층형 아키텍처 전환
+
+### 서비스 개발
+
+- [ ] 모든 도메인 요청 흐름을 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`로 통일
+- [ ] UseCase·Port 계약 및 위임 adapter 제거, 구체 Service·JpaEntityService 직접 주입으로 전환
+- [ ] 트랜잭션 경계를 도메인 Service에 통합하고 모든 wrapper 제거
+- [ ] `AGENTS.md`·README·architecture·서비스 문서 및 구현 현황을 새 경계에 맞춰 갱신
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [ ] Service 단위 테스트 및 Controller·JPA 통합 테스트를 계층별로 작성·실행
+- [ ] 전체 기존 동작·권한·트랜잭션 회귀 검증
 
 ## 마지막 Task — 파일 및 object storage
 

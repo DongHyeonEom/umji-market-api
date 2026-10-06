@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.operation.account.application
 
-import com.buyeong.umji.api.operation.account.application.port.out.OperationAccountPort
+import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactly
@@ -11,7 +11,7 @@ import io.mockk.verify
 import java.util.UUID
 
 class OperationAccountRoleManagementTest : DescribeSpec({
-    val accounts = mockk<OperationAccountPort>(relaxed = true)
+    val accounts = mockk<OperationAccountJpaEntityService>(relaxed = true)
     val service = OperationAccountService(accounts)
     val accountId = UUID.randomUUID()
     val operatorId = UUID.randomUUID()

@@ -14,7 +14,7 @@ import com.buyeong.umji.api.operation.catalog.application.model.ProductView
 import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView
-import com.buyeong.umji.api.operation.catalog.application.port.`in`.OperationCatalogUseCase
+import com.buyeong.umji.api.operation.catalog.application.OperationCatalogService
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
 import com.buyeong.umji.api.operation.model.CreateCategoryRequest
 import com.buyeong.umji.api.operation.model.CreateChannelCategoryRequest
@@ -61,7 +61,7 @@ import java.util.UUID
 @RequestMapping("/api/operation")
 @Validated
 @Tag(name = "운영 상품 관리", description = "카테고리·브랜드·상품·옵션·SKU 관리 API")
-class OperationCatalogController(private val useCase: OperationCatalogUseCase) {
+class OperationCatalogController(private val useCase: OperationCatalogService) {
     @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/categories")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_READ')")

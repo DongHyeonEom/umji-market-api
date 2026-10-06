@@ -2,7 +2,7 @@ package com.buyeong.umji.api.catalog.adapter.`in`.web
 
 import com.buyeong.umji.api.catalog.application.model.ProductDetailView
 import com.buyeong.umji.api.catalog.application.model.ProductPageView
-import com.buyeong.umji.api.catalog.application.port.`in`.CatalogUseCase
+import com.buyeong.umji.api.catalog.application.CatalogService
 import com.buyeong.umji.api.catalog.model.CategoryResponse
 import com.buyeong.umji.api.catalog.model.ProductDetailResponse
 import com.buyeong.umji.api.catalog.model.ProductPageResponse
@@ -26,7 +26,7 @@ import java.util.UUID
 @Validated
 @Tag(name = "상품 조회", description = "앱 카테고리·상품·SKU 조회 API")
 class CatalogController(
-    private val catalogService: CatalogUseCase,
+    private val catalogService: CatalogService,
 ) {
     @Operation(summary = "카테고리 목록 조회", description = "카테고리 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/categories")

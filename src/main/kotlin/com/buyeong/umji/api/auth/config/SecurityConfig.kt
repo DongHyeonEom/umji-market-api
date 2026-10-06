@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.auth.config
 
-import com.buyeong.umji.api.auth.application.port.out.AccountAuthenticationPort
+import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
@@ -100,7 +100,7 @@ class SecurityConfig {
         havingValue = "REQUIRED",
         matchIfMissing = true,
     )
-    fun jwtDecoder(properties: JwtProperties, accounts: AccountAuthenticationPort): JwtDecoder =
+    fun jwtDecoder(properties: JwtProperties, accounts: AuthenticationJpaEntityService): JwtDecoder =
         NimbusJwtDecoder.withPublicKey(properties.publicKey()).build().apply {
             setJwtValidator(
                 DelegatingOAuth2TokenValidator(

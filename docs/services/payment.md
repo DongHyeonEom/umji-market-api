@@ -55,6 +55,7 @@ stateDiagram-v2
 향후 카드·PG 등 다른 결제 수단을 추가할 수 있도록 결제수단은 provider 종속 값이 아닌 확장 가능한 코드로 관리.<br>
 입금 상태 변경 권한은 `ORDER_WRITE`를 가진 운영자에게 있음.<br>
 입금 확인 화면에는 주문자명·연락처가 포함되므로 이 권한을 가진 운영자에게만 노출.<br>
+운영 결제 흐름은 `OperationPaymentController → PaymentService → OrderPaymentJpaEntityService → Spring Data Repository` 순서.<br>
 
 ## 입금 확인 상태
 

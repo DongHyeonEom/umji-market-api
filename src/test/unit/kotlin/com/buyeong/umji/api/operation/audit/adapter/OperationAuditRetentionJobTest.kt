@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.operation.audit.adapter
 
-import com.buyeong.umji.api.operation.audit.application.port.`in`.OperationAuditUseCase
+import com.buyeong.umji.api.operation.audit.application.OperationAuditService
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 
 class OperationAuditRetentionJobTest : DescribeSpec({
-    val audit = mockk<OperationAuditUseCase>(relaxed = true)
+    val audit = mockk<OperationAuditService>(relaxed = true)
     val job = OperationAuditRetentionJob(audit)
     val deleteCalls = AtomicInteger()
 

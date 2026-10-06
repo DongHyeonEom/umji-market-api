@@ -3,8 +3,8 @@ package com.buyeong.umji.api.operation.account.adapter.`in`.web
 import com.buyeong.umji.api.account.model.SetBuyerGroupRepresentativeRequest
 import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileRequest
 import com.buyeong.umji.api.account.model.toResponse as taxInvoiceProfileResponse
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
-import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
+import com.buyeong.umji.api.account.application.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.operation.account.application.OperationAccountService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -22,8 +22,8 @@ import java.util.UUID
 @RequestMapping("/api/operation/buyer-groups")
 @Tag(name = "운영 구매자 그룹", description = "구매자 그룹 대표자 지정 등 그룹 운영 API")
 class OperationBuyerGroupController(
-    private val accounts: OperationAccountUseCase,
-    private val taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileUseCase,
+    private val accounts: OperationAccountService,
+    private val taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileService,
 ) {
     @Operation(summary = "구매자 그룹수정", description = "구매자 그룹 대표자 지정 등 그룹 운영 API. /{groupId}/representative 경로에서 구매자 그룹수정를 수행")
     @PutMapping("/{groupId}/representative")

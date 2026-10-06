@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.payment.application
 
 import com.buyeong.umji.api.notification.application.model.NotificationEventType
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
-import com.buyeong.umji.api.payment.application.model.PaymentRecord
-import com.buyeong.umji.api.payment.application.model.PaymentStatusChange
-import com.buyeong.umji.api.payment.application.port.out.PaymentStorePort
+import com.buyeong.umji.api.notification.application.NotificationEventService
+import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentEntity
+import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -15,8 +15,8 @@ import io.mockk.verify
 import java.util.UUID
 
 class PaymentServiceTest : DescribeSpec({
-    val payments = mockk<PaymentStorePort>()
-    val notifications = mockk<NotificationEventUseCase>(relaxed = true)
+    val payments = mockk<OrderPaymentJpaEntityService>()
+    val notifications = mockk<NotificationEventService>(relaxed = true)
     val service = PaymentService(payments, notifications)
     val orderId = UUID.randomUUID()
     val operatorId = UUID.randomUUID()
@@ -25,37 +25,38 @@ class PaymentServiceTest : DescribeSpec({
         it("부분 입금 확인 필요 상태를 결제 상태로만 저장한다") {
             clearMocks(payments)
             clearMocks(notifications)
-            val current = PaymentRecord(orderId, "PENDING_PAYMENT", "WAITING_FOR_DEPOSIT")
-            val result = PaymentStatusChange(orderId, "PENDING_PAYMENT", "PARTIAL_PAYMENT_REVIEW_REQUIRED", true)
-            every { payments.lock(orderId) } returns current
-            every { payments.updateStatus(current, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId) } returns result
+            val current = payment(orderId, "PENDING_PAYMENT", "WAITING_FOR_DEPOSIT")
+            every { payments.findForUpdate(orderId) } returns current
+            every { payments.saveChange(current, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId) } answers {
+                payment(orderId, "PENDING_PAYMENT", "PARTIAL_PAYMENT_REVIEW_REQUIRED")
+            }
 
-            service.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId) shouldBe result
+            service.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId).paymentStatus shouldBe "PARTIAL_PAYMENT_REVIEW_REQUIRED"
             verify(exactly = 1) { notifications.record(NotificationEventType.PAYMENT_STATUS_CHANGED, orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED") }
         }
 
         it("전액 입금 확인 상태를 배송과 별도로 저장한다") {
             clearMocks(payments)
             clearMocks(notifications)
-            val current = PaymentRecord(orderId, "PENDING_PAYMENT", "PARTIAL_PAYMENT_REVIEW_REQUIRED")
-            val result = PaymentStatusChange(orderId, "PAID", "PAYMENT_CONFIRMED", true)
-            every { payments.lock(orderId) } returns current
-            every { payments.updateStatus(current, "PAYMENT_CONFIRMED", operatorId) } returns result
+            val current = payment(orderId, "PENDING_PAYMENT", "PARTIAL_PAYMENT_REVIEW_REQUIRED")
+            every { payments.findForUpdate(orderId) } returns current
+            every { payments.saveChange(current, "PAYMENT_CONFIRMED", operatorId) } answers {
+                payment(orderId, "PAID", "PAYMENT_CONFIRMED")
+            }
 
-            service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId) shouldBe result
+            service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId).orderStatus shouldBe "PAID"
             verify(exactly = 1) { notifications.record(NotificationEventType.PAYMENT_STATUS_CHANGED, orderId, "PAYMENT_CONFIRMED") }
         }
 
         it("같은 입금 상태 요청은 중복 변경하지 않는다") {
             clearMocks(payments)
             clearMocks(notifications)
-            val current = PaymentRecord(orderId, "PAID", "PAYMENT_CONFIRMED")
-            every { payments.lock(orderId) } returns current
+            every { payments.findForUpdate(orderId) } returns payment(orderId, "PAID", "PAYMENT_CONFIRMED")
 
             val result = service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId)
 
             result.changed shouldBe false
-            io.mockk.verify(exactly = 0) { payments.updateStatus(any(), any(), any()) }
+            io.mockk.verify(exactly = 0) { payments.saveChange(any(), any(), any()) }
             verify(exactly = 0) { notifications.record(any(), any(), any()) }
         }
 
@@ -68,8 +69,17 @@ class PaymentServiceTest : DescribeSpec({
 
         it("취소되지 않은 주문은 환불 상태로 변경할 수 없다") {
             clearMocks(payments)
-            every { payments.lock(orderId) } returns PaymentRecord(orderId, "PAID", "REFUND_PENDING")
+            every { payments.findForUpdate(orderId) } returns payment(orderId, "PAID", "REFUND_PENDING")
             shouldThrow<IllegalArgumentException> { service.updateStatus(orderId, "REFUNDED", operatorId) }
         }
     }
+
 })
+
+private fun payment(orderId: UUID, orderStatus: String, paymentStatus: String) = OrderPaymentEntity().apply {
+    order = mockk<PurchaseOrderEntity> {
+        every { publicId } returns orderId
+        every { status } returns orderStatus
+    }
+    status = paymentStatus
+}

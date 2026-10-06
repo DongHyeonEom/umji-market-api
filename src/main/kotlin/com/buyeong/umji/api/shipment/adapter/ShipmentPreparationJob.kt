@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.shipment.adapter
 
-import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
-import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
+import com.buyeong.umji.api.shipment.application.ShipmentService
+import com.buyeong.umji.api.order.application.ShippingHolidayService
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.DayOfWeek
@@ -10,8 +10,8 @@ import java.time.ZoneId
 
 @Component
 class ShipmentPreparationJob(
-    private val shipments: TransactionalShipmentUseCase,
-    private val holidays: ShippingHolidayUseCase,
+    private val shipments: ShipmentService,
+    private val holidays: ShippingHolidayService,
 ) {
     @Scheduled(cron = "0 0 15 * * MON-FRI", zone = "Asia/Seoul")
     fun prepareWeekdayShipments() {

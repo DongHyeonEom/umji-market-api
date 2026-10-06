@@ -2,18 +2,22 @@ package com.buyeong.umji.api.account.application
 
 import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfile
 import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
-import com.buyeong.umji.api.account.application.port.out.BuyerGroupTaxInvoiceProfilePort
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.stereotype.Service
 import java.util.UUID
 
+@Service
 class BuyerGroupTaxInvoiceProfileService(
-    private val profiles: BuyerGroupTaxInvoiceProfilePort,
-) : BuyerGroupTaxInvoiceProfileUseCase {
-    override fun forAccount(accountPublicId: UUID): BuyerGroupTaxInvoiceProfile =
+    private val profiles: BuyerGroupTaxInvoiceJpaEntityService,
+) {
+    @Transactional(readOnly = true)
+    fun forAccount(accountPublicId: UUID): BuyerGroupTaxInvoiceProfile =
         profiles.forAccount(accountPublicId) ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
 
-    override fun updateForAccount(
+    @Transactional
+    fun updateForAccount(
         accountPublicId: UUID,
         command: BuyerGroupTaxInvoiceProfileCommand,
     ): BuyerGroupTaxInvoiceProfile {
@@ -22,10 +26,12 @@ class BuyerGroupTaxInvoiceProfileService(
             ?: throw ItemNotFoundException("활성 사업자 그룹을 찾을 수 없습니다.")
     }
 
-    override fun forGroup(groupPublicId: UUID): BuyerGroupTaxInvoiceProfile =
+    @Transactional(readOnly = true)
+    fun forGroup(groupPublicId: UUID): BuyerGroupTaxInvoiceProfile =
         profiles.forGroup(groupPublicId) ?: throw ItemNotFoundException("구매자 그룹을 찾을 수 없습니다.")
 
-    override fun updateForGroup(
+    @Transactional
+    fun updateForGroup(
         groupPublicId: UUID,
         command: BuyerGroupTaxInvoiceProfileCommand,
     ): BuyerGroupTaxInvoiceProfile {

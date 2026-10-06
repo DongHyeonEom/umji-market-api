@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.notification.adapter
 
 import com.buyeong.umji.api.notification.application.model.NotificationEventType
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
+import com.buyeong.umji.api.notification.application.NotificationEventService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -23,7 +23,7 @@ class NotificationOutboxMySqlIntegrationTest {
     private lateinit var jdbc: JdbcTemplate
 
     @Autowired
-    private lateinit var notificationEvents: NotificationEventUseCase
+    private lateinit var notificationEvents: NotificationEventService
 
     @Autowired
     private lateinit var transactionManager: PlatformTransactionManager

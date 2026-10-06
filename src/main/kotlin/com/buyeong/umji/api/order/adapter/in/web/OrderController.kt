@@ -5,8 +5,8 @@ import com.buyeong.umji.api.order.application.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
-import com.buyeong.umji.api.order.application.port.`in`.CustomerOrderListingUseCase
-import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
+import com.buyeong.umji.api.order.application.CustomerOrderListingService
+import com.buyeong.umji.api.order.application.OrderService
 import com.buyeong.umji.api.order.model.BankAccountInstructionsResponse
 import com.buyeong.umji.api.order.model.CreateOrderRequest
 import com.buyeong.umji.api.order.model.OrderCheckoutOptionsResponse
@@ -38,8 +38,8 @@ import java.util.UUID
 @Tag(name = "주문", description = "구매자 그룹 주문 생성·조회와 결제 정보 API")
 class OrderController(
     private val currentAccounts: CurrentAccountPort,
-    private val orders: OrderUseCase,
-    private val customerOrders: CustomerOrderListingUseCase,
+    private val orders: OrderService,
+    private val customerOrders: CustomerOrderListingService,
 ) {
     @Operation(summary = "주문 결제 정보조회", description = "구매자 그룹 주문 생성·조회와 결제 정보 API. /checkout-options 경로에서 주문 결제 정보조회를 수행")
     @GetMapping("/checkout-options")

@@ -11,8 +11,8 @@ import org.springframework.stereotype.Service
  * 이 클래스를 확장하거나 새로운 구현체를 작성.
  */
 @Service
-class DefaultErrorMessageService : ErrorMessageService {
-    override fun getMessage(
+class DefaultErrorMessageService {
+    fun getMessage(
         exception: Exception,
         defaultCode: String,
     ): ErrorMessageDto {

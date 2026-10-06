@@ -4,7 +4,7 @@ import com.buyeong.umji.api.operation.account.application.model.AccountData
 import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.application.model.ConsentData
-import com.buyeong.umji.api.operation.account.application.port.out.OperationAccountPort
+import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -15,7 +15,7 @@ import io.mockk.verify
 import java.util.UUID
 
 class OperationAccountActivationTest : DescribeSpec({
-    val accounts = mockk<OperationAccountPort>(relaxed = true)
+    val accounts = mockk<OperationAccountJpaEntityService>(relaxed = true)
     val service = OperationAccountService(accounts)
     val accountId = UUID.randomUUID()
     val operatorId = UUID.randomUUID()

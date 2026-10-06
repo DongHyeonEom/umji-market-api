@@ -2,18 +2,16 @@
 
 ## 기반 아키텍처
 
-이 서비스의 최상위 아키텍처 기준은 **헥사고날 아키텍처(Ports and Adapters)와 클린 아키텍처**임.
-의존성은 항상 안쪽(도메인·애플리케이션)을 향해야 하며, Spring MVC·Spring Data JPA·DB·외부 서비스는 바깥 어댑터로 취급함.
+이 서비스의 최상위 아키텍처 기준은 **계층형 아키텍처**임.
+주요 요청 흐름은 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`임.
 
-- 도메인 모델과 애플리케이션 유스케이스가 중심이며, 프레임워크와 영속성 구현에 의존하지 않도록 함
-- 애플리케이션은 입력 Port(UseCase)와 출력 Port(Repository/Gateway 인터페이스)에 의존함.
-  구현체는 바깥 adapter에서 제공함
-- Controller는 입력 adapter로서 요청을 유스케이스 입력 모델로 변환하고 결과를 HTTP 응답으로 변환함
-- JPA Entity, Spring Data Repository, HTTP DTO를 도메인·유스케이스 경계 밖으로 전달하지 않음.
-  영속성 adapter에서 도메인 모델로 매핑함
-- 기능 추가·수정 시 기존 구조가 위 의존성 규칙을 지키는지 확인하고, 경계 침범을 새로 만들지 않음.
-  기존 코드의 점진적 정리는 변경 범위와 위험을 고려해 수행함
-- 세부 패키지 경계와 현재 구조 평가는 `docs/architecture.md`를 기준으로 함
+- Controller는 HTTP 입력 검증과 응답 변환을 담당하고, 구체 도메인 Service를 직접 호출함
+- 도메인 Service는 업무 흐름·권한·트랜잭션을 조정하고 `JpaEntityService` 및 외부 연동 구체 클래스를 직접 호출함
+- `JpaEntityService`와 Spring Data Repository는 조회·저장과 Entity 생명주기를 담당함
+- UseCase·Port·Adapter 목적의 서비스 인터페이스 및 위임 wrapper를 새로 만들지 않음
+- Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider interface는 유지 가능
+- JPA Entity는 영속성 처리에 사용하고, 외부 HTTP 응답에는 전용 DTO를 사용함
+- 세부 패키지 경계와 전환 수용 기준은 `docs/architecture.md`를 기준으로 함
 
 ## 역할
 
@@ -23,7 +21,7 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 ## 구현 원칙
 
 - 패키지 루트: `com.buyeong.umji.api`
-- Controller/HTTP adapter는 입출력 변환, Application Use Case는 유스케이스 조정, Domain은 핵심 업무 규칙, Persistence adapter는 DB 접근 담당
+- Controller는 HTTP 입출력 변환, 도메인 Service는 유스케이스 흐름과 핵심 규칙, JpaEntityService·Repository는 DB 접근 담당
 - 외부 request/response에 Entity 직접 노출 금지
 - 관리자 API는 UI 노출 여부와 무관하게 서버 권한 검사 필수
 - 신규 DB 변경은 Flyway 마이그레이션으로만 적용.
@@ -86,7 +84,7 @@ DB 스키마나 영속 데이터 규칙을 변경하면 해당 Flyway migration�
 ## 서비스 개발 순서
 
 - 서비스 기능을 새로 개발하거나 기존 동작을 변경할 때 해당 도메인의 `docs/services/<service>.md`에서 알고리즘 흐름도를 Mermaid로 먼저 작성·갱신함.
-- 흐름도에는 입력, 인증·인가, 주요 분기와 검증, Port/adapter를 통한 저장·외부 호출, 상태 변경, 성공·실패 결과를 실제 구현 기준으로 표현함.
+- 흐름도에는 입력, 인증·인가, 주요 분기와 검증, Service·JpaEntityService·외부 연동 호출, 저장, 상태 변경, 성공·실패 결과를 실제 구현 기준으로 표현함.
 - 흐름도와 관련 수용 기준을 먼저 검토한 뒤 코드와 자동화 테스트를 구현함. 코드는 문서에 정의된 흐름을 따르며, 구현 중 정책이나 흐름이 달라지면 문서와 `docs/todo.md`를 먼저 갱신함.
 - 기존에 구현된 서비스의 흐름도가 없으면 해당 서비스의 현재 코드 흐름을 확인해 `service.md`에 Mermaid 다이어그램을 추가함. 미구현 서비스의 계획 흐름은 현재 구현 흐름과 섞지 않으며, 구현 착수 시 먼저 작성함.
 - `docs/todo.md`의 각 Task는 `서비스 개발`과 `서비스 자동화 테스트 개발 및 테스트`를 구분함. 코드 작업 항목과 자동화 테스트 작성·실행 항목을 각각 관리하며, 실행하지 않은 테스트는 완료로 표시하지 않음.
