@@ -1,22 +1,24 @@
 package com.buyeong.umji.api.order.application
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.notification.application.model.NotificationEventType
-import com.buyeong.umji.api.notification.application.port.`in`.NoOpNotificationEventUseCase
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
+import com.buyeong.umji.api.notification.application.NotificationEventService
 import com.buyeong.umji.api.order.application.model.CancellationChange
 import com.buyeong.umji.api.order.application.model.CancellationQueuePage
-import com.buyeong.umji.api.order.application.port.`in`.OrderCancellationUseCase
-import com.buyeong.umji.api.order.application.port.out.OrderCancellationPort
+import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationJpaEntityService
 import java.util.UUID
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
+@Service
+@Transactional
 class OrderCancellationService(
-    private val cancellations: OrderCancellationPort,
-    private val inventory: InventoryUseCase,
-    private val notifications: NotificationEventUseCase = NoOpNotificationEventUseCase,
-) : OrderCancellationUseCase {
-    override fun request(accountId: UUID, orderId: UUID): CancellationChange {
+    private val cancellations: OrderCancellationJpaEntityService,
+    private val inventory: InventoryService,
+    private val notifications: NotificationEventService,
+) {
+    fun request(accountId: UUID, orderId: UUID): CancellationChange {
         val order = cancellations.lock(orderId) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다.")
         require(order.accountId == accountId) { "본인 주문만 취소할 수 있습니다." }
         require(order.orderStatus != CANCELLED) { "이미 취소된 주문입니다." }
@@ -38,12 +40,13 @@ class OrderCancellationService(
         }
     }
 
-    override fun queue(page: Int, size: Int): CancellationQueuePage {
+    @Transactional(readOnly = true)
+    fun queue(page: Int, size: Int): CancellationQueuePage {
         require(page >= 0 && size in 1..100) { "페이지 값이 올바르지 않습니다." }
         return cancellations.queue(page, size)
     }
 
-    override fun resolve(orderId: UUID, approved: Boolean, operatorId: UUID): CancellationChange {
+    fun resolve(orderId: UUID, approved: Boolean, operatorId: UUID): CancellationChange {
         val order = cancellations.lock(orderId) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다.")
         require(order.shippingStatus == PREPARING) { "배송 준비 상태의 주문만 취소 요청을 처리할 수 있습니다." }
         require(cancellations.hasPendingRequest(orderId)) { "대기 중인 취소 요청이 없습니다." }

@@ -218,7 +218,9 @@ flowchart TD
 주문 취소는 전체 주문 단위. `READY_TO_SHIP`에서 주문자는 즉시 취소 가능하고 예약 재고 해제. `PREPARING` 이후 송장 등록 전에는 취소 요청 상태(`PENDING`)를 주문 조회에 제공하며, 운영자 승인(`APPROVED`) 시 주문 취소·확정 재고 복구, 거절(`REJECTED`) 시 주문·재고 유지.<br>
 운영자 공휴일 등록은 평일 15:00 배송 준비·재고 확정 배치에서 제외할 날짜를 관리.<br>
 입금이 확인된 취소 주문의 실제 계좌 환불은 운영자가 수행하고 시스템에서 환불 상태를 직접 갱신.<br>
-application UseCase가 장바구니·재고·주문 저장 Port를 조정함.<br>
+`OrderService`가 장바구니·재고·주문 저장 기능을 조정하고 트랜잭션을 관리하며 주문 snapshot 저장·조회는 `OrderCheckoutJpaEntityService`에서 처리함.<br>
+취소 정책은 `OrderCancellationService → OrderCancellationJpaEntityService`, 공휴일 관리는 `ShippingHolidayService → ShippingHolidayJpaEntityService`, 배송 상태 변경은 `ShipmentService → OrderShipmentJpaEntityService`에서 처리함.<br>
+운영 결제 상태 변경은 `PaymentService → OrderPaymentJpaEntityService` 흐름으로 처리.<br>
 
 ## 입금 확인 운영 흐름
 

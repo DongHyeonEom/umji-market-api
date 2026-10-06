@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.order.application
 
-import com.buyeong.umji.api.inventory.application.port.`in`.InventoryUseCase
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.notification.application.model.NotificationEventType
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
+import com.buyeong.umji.api.notification.application.NotificationEventService
 import com.buyeong.umji.api.order.application.model.CancellationOrder
-import com.buyeong.umji.api.order.application.port.out.OrderCancellationPort
+import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -14,9 +14,9 @@ import io.mockk.verify
 import java.util.UUID
 
 class OrderCancellationServiceTest : DescribeSpec({
-    val port = mockk<OrderCancellationPort>(relaxed = true)
-    val inventory = mockk<InventoryUseCase>(relaxed = true)
-    val notifications = mockk<NotificationEventUseCase>(relaxed = true)
+    val port = mockk<OrderCancellationJpaEntityService>(relaxed = true)
+    val inventory = mockk<InventoryService>(relaxed = true)
+    val notifications = mockk<NotificationEventService>(relaxed = true)
     val service = OrderCancellationService(port, inventory, notifications)
     val customer = UUID.randomUUID()
     val orderId = UUID.randomUUID()

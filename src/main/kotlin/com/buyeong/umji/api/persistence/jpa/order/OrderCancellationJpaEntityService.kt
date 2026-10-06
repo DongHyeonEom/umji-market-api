@@ -1,9 +1,8 @@
-package com.buyeong.umji.api.persistence.jpa.order.adapter
+package com.buyeong.umji.api.persistence.jpa.order
 
 import com.buyeong.umji.api.order.application.model.CancellationOrder
 import com.buyeong.umji.api.order.application.model.CancellationQueueItem
 import com.buyeong.umji.api.order.application.model.CancellationQueuePage
-import com.buyeong.umji.api.order.application.port.out.OrderCancellationPort
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationHistoryRepository
@@ -14,27 +13,27 @@ import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
-@Component
-class OrderCancellationJpaAdapter(
+@Service
+@Transactional(readOnly = true)
+class OrderCancellationJpaEntityService(
     private val orders: PurchaseOrderRepository,
     private val histories: OrderStatusHistoryRepository,
     private val cancellations: OrderCancellationHistoryRepository,
     private val payments: OrderPaymentJpaEntityService,
     private val accounts: AccountJpaEntityService,
-) : OrderCancellationPort {
+) {
     @Transactional
-    override fun lock(orderId: UUID): CancellationOrder? = orders.findForCancellation(orderId)?.toCancellationOrder()
+    fun lock(orderId: UUID): CancellationOrder? = orders.findForCancellation(orderId)?.toCancellationOrder()
 
-    @Transactional(readOnly = true)
-    override fun hasPendingRequest(orderId: UUID): Boolean = cancellations.existsByOrderPublicIdAndStatus(orderId, PENDING)
+    fun hasPendingRequest(orderId: UUID): Boolean = cancellations.existsByOrderPublicIdAndStatus(orderId, PENDING)
 
     @Transactional
-    override fun recordRequest(orderId: UUID, requesterId: UUID, status: String, processorId: UUID?) {
+    fun recordRequest(orderId: UUID, requesterId: UUID, status: String, processorId: UUID? = null) {
         val order = requireNotNull(orders.findForCancellation(orderId))
         val requester = requireNotNull(accounts.findByPublicId(requesterId))
         cancellations.saveAndFlush(
@@ -50,7 +49,7 @@ class OrderCancellationJpaAdapter(
     }
 
     @Transactional
-    override fun cancel(order: CancellationOrder, processorId: UUID?) {
+    fun cancel(order: CancellationOrder, processorId: UUID?) {
         val entity = requireNotNull(orders.findForCancellation(order.id))
         check(entity.status != CANCELLED) { "이미 취소된 주문입니다." }
         val now = Instant.now()
@@ -73,7 +72,7 @@ class OrderCancellationJpaAdapter(
     }
 
     @Transactional
-    override fun resolveRequest(orderId: UUID, status: String, processorId: UUID) {
+    fun resolveRequest(orderId: UUID, status: String, processorId: UUID) {
         val history = cancellations.findPending(orderId).firstOrNull() ?: error("대기 중인 취소 요청이 없습니다.")
         history.status = status
         history.processor = accounts.findByPublicId(processorId) ?: error("운영자 계정을 찾을 수 없습니다.")
@@ -81,8 +80,7 @@ class OrderCancellationJpaAdapter(
         cancellations.saveAndFlush(history)
     }
 
-    @Transactional(readOnly = true)
-    override fun queue(page: Int, size: Int): CancellationQueuePage {
+    fun queue(page: Int, size: Int): CancellationQueuePage {
         val result = cancellations.findQueue(PENDING, PageRequest.of(page, size, Sort.by("requestedAt").ascending()))
         return CancellationQueuePage(
             result.content.map {

@@ -1,4 +1,4 @@
-package com.buyeong.umji.api.order.adapter.out.persistence
+package com.buyeong.umji.api.persistence.jpa.order
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.exception.ClientBadRequestException
@@ -10,30 +10,23 @@ import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.model.TaxInvoiceBuyer
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshot
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSupplier
-import com.buyeong.umji.api.order.application.port.out.OrderStorePort
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
-import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationHistoryRepository
-import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.order.OrderNumberSequenceEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.order.OrderStatusHistoryEntity
-import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.ZoneOffset
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
-@Component
-class JpaOrderStoreAdapter(
+@Service
+@Transactional(readOnly = true)
+class OrderCheckoutJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val buyerGroupMembers: BuyerGroupMemberRepository,
     private val buyerGroups: BuyerGroupJpaEntityService,
@@ -43,17 +36,19 @@ class JpaOrderStoreAdapter(
     private val payments: OrderPaymentJpaEntityService,
     private val shipments: OrderShipmentJpaEntityService,
     private val cancellationHistory: OrderCancellationHistoryRepository,
-) : OrderStorePort {
-    override fun defaultTaxInvoiceRequested(accountId: UUID): Boolean =
+) {
+    fun defaultTaxInvoiceRequested(accountId: UUID): Boolean =
         account(accountId).defaultTaxInvoiceRequested
 
-    override fun updateDefaultTaxInvoiceRequested(accountId: UUID, requested: Boolean) {
+    @Transactional
+    fun updateDefaultTaxInvoiceRequested(accountId: UUID, requested: Boolean) {
         val account = account(accountId)
         account.defaultTaxInvoiceRequested = requested
         accounts.save(account)
     }
 
-    override fun save(draft: OrderDraft): OrderView {
+    @Transactional
+    fun save(draft: OrderDraft): OrderView {
         val account = account(draft.accountId)
         val buyerGroup = buyerGroupMembers.findFirstByAccount_IdAndStatus(requireNotNull(account.id), "ACTIVE")?.buyerGroup
             ?.takeIf { it.status == "ACTIVE" }
@@ -109,12 +104,12 @@ class JpaOrderStoreAdapter(
         return saved.toView()
     }
 
-    override fun findAll(accountId: UUID, page: Int, size: Int): OrderPage {
+    fun findAll(accountId: UUID, page: Int, size: Int): OrderPage {
         val result = orders.findAll(buyerGroupInternalId(accountId), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
         return OrderPage(result.content.map { it.toView() }, result.number, result.size, result.totalElements, result.totalPages)
     }
 
-    override fun find(accountId: UUID, orderId: UUID): OrderView? =
+    fun find(accountId: UUID, orderId: UUID): OrderView? =
         orders.findWithItems(orderId, buyerGroupInternalId(accountId))?.toView()
 
     private fun buyerGroupInternalId(accountPublicId: UUID): Long =

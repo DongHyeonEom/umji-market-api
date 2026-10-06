@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.order.adapter.`in`.web
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
-import com.buyeong.umji.api.order.application.port.`in`.ShippingHolidayUseCase
+import com.buyeong.umji.api.order.application.ShippingHolidayService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Schema
@@ -22,7 +22,7 @@ import java.time.LocalDate
 @RestController
 @RequestMapping("/api/operation/shipping-holidays")
 @Tag(name = "배송 휴무일 관리", description = "배송 준비 자동 전환에 반영할 휴무일 등록·조회·삭제 API")
-class OperationShippingHolidayController(private val currentAccounts: CurrentAccountPort, private val holidays: ShippingHolidayUseCase) {
+class OperationShippingHolidayController(private val currentAccounts: CurrentAccountPort, private val holidays: ShippingHolidayService) {
     @Operation(summary = "배송 휴무일 목록 조회", description = "등록된 배송 휴무일과 설명 목록을 반환")
     @GetMapping
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")

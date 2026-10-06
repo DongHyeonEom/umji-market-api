@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.order.application
 
 import com.buyeong.umji.api.order.application.model.OrderPage
-import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
-import com.buyeong.umji.api.shipment.application.port.`in`.ShipmentUseCase
+import com.buyeong.umji.api.order.application.OrderService
+import com.buyeong.umji.api.shipment.application.ShipmentService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -12,8 +12,8 @@ import java.util.UUID
 
 class CustomerOrderListingServiceTest : DescribeSpec({
     val customerId = UUID.randomUUID()
-    val orders = mockk<OrderUseCase>()
-    val shipments = mockk<ShipmentUseCase>()
+    val orders = mockk<OrderService>()
+    val shipments = mockk<ShipmentService>()
     val service = CustomerOrderListingService(orders, shipments)
     val page = OrderPage(emptyList(), 0, 20, 0, 0)
 

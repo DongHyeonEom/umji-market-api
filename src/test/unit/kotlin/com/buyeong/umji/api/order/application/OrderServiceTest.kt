@@ -1,15 +1,18 @@
 package com.buyeong.umji.api.order.application
 
 import com.buyeong.umji.api.notification.application.model.NotificationEventType
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationEventUseCase
+import com.buyeong.umji.api.notification.application.NotificationEventService
 import com.buyeong.umji.api.order.application.model.CheckoutLine
 import com.buyeong.umji.api.order.application.model.OrderItemView
 import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.model.ShippingAddressSnapshot
 import com.buyeong.umji.api.order.application.port.out.CheckoutCartPort
 import com.buyeong.umji.api.order.application.port.out.InventoryReservationPort
-import com.buyeong.umji.api.order.application.port.out.OrderShippingAddressPort
-import com.buyeong.umji.api.order.application.port.out.OrderStorePort
+import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.OrderCheckoutJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.payment.adapter.TaxInvoiceSupplierAdapter
+import com.buyeong.umji.api.payment.adapter.BankAccountInstructionsService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -20,10 +23,13 @@ import java.util.UUID
 class OrderServiceTest : DescribeSpec({
     val carts = mockk<CheckoutCartPort>()
     val inventory = mockk<InventoryReservationPort>(relaxed = true)
-    val orders = mockk<OrderStorePort>()
-    val shippingAddresses = mockk<OrderShippingAddressPort>()
-    val notifications = mockk<NotificationEventUseCase>(relaxed = true)
-    val service = OrderService(carts, inventory, orders, shippingAddresses, notifications = notifications)
+    val orders = mockk<OrderCheckoutJpaEntityService>()
+    val shippingAddresses = mockk<CustomerAccountJpaEntityService>()
+    val notifications = mockk<NotificationEventService>(relaxed = true)
+    val taxInvoiceSuppliers = mockk<TaxInvoiceSupplierAdapter>(relaxed = true)
+    val taxInvoiceBuyers = mockk<BuyerGroupTaxInvoiceJpaEntityService>(relaxed = true)
+    val bankAccounts = mockk<BankAccountInstructionsService>(relaxed = true)
+    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers)
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()

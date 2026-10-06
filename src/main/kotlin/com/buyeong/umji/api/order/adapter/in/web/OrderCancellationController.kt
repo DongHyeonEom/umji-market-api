@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.order.adapter.`in`.web
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
+import com.buyeong.umji.api.order.application.OrderCancellationService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.ArraySchema
@@ -28,7 +29,7 @@ import java.util.UUID
 @Tag(name = "주문 취소", description = "구매자 취소 요청과 운영자 취소 요청 처리 API")
 class OrderCancellationController(
     private val currentAccounts: CurrentAccountPort,
-    private val cancellations: TransactionalOrderCancellationUseCase,
+    private val cancellations: OrderCancellationService,
 ) {
     @Operation(summary = "주문 취소 요청", description = "주문 소유자의 취소 가능 여부를 확인하고 취소 요청을 등록")
     @PostMapping("/api/orders/{orderId}/cancellation")

@@ -5,19 +5,19 @@ import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationComm
 import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
 import com.buyeong.umji.api.account.application.model.BusinessGroupRegistration
 import com.buyeong.umji.api.account.application.model.SharedAddressCommand
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
-import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
-import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
+import com.buyeong.umji.api.account.application.BuyerGroupMembershipService
+import com.buyeong.umji.api.account.application.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.account.application.CustomerAccountService
 import com.buyeong.umji.api.account.application.port.out.BusinessRegistrationStatus
 import com.buyeong.umji.api.account.application.port.out.BusinessRegistrationStatusPort
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.operation.account.application.port.`in`.OperationAccountUseCase
-import com.buyeong.umji.api.operation.payment.adapter.`in`.web.TransactionalPaymentUseCase
-import com.buyeong.umji.api.operation.shipment.adapter.`in`.web.TransactionalShipmentUseCase
-import com.buyeong.umji.api.order.adapter.`in`.web.TransactionalOrderCancellationUseCase
-import com.buyeong.umji.api.order.application.port.`in`.OrderUseCase
-import com.buyeong.umji.api.order.application.port.out.TaxInvoiceSupplierPort
+import com.buyeong.umji.api.operation.account.application.OperationAccountService
+import com.buyeong.umji.api.payment.application.PaymentService
+import com.buyeong.umji.api.shipment.application.ShipmentService
+import com.buyeong.umji.api.order.application.OrderCancellationService
+import com.buyeong.umji.api.order.application.OrderService
+import com.buyeong.umji.api.payment.adapter.TaxInvoiceSupplierAdapter
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -65,40 +65,40 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     private lateinit var jdbc: JdbcTemplate
 
     @Autowired
-    private lateinit var orders: OrderUseCase
+    private lateinit var orders: OrderService
 
     @Autowired
-    private lateinit var taxInvoiceSupplier: TaxInvoiceSupplierPort
+    private lateinit var taxInvoiceSupplier: TaxInvoiceSupplierAdapter
 
     @Autowired
-    private lateinit var customerAccounts: CustomerAccountUseCase
+    private lateinit var customerAccounts: CustomerAccountService
 
     @Autowired
     private lateinit var buyerGroups: BuyerGroupJpaEntityService
 
     @Autowired
-    private lateinit var groupMembership: BuyerGroupMembershipUseCase
+    private lateinit var groupMembership: BuyerGroupMembershipService
 
     @MockitoBean
     private lateinit var businessRegistrationStatus: BusinessRegistrationStatusPort
 
     @Autowired
-    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileUseCase
+    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileService
 
     @Autowired
     private lateinit var businessRegistrationVerificationJob: BusinessRegistrationVerificationJob
 
     @Autowired
-    private lateinit var operationAccounts: OperationAccountUseCase
+    private lateinit var operationAccounts: OperationAccountService
 
     @Autowired
-    private lateinit var payments: TransactionalPaymentUseCase
+    private lateinit var payments: PaymentService
 
     @Autowired
-    private lateinit var shipments: TransactionalShipmentUseCase
+    private lateinit var shipments: ShipmentService
 
     @Autowired
-    private lateinit var cancellations: TransactionalOrderCancellationUseCase
+    private lateinit var cancellations: OrderCancellationService
 
     @Test
     fun `flyway v13 persists invoice preference and order-specific bank account snapshots`() {
