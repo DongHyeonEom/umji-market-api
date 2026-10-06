@@ -3,7 +3,7 @@ package com.buyeong.umji.api.handler
 import com.buyeong.umji.api.enums.ErrorCode
 import com.buyeong.umji.api.exception.ApiCallException
 import com.buyeong.umji.api.exception.ClientBadRequestException
-import com.buyeong.umji.api.exception.ErrorMessageService
+import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.model.ErrorResponseModel
@@ -29,7 +29,7 @@ import java.io.IOException
 
 @RestControllerAdvice
 class GlobalExceptionHandler(
-    private val errorMessageService: ErrorMessageService,
+    private val errorMessageService: DefaultErrorMessageService,
 ) {
     // ================================
     // Custom Exception Handlers
