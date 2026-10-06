@@ -8,11 +8,11 @@ import com.buyeong.umji.api.auth.model.TotpSetupResult
 import com.buyeong.umji.api.auth.model.WebLoginCommand
 import com.buyeong.umji.api.auth.model.WebLoginResult
 import com.buyeong.umji.api.auth.model.WebPasswordCommand
-import com.buyeong.umji.api.persistence.jpa.auth.WebLoginAttemptJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.WebLoginAttemptJpaEntityService
 import com.buyeong.umji.api.auth.integration.security.JwtAccessTokenIssuer
 import com.buyeong.umji.api.auth.integration.security.Rfc6238TotpService
-import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.auth.WebCredentialJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.WebCredentialJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.util.PhoneNumberHelper
 import java.security.MessageDigest

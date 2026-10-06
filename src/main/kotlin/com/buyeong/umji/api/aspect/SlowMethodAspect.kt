@@ -2,6 +2,7 @@ package com.buyeong.umji.api.aspect
 
 import com.buyeong.umji.api.annotation.SlowMethod
 import com.buyeong.umji.api.util.logger
+import java.util.concurrent.TimeUnit
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
@@ -9,7 +10,6 @@ import org.aspectj.lang.reflect.MethodSignature
 import org.slf4j.MDC
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
-import java.util.concurrent.TimeUnit
 
 /**
  * 메서드 실행 시간을 측정하고 임계값 초과 시 경고 로그를 출력하는 Aspect.

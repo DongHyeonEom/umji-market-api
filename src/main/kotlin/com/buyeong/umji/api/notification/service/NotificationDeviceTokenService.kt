@@ -2,7 +2,7 @@ package com.buyeong.umji.api.notification.service
 
 import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.model.NotificationDeviceTokenRegistration
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationDeviceTokenJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
 import java.security.MessageDigest
 import java.time.Clock
 import java.util.UUID

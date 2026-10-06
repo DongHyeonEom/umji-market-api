@@ -1,5 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.cart
+package com.buyeong.umji.api.persistence.jpa.cart.repository
 
+import com.buyeong.umji.api.persistence.jpa.cart.entity.CartEntity
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

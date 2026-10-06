@@ -2,9 +2,9 @@ package com.buyeong.umji.api.payment.service
 
 import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
-import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderPaymentEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderPaymentJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe

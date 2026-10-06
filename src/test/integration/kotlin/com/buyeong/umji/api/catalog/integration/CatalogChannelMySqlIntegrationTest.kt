@@ -1,8 +1,10 @@
 package com.buyeong.umji.api.catalog.integration
 
 import com.buyeong.umji.api.catalog.service.CatalogService
-import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.operation.catalog.model.SalesOfferCommand
+import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
+import java.nio.ByteBuffer
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -12,8 +14,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
-import java.nio.ByteBuffer
-import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")

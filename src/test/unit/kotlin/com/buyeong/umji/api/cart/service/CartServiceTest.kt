@@ -2,9 +2,9 @@ package com.buyeong.umji.api.cart.service
 
 import com.buyeong.umji.api.cart.model.AddCartItemCommand
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.cart.CartJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.cart.service.CartJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.every

@@ -3,7 +3,7 @@ package com.buyeong.umji.api.account.service
 import com.buyeong.umji.api.account.model.CustomerProfile
 import com.buyeong.umji.api.account.model.SharedAddress
 import com.buyeong.umji.api.account.model.SharedAddressCommand
-import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.stereotype.Service

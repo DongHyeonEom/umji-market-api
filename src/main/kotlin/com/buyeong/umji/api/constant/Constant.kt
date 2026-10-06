@@ -1,5 +1,4 @@
 package com.buyeong.umji.api.constant
-
 /**
  * 애플리케이션 전역에서 사용되는 상수 정의.
  */

@@ -6,7 +6,7 @@ import com.buyeong.umji.api.operation.account.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.model.ManagedRole
 import com.buyeong.umji.api.operation.account.model.NewAccount
-import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

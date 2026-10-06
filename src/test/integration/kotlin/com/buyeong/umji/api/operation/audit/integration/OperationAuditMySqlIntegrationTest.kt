@@ -3,6 +3,9 @@ package com.buyeong.umji.api.operation.audit.integration
 import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
 import com.buyeong.umji.api.operation.audit.model.OperationAuditQuery
 import com.buyeong.umji.api.operation.audit.service.OperationAuditService
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -11,9 +14,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
-import java.time.Duration
-import java.time.Instant
-import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")

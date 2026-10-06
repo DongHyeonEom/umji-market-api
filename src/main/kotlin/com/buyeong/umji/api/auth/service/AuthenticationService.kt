@@ -10,7 +10,7 @@ import com.buyeong.umji.api.auth.model.RefreshSessionRecord
 import com.buyeong.umji.api.auth.model.RefreshTokenCommand
 import com.buyeong.umji.api.auth.model.RevokeRefreshTokenCommand
 import com.buyeong.umji.api.auth.integration.security.JwtAccessTokenIssuer
-import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.util.PhoneNumberHelper
 import java.security.MessageDigest

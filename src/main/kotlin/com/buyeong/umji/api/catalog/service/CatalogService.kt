@@ -6,10 +6,10 @@ import com.buyeong.umji.api.catalog.model.ProductPageView
 import com.buyeong.umji.api.catalog.model.ProductSkuView
 import com.buyeong.umji.api.catalog.model.ProductSummaryView
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
+import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class CatalogService(private val catalog: CatalogJpaEntityService) {

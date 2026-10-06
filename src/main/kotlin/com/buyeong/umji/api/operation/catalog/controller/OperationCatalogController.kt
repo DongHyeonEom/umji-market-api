@@ -1,6 +1,5 @@
 package com.buyeong.umji.api.operation.catalog.controller
 
-import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.operation.catalog.model.BrandCommand
 import com.buyeong.umji.api.operation.catalog.model.CatalogResource
 import com.buyeong.umji.api.operation.catalog.model.CategoryCommand
@@ -15,6 +14,7 @@ import com.buyeong.umji.api.operation.catalog.model.ProductView
 import com.buyeong.umji.api.operation.catalog.model.SalesOfferCommand
 import com.buyeong.umji.api.operation.catalog.model.SalesOfferView
 import com.buyeong.umji.api.operation.catalog.model.SkuCommand
+import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
 import com.buyeong.umji.api.operation.model.CreateCategoryRequest
 import com.buyeong.umji.api.operation.model.CreateChannelCategoryRequest
@@ -42,6 +42,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -55,7 +56,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 @RequestMapping("/api/operation")

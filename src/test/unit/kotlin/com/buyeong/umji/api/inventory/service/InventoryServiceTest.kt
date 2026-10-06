@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.inventory.service
 
-import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
-import com.buyeong.umji.api.persistence.jpa.inventory.InventoryJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.inventory.InventoryStockEntity
-import com.buyeong.umji.api.persistence.jpa.inventory.StockReservationEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryStockEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.service.InventoryJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe

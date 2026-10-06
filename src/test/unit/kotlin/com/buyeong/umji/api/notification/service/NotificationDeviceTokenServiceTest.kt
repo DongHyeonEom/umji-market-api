@@ -2,7 +2,7 @@ package com.buyeong.umji.api.notification.service
 
 import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.model.NotificationDeviceTokenRegistration
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationDeviceTokenJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe

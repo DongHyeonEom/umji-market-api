@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.account.service
 
 import com.buyeong.umji.api.account.model.SharedAddressCommand
-import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.mockk

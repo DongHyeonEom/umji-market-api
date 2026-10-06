@@ -1,5 +1,4 @@
 package com.buyeong.umji.api.notification.model
-
 data class NotificationMessage(val title: String, val body: String, val data: Map<String, String>)
 
 fun NotificationEvent.toMessage(): NotificationMessage =

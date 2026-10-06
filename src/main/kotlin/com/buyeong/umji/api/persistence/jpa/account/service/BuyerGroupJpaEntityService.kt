@@ -1,9 +1,16 @@
-package com.buyeong.umji.api.persistence.jpa.account
+package com.buyeong.umji.api.persistence.jpa.account.service
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.persistence.jpa.account.entity.BusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupBusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupMemberEntity
+import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupBusinessProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupMemberRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupRepository
+import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)

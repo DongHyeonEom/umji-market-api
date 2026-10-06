@@ -1,10 +1,16 @@
-package com.buyeong.umji.api.persistence.jpa.account
+package com.buyeong.umji.api.persistence.jpa.account.service
 
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.BusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.ConsentHistoryEntity
+import com.buyeong.umji.api.persistence.jpa.account.repository.AccountRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.BusinessProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.ConsentHistoryRepository
+import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)

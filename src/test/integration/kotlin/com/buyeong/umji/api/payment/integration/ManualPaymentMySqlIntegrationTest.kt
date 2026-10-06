@@ -2,8 +2,12 @@ package com.buyeong.umji.api.payment.integration
 
 import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
 import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
-import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.order.service.OrderService
+import com.buyeong.umji.api.payment.service.PaymentService
+import java.nio.ByteBuffer
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -14,10 +18,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
-import java.nio.ByteBuffer
-import java.sql.Timestamp
-import java.time.Instant
-import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")

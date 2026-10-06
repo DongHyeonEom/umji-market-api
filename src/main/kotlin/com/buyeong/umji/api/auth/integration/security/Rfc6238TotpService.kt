@@ -1,6 +1,5 @@
 package com.buyeong.umji.api.auth.integration.security
 
-import org.springframework.stereotype.Component
 import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -8,6 +7,7 @@ import java.security.SecureRandom
 import java.time.Clock
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
+import org.springframework.stereotype.Component
 
 @Component
 class Rfc6238TotpService(private val clock: Clock = Clock.systemUTC()) {

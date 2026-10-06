@@ -1,6 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.inventory
+package com.buyeong.umji.api.persistence.jpa.inventory.entity
 
-import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainBaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

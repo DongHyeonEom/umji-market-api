@@ -1,6 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.cart
+package com.buyeong.umji.api.persistence.jpa.cart.entity
 
-import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity

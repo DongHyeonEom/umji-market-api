@@ -3,15 +3,15 @@ package com.buyeong.umji.api.payment.service
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
-import com.buyeong.umji.api.payment.model.PaymentQueuePage
 import com.buyeong.umji.api.payment.model.PaymentQueueItem
+import com.buyeong.umji.api.payment.model.PaymentQueuePage
 import com.buyeong.umji.api.payment.model.PaymentRecord
 import com.buyeong.umji.api.payment.model.PaymentStatusChange
-import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderPaymentJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderPaymentEntity
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderPaymentJpaEntityService
+import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 

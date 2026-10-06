@@ -1,17 +1,17 @@
 package com.buyeong.umji.api.operation.account.integration.persistence
 
-import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.springframework.jdbc.core.JdbcTemplate
 import java.util.UUID
+import org.springframework.jdbc.core.JdbcTemplate
 
 class JpaOperationAccountRoleManagementTest : DescribeSpec({
     val accounts = mockk<AccountJpaEntityService>(relaxed = true)

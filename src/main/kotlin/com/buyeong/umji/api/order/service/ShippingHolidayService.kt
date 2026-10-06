@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.order.service
 
 import com.buyeong.umji.api.order.model.ShippingHoliday
-import com.buyeong.umji.api.persistence.jpa.order.ShippingHolidayJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.service.ShippingHolidayJpaEntityService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate

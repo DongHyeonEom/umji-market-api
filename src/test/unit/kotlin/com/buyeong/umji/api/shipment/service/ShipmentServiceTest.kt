@@ -1,16 +1,16 @@
 package com.buyeong.umji.api.shipment.service
 
+import com.buyeong.umji.api.inventory.service.InventoryService
 import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderItemEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
+import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
 import com.buyeong.umji.api.shipment.model.ShipmentRecord
 import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate
-import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
-import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.order.PurchaseOrderEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderItemEntity
-import com.buyeong.umji.api.inventory.service.InventoryService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every

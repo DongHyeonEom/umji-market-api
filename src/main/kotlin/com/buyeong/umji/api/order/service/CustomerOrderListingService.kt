@@ -2,9 +2,9 @@ package com.buyeong.umji.api.order.service
 
 import com.buyeong.umji.api.order.model.OrderPage
 import com.buyeong.umji.api.shipment.service.ShipmentService
+import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class CustomerOrderListingService(

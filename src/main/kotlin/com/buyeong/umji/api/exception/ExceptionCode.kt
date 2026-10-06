@@ -1,5 +1,4 @@
 package com.buyeong.umji.api.exception
-
 /**
  * 예외에 대한 코드 및 치환값을 제공하는 인터페이스
  */

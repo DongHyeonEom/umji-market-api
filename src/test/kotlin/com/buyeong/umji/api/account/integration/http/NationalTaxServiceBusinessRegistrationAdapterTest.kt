@@ -4,6 +4,7 @@ import com.buyeong.umji.api.exception.ClientBadRequestException
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.test.web.client.MockRestServiceServer
 import org.springframework.test.web.client.match.MockRestRequestMatchers.content
@@ -11,7 +12,6 @@ import org.springframework.test.web.client.match.MockRestRequestMatchers.method
 import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestClient
-import org.springframework.http.HttpMethod
 
 class BusinessRegistrationStatusClientTest {
     @Test

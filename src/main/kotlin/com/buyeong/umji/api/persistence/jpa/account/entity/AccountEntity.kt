@@ -1,4 +1,4 @@
-package com.buyeong.umji.api.persistence.jpa.account
+package com.buyeong.umji.api.persistence.jpa.account.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

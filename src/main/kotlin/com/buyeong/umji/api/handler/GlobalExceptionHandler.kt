@@ -11,6 +11,7 @@ import com.buyeong.umji.api.util.logger
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonProcessingException
 import jakarta.validation.ConstraintViolationException
+import java.io.IOException
 import org.springframework.boot.json.JsonParseException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -25,7 +26,6 @@ import org.springframework.web.client.HttpClientErrorException.BadRequest
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.servlet.NoHandlerFoundException
 import org.springframework.web.servlet.resource.NoResourceFoundException
-import java.io.IOException
 
 @RestControllerAdvice
 class GlobalExceptionHandler(

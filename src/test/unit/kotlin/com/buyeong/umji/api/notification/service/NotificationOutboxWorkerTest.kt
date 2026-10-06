@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.notification.service
 
+import com.buyeong.umji.api.notification.integration.push.NotificationDeliveryService
+import com.buyeong.umji.api.notification.model.ClaimedNotification
+import com.buyeong.umji.api.notification.model.NotificationDeliveryResult
 import com.buyeong.umji.api.notification.model.NotificationEvent
 import com.buyeong.umji.api.notification.model.NotificationEventType
-import com.buyeong.umji.api.notification.model.ClaimedNotification
-import com.buyeong.umji.api.notification.integration.push.NotificationDeliveryService
-import com.buyeong.umji.api.notification.model.NotificationDeliveryResult
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationOutboxWorkerJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationOutboxWorkerJpaEntityService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every

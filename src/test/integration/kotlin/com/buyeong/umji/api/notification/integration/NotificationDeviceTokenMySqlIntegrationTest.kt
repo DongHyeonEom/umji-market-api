@@ -3,6 +3,9 @@ package com.buyeong.umji.api.notification.integration
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.service.NotificationDeviceTokenService
+import java.nio.ByteBuffer
+import java.security.MessageDigest
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -12,9 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
-import java.nio.ByteBuffer
-import java.security.MessageDigest
-import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")

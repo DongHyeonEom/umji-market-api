@@ -2,7 +2,7 @@ package com.buyeong.umji.api.notification.service
 
 import com.buyeong.umji.api.notification.integration.push.NotificationDeliveryService
 import com.buyeong.umji.api.notification.model.NotificationDeliveryResult
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationOutboxWorkerJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationOutboxWorkerJpaEntityService
 import java.time.Clock
 import java.time.Duration
 

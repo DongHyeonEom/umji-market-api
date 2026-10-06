@@ -3,7 +3,7 @@ package com.buyeong.umji.api.account.service
 import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfile
 import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileCommand
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupTaxInvoiceJpaEntityService
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.stereotype.Service
 import java.util.UUID

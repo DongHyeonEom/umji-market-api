@@ -6,8 +6,8 @@ import com.buyeong.umji.api.auth.model.AuthenticationStatus
 import com.buyeong.umji.api.auth.model.PhoneLoginCommand
 import com.buyeong.umji.api.auth.model.RefreshSessionRecord
 import com.buyeong.umji.api.auth.model.RefreshTokenCommand
-import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldBeNull

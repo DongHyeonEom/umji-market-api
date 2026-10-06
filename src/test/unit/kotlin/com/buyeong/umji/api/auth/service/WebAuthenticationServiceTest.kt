@@ -1,7 +1,5 @@
 package com.buyeong.umji.api.auth.service
 
-import org.springframework.security.crypto.password.PasswordEncoder
-import com.buyeong.umji.api.persistence.jpa.auth.WebLoginAttemptJpaEntityService
 import com.buyeong.umji.api.auth.integration.security.JwtAccessTokenIssuer
 import com.buyeong.umji.api.auth.integration.security.Rfc6238TotpService
 import com.buyeong.umji.api.auth.model.AccountRecord
@@ -9,6 +7,9 @@ import com.buyeong.umji.api.auth.model.WebAccountCredentials
 import com.buyeong.umji.api.auth.model.WebLoginCommand
 import com.buyeong.umji.api.auth.model.WebPasswordCommand
 import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.WebCredentialJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.WebLoginAttemptJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -18,12 +19,13 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import java.util.UUID
+import org.springframework.security.crypto.password.PasswordEncoder
 
 class WebAuthenticationServiceTest : DescribeSpec({
-    val credentials = mockk<com.buyeong.umji.api.persistence.jpa.auth.WebCredentialJpaEntityService>(relaxed = true)
+    val credentials = mockk<com.buyeong.umji.api.persistence.jpa.auth.service.WebCredentialJpaEntityService>(relaxed = true)
     val encoder = mockk<PasswordEncoder>()
     val totp = mockk<Rfc6238TotpService>()
-    val sessions = mockk<com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService>(relaxed = true)
+    val sessions = mockk<com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService>(relaxed = true)
     val accessTokens = mockk<JwtAccessTokenIssuer>()
     val attempts = mockk<WebLoginAttemptJpaEntityService>(relaxed = true)
     val service = WebAuthenticationService(credentials, encoder, totp, sessions, accessTokens, attempts)

@@ -3,7 +3,7 @@ package com.buyeong.umji.api.notification.integration.push
 import com.buyeong.umji.api.notification.model.NotificationEvent
 import com.buyeong.umji.api.notification.model.toMessage
 import com.buyeong.umji.api.notification.model.NotificationDeliveryResult
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationDeviceTokenJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
 import com.buyeong.umji.api.notification.model.NotificationProviderResult
 import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.integration.apns.ApnsHttpPushProvider

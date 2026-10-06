@@ -4,8 +4,8 @@ import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.inventory.service.InventoryService
-import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
 import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
 import com.buyeong.umji.api.shipment.model.ShipmentChange
 import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate

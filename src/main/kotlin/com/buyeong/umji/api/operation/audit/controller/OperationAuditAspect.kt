@@ -6,6 +6,8 @@ import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
 import com.buyeong.umji.api.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
+import java.time.Instant
+import java.util.UUID
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
@@ -19,8 +21,6 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.servlet.HandlerMapping
-import java.time.Instant
-import java.util.UUID
 
 @Aspect
 @Component

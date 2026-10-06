@@ -7,18 +7,18 @@ import com.buyeong.umji.api.inventory.model.ReservationState
 import com.buyeong.umji.api.inventory.model.SkuReference
 import com.buyeong.umji.api.inventory.model.StockState
 import com.buyeong.umji.api.inventory.model.StockView
-import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
-import com.buyeong.umji.api.persistence.jpa.inventory.InventoryJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.inventory.InventoryMovementEntity
-import com.buyeong.umji.api.persistence.jpa.inventory.InventoryStockEntity
-import com.buyeong.umji.api.persistence.jpa.inventory.StockReservationEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryMovementEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryStockEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.service.InventoryJpaEntityService
+import java.time.Instant
+import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
-import java.util.UUID
 
 @Service
 class InventoryService(
@@ -130,7 +130,7 @@ class InventoryService(
     private fun ProductSkuEntity.toReference() = SkuReference(requireNotNull(publicId), skuCode)
     private fun InventoryStockEntity.toState() = StockState(sku.toReference(), onHandQuantity, reservedQuantity, safetyStockQuantity)
     private fun StockReservationEntity.toState() = ReservationState(reservationKey, sku.toReference(), quantity, status, expiresAt, releasedAt)
-    private fun com.buyeong.umji.api.persistence.jpa.inventory.InventoryMovementEntity.toState() = MovementState(
+    private fun com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryMovementEntity.toState() = MovementState(
         requireNotNull(id),
         sku.toReference(),
         movementType,

@@ -2,6 +2,10 @@ package com.buyeong.umji.api.notification.integration
 
 import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
+import java.nio.ByteBuffer
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -11,10 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
-import java.nio.ByteBuffer
-import java.sql.Timestamp
-import java.time.Instant
-import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")

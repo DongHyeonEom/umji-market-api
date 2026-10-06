@@ -4,7 +4,7 @@ import com.buyeong.umji.api.operation.account.model.AccountData
 import com.buyeong.umji.api.operation.account.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.model.ConsentData
-import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe

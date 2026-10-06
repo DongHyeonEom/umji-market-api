@@ -7,7 +7,7 @@ import com.buyeong.umji.api.account.model.BuyerGroupSummary
 import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
 import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
 import com.buyeong.umji.api.util.PhoneNumberHelper
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMembershipJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupMembershipJpaEntityService
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.stereotype.Service
 import java.util.UUID

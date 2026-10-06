@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.auth.config
 
-import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet

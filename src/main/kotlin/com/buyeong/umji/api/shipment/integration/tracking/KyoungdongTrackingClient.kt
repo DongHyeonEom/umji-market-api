@@ -2,10 +2,10 @@ package com.buyeong.umji.api.shipment.integration.tracking
 
 import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.jsoup.Jsoup
-import org.springframework.stereotype.Component
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import org.jsoup.Jsoup
+import org.springframework.stereotype.Component
 
 @Component
 class KyoungdongTrackingClient(

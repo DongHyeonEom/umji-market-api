@@ -1,10 +1,11 @@
-package com.buyeong.umji.api.persistence.jpa.catalog
+package com.buyeong.umji.api.persistence.jpa.catalog.repository
 
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductEntity
+import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
-import java.util.UUID
 
 interface ProductRepository : JpaRepository<ProductEntity, Long> {
     @EntityGraph(attributePaths = ["brand"])

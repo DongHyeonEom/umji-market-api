@@ -1,5 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.account
+package com.buyeong.umji.api.persistence.jpa.account.repository
 
+import com.buyeong.umji.api.persistence.jpa.account.entity.ConsentHistoryEntity
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface ConsentHistoryRepository : JpaRepository<ConsentHistoryEntity, Long> {
