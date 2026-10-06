@@ -8,7 +8,7 @@ endpoint 계약은 각 [도메인 문서](services/README.md), 아키텍처 규�
 
 - Kotlin, Java 21, Spring Boot, Gradle
 - MySQL read/write datasource, Flyway, Spring Data JPA
-- 헥사고날/클린 아키텍처의 application Port와 inbound/outbound adapter
+- 아키텍처 전환 진행 중: 입력 UseCase 계약과 위임 wrapper 제거. 카탈로그·장바구니·재고·결제·배송·공휴일·주문 조회/저장·주문 취소·그룹 onboarding/멤버십·그룹 세금계산서 프로필은 도메인 Service에서 JpaEntityService 직접 호출. 계정 프로필·인증·운영자·알림 일부 영속성 경로는 기존 출력 Port·adapter에 의존
 - JWT RS256 인증, Access Token 및 영속 Refresh Token
 - 공통 예외 응답, 요청 추적, Actuator, OpenAPI 설정
 - Swagger controller tag·endpoint summary·request/response 모델 설명 및 필드별 형식·예시 metadata

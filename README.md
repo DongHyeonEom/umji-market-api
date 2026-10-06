@@ -4,8 +4,8 @@ Flutter 앱의 React WebView가 사용하는 Kotlin/Spring Boot API임.
 
 ## 아키텍처
 
-도메인별 헥사고날 아키텍처와 클린 아키텍처를 적용함.
-Controller는 입력 adapter, application UseCase는 업무 흐름, JPA 구현은 출력 adapter임.
+도메인별 계층형 구조를 사용함.
+요청 흐름은 Controller → 구체 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity임.
 상세 규칙과 Mermaid 흐름도는 [docs/architecture.md](docs/architecture.md)를 참고.
 
 ## 로컬 실행

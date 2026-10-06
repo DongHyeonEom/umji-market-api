@@ -18,8 +18,8 @@
   현재 상태 테이블은 업무 상태 전이를 위해 갱신할 수 있음.<br>
 - FK 기본 정책은 연쇄 삭제를 피함.<br>
   과거 주문에서 참조하는 상품/SKU를 물리 삭제하지 않음.<br>
-- JPA Entity와 Spring Data Repository는 persistence adapter 안에 배치.<br>
-  애플리케이션 경계 밖으로 Entity를 전달하지 않음.<br>
+- JPA Entity와 Spring Data Repository는 해당 도메인의 persistence 계층에 배치.<br>
+  HTTP 응답에는 JPA Entity를 직접 노출하지 않음.<br>
 
 ## 현재 테이블과 마이그레이션
 
