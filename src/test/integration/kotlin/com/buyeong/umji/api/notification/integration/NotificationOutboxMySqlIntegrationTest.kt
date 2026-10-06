@@ -109,7 +109,7 @@ class NotificationOutboxMySqlIntegrationTest {
         )
         val orderId = UUID.randomUUID()
         jdbc.update(
-            "INSERT INTO purchase_order (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, tax_invoice_requested, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, FALSE, ?)",
+            "INSERT INTO purchase_order (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)",
             orderId.toBytes(),
             "OUT-${UUID.randomUUID()}",
             internalAccountId,

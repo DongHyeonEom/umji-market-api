@@ -64,11 +64,12 @@ class OrderShipmentJpaEntityService(
         shipment.trackingNumber = trackingNumber
         shipment.processedBy = operatorId?.let { accounts.findByPublicId(it) ?: error("처리자 계정을 찾을 수 없습니다.") }
         shipment.updatedAt = Instant.now()
-        if (status == IN_TRANSIT && shipment.order.taxInvoiceStatus == WAITING_FOR_SHIPMENT) {
+        val taxInvoice = shipment.order.taxInvoice
+        if (status == IN_TRANSIT && taxInvoice?.status == WAITING_FOR_SHIPMENT) {
             val orderDate = shipment.order.orderedAt.atZone(KST).toLocalDate()
-            shipment.order.taxInvoiceWrittenDate = orderDate
-            shipment.order.taxInvoiceSupplyDate = orderDate
-            shipment.order.taxInvoiceStatus = READY_FOR_ISSUANCE
+            taxInvoice.writtenDate = orderDate
+            taxInvoice.supplyDate = orderDate
+            taxInvoice.status = READY_FOR_ISSUANCE
         }
         return shipments.saveAndFlush(shipment)
     }

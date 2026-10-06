@@ -465,7 +465,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         accountHolder: String,
     ) {
         val row = jdbc.queryForMap(
-            "SELECT tax_invoice_requested, deposit_bank_name, deposit_account_number, deposit_account_holder, shipping_recipient_name, shipping_recipient_phone, shipping_postal_code, shipping_address1, shipping_address2 FROM purchase_order WHERE public_id = ?",
+            "SELECT EXISTS (SELECT 1 FROM purchase_order_tax_invoice invoice WHERE invoice.order_id = purchase_order.id) AS tax_invoice_requested, deposit_bank_name, deposit_account_number, deposit_account_holder, shipping_recipient_name, shipping_recipient_phone, shipping_postal_code, shipping_address1, shipping_address2 FROM purchase_order WHERE public_id = ?",
             orderId.toBytes(),
         )
         assertThat(row["tax_invoice_requested"]).isEqualTo(taxInvoiceRequested)

@@ -14,18 +14,18 @@ import org.springframework.data.repository.query.Param
 interface PurchaseOrderRepository : JpaRepository<PurchaseOrderEntity, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query(
-        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder join fetch purchaseOrder.account join fetch purchaseOrder.payment join fetch purchaseOrder.shipment left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId",
+        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder join fetch purchaseOrder.account join fetch purchaseOrder.payment join fetch purchaseOrder.shipment left join fetch purchaseOrder.items item left join fetch purchaseOrder.taxInvoice where purchaseOrder.publicId = :publicId",
     )
     fun findForCancellation(@Param("publicId") publicId: UUID): PurchaseOrderEntity?
 
     @Query(
-        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder join fetch purchaseOrder.account left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId and purchaseOrder.organization.id = :organizationId",
+        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder join fetch purchaseOrder.account left join fetch purchaseOrder.items item left join fetch purchaseOrder.taxInvoice where purchaseOrder.publicId = :publicId and purchaseOrder.organization.id = :organizationId",
     )
     fun findWithItemsByPublicIdAndOrganizationId(
         @Param("publicId") publicId: UUID,
         @Param("organizationId") organizationId: Long,
     ): PurchaseOrderEntity?
 
-    @EntityGraph(attributePaths = ["account", "payment", "shipment"])
+    @EntityGraph(attributePaths = ["account", "payment", "shipment", "taxInvoice"])
     fun findAllByOrganization_Id(organizationId: Long, pageable: Pageable): Page<PurchaseOrderEntity>
 }
