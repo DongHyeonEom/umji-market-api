@@ -1,12 +1,12 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfile
-import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfile
+import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfileCommand
 import com.buyeong.umji.api.exception.ForbiddenOperationException
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupBusinessProfileEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupEntity
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupBusinessProfileRepository
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupRepository
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
 import java.time.Instant
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -14,25 +14,25 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class BuyerGroupTaxInvoiceJpaEntityService(
-    private val buyerGroups: BuyerGroupJpaEntityService,
-    private val groups: BuyerGroupRepository,
-    private val profiles: BuyerGroupBusinessProfileRepository,
+class OrganizationTaxInvoiceJpaEntityService(
+    private val organizations: OrganizationJpaEntityService,
+    private val groups: OrganizationRepository,
+    private val profiles: OrganizationProfileRepository,
 ) {
-    fun forAccount(accountPublicId: UUID): BuyerGroupTaxInvoiceProfile? =
-        buyerGroups.activeForAccountPublicId(accountPublicId)?.toProfile()
+    fun forAccount(accountPublicId: UUID): OrganizationTaxInvoiceProfile? =
+        organizations.activeBuyerForAccountPublicId(accountPublicId)?.toProfile()
 
     @Transactional
     fun updateForAccount(
         accountPublicId: UUID,
-        command: BuyerGroupTaxInvoiceProfileCommand,
-    ): BuyerGroupTaxInvoiceProfile? {
-        val group = buyerGroups.lockActiveForAccountPublicId(accountPublicId)
-        if (group.groupType != BUSINESS) throw IllegalArgumentException("사업자 그룹만 세금계산서 정보를 관리할 수 있습니다.")
+        command: OrganizationTaxInvoiceProfileCommand,
+    ): OrganizationTaxInvoiceProfile? {
+        val group = organizations.lockActiveForAccountPublicId(accountPublicId)
+        if (group.organizationType != BUSINESS) throw IllegalArgumentException("사업자 그룹만 세금계산서 정보를 관리할 수 있습니다.")
         if (group.representativeAccount?.publicId != accountPublicId) {
             throw ForbiddenOperationException("그룹 대표자만 세금계산서 정보를 수정할 수 있습니다.")
         }
-        val existing = profiles.findByBuyerGroup_Id(requireNotNull(group.id))
+        val existing = profiles.findByOrganization_Id(requireNotNull(group.id))
         if (existing?.businessRegistrationVerificationStatus !in setOf("ACTIVE", "TEMPORARILY_CLOSED")) {
             throw IllegalStateException("사업자등록 상태 확인이 완료된 후 정보를 확인할 수 있습니다.")
         }
@@ -49,24 +49,24 @@ class BuyerGroupTaxInvoiceJpaEntityService(
         return profile.toModel(group)
     }
 
-    fun forGroup(groupPublicId: UUID): BuyerGroupTaxInvoiceProfile? =
-        groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE }?.toProfile()
+    fun forGroup(groupPublicId: UUID): OrganizationTaxInvoiceProfile? =
+        groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE && organizations.hasCapability(groupPublicId, BUYER) }?.toProfile()
 
     @Transactional
     fun updateForGroup(
         groupPublicId: UUID,
-        command: BuyerGroupTaxInvoiceProfileCommand,
-    ): BuyerGroupTaxInvoiceProfile? {
-        val group = groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE } ?: return null
+        command: OrganizationTaxInvoiceProfileCommand,
+    ): OrganizationTaxInvoiceProfile? {
+        val group = groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE && organizations.hasCapability(groupPublicId, BUYER) } ?: return null
         val lockedGroup = groups.findLockedById(requireNotNull(group.id))?.takeIf { it.status == ACTIVE } ?: return null
-        if (lockedGroup.groupType != BUSINESS) throw IllegalArgumentException("사업자 그룹만 세금계산서 정보를 관리할 수 있습니다.")
+        if (lockedGroup.organizationType != BUSINESS) throw IllegalArgumentException("사업자 그룹만 세금계산서 정보를 관리할 수 있습니다.")
         return save(lockedGroup, command).toModel(lockedGroup)
     }
 
-    private fun save(group: BuyerGroupEntity, command: BuyerGroupTaxInvoiceProfileCommand): BuyerGroupBusinessProfileEntity {
-        val groupId = requireNotNull(group.id)
-        val profile = profiles.findByBuyerGroup_Id(groupId) ?: BuyerGroupBusinessProfileEntity().apply {
-            buyerGroup = group
+    private fun save(group: OrganizationEntity, command: OrganizationTaxInvoiceProfileCommand): OrganizationProfileEntity {
+        val organizationId = requireNotNull(group.id)
+        val profile = profiles.findByOrganization_Id(organizationId) ?: OrganizationProfileEntity().apply {
+            organization = group
             businessName = group.displayName
             status = COMPLETED
         }
@@ -90,15 +90,15 @@ class BuyerGroupTaxInvoiceJpaEntityService(
         return profile
     }
 
-    private fun BuyerGroupEntity.toProfile(): BuyerGroupTaxInvoiceProfile {
-        val profile = id?.let(profiles::findByBuyerGroup_Id)
-        val complete = groupType == BUSINESS
+    private fun OrganizationEntity.toProfile(): OrganizationTaxInvoiceProfile {
+        val profile = id?.let(profiles::findByOrganization_Id)
+        val complete = organizationType == BUSINESS
             && profile.isComplete()
             && profile?.businessRegistrationVerificationStatus in setOf("ACTIVE", "TEMPORARILY_CLOSED")
             && profile?.businessRegistrationConfirmedAt != null
-        return BuyerGroupTaxInvoiceProfile(
-            buyerGroupId = requireNotNull(publicId),
-            groupType = groupType,
+        return OrganizationTaxInvoiceProfile(
+            organizationId = requireNotNull(publicId),
+            organizationType = organizationType,
             businessRegistrationNumber = profile?.businessRegistrationNumber,
             businessName = profile?.businessName,
             representativeName = profile?.representativeName,
@@ -115,7 +115,7 @@ class BuyerGroupTaxInvoiceJpaEntityService(
         )
     }
 
-    private fun BuyerGroupBusinessProfileEntity?.isComplete(): Boolean = this != null && listOf(
+    private fun OrganizationProfileEntity?.isComplete(): Boolean = this != null && listOf(
         businessRegistrationNumber,
         businessName,
         representativeName,
@@ -125,9 +125,9 @@ class BuyerGroupTaxInvoiceJpaEntityService(
         businessItem,
     ).all { !it.isNullOrBlank() }
 
-    private fun BuyerGroupBusinessProfileEntity.toModel(group: BuyerGroupEntity) = BuyerGroupTaxInvoiceProfile(
-        buyerGroupId = requireNotNull(group.publicId),
-        groupType = group.groupType,
+    private fun OrganizationProfileEntity.toModel(group: OrganizationEntity) = OrganizationTaxInvoiceProfile(
+        organizationId = requireNotNull(group.publicId),
+        organizationType = group.organizationType,
         businessRegistrationNumber = businessRegistrationNumber,
         businessName = businessName,
         representativeName = representativeName,
@@ -137,7 +137,7 @@ class BuyerGroupTaxInvoiceJpaEntityService(
         businessIndustry = businessIndustry,
         businessItem = businessItem,
         email = taxInvoiceEmail,
-        complete = group.groupType == BUSINESS
+        complete = group.organizationType == BUSINESS
             && isComplete()
             && businessRegistrationVerificationStatus in setOf("ACTIVE", "TEMPORARILY_CLOSED")
             && businessRegistrationConfirmedAt != null,
@@ -152,5 +152,6 @@ class BuyerGroupTaxInvoiceJpaEntityService(
         const val ACTIVE = "ACTIVE"
         const val BUSINESS = "BUSINESS"
         const val COMPLETED = "COMPLETED"
+        const val BUYER = "BUYER"
     }
 }

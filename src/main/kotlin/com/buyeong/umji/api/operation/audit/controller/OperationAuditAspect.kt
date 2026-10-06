@@ -55,7 +55,7 @@ class OperationAuditAspect(
                 segment == "brands" -> "BRAND"
                 segment == "products" -> "PRODUCT"
                 segment == "inventory" -> "INVENTORY"
-                segment == "buyer-groups" -> "BUYER_GROUP"
+                segment == "organizations" -> "ORGANIZATION"
                 segment == "orders" -> "ORDER"
                 else -> "OPERATION"
             }

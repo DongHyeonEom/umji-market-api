@@ -11,7 +11,7 @@ import com.buyeong.umji.api.order.model.OrderView
 import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
-import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
@@ -30,7 +30,7 @@ class OrderServiceTest : DescribeSpec({
     val shippingAddresses = mockk<CustomerAccountJpaEntityService>()
     val notifications = mockk<NotificationEventService>(relaxed = true)
     val taxInvoiceSuppliers = mockk<TaxInvoiceSupplierService>(relaxed = true)
-    val taxInvoiceBuyers = mockk<BuyerGroupTaxInvoiceJpaEntityService>(relaxed = true)
+    val taxInvoiceBuyers = mockk<OrganizationTaxInvoiceJpaEntityService>(relaxed = true)
     val bankAccounts = mockk<BankAccountInstructionsService>(relaxed = true)
     val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers)
     val accountId = UUID.randomUUID()

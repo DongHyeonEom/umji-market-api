@@ -2,9 +2,9 @@ package com.buyeong.umji.api.account.model
 
 import java.util.UUID
 
-data class BuyerGroupTaxInvoiceProfile(
-    val buyerGroupId: UUID,
-    val groupType: String,
+data class OrganizationTaxInvoiceProfile(
+    val organizationId: UUID,
+    val organizationType: String,
     val businessRegistrationNumber: String?,
     val businessName: String?,
     val representativeName: String?,
@@ -20,7 +20,7 @@ data class BuyerGroupTaxInvoiceProfile(
     val businessRegistrationConfirmedAt: java.time.Instant?,
 )
 
-data class BuyerGroupTaxInvoiceProfileCommand(
+data class OrganizationTaxInvoiceProfileCommand(
     val businessRegistrationNumber: String?,
     val businessName: String,
     val representativeName: String?,

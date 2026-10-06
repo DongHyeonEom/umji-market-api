@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.order.entity
 
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
@@ -29,8 +29,8 @@ class PurchaseOrderEntity : DomainPublicEntity() {
     lateinit var account: AccountEntity
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "buyer_group_id", nullable = false)
-    lateinit var buyerGroup: BuyerGroupEntity
+    @JoinColumn(name = "organization_id", nullable = false)
+    lateinit var organization: OrganizationEntity
 
     @Column(nullable = false)
     lateinit var status: String

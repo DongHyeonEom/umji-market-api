@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.payment.integration
 
-import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
+import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
+import com.buyeong.umji.api.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.payment.service.PaymentService
 import java.nio.ByteBuffer
@@ -34,7 +34,7 @@ class ManualPaymentMySqlIntegrationTest {
     private lateinit var orders: OrderService
 
     @Autowired
-    private lateinit var groupMembership: BuyerGroupMembershipService
+    private lateinit var groupMembership: OrganizationMembershipService
 
     @Test
     fun `general payment issue is visible and can be resolved with operator history`() {
@@ -233,7 +233,7 @@ class ManualPaymentMySqlIntegrationTest {
             "payment-$suffix-${UUID.randomUUID()}",
             suffix,
         )
-        groupMembership.register(publicId, BuyerGroupRegistrationCommand("INDIVIDUAL", null))
+        groupMembership.register(publicId, OrganizationRegistrationCommand("INDIVIDUAL", null))
         return publicId
     }
 
@@ -279,16 +279,16 @@ class ManualPaymentMySqlIntegrationTest {
 
     private fun createOrder(accountId: UUID, skuId: UUID, reservationKey: UUID): UUID {
         val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, accountId.toBytes())!!
-        val buyerGroupInternalId = jdbc.queryForObject("SELECT buyer_group_id FROM buyer_group_member WHERE account_id = ? AND status = 'ACTIVE'", Long::class.java, accountInternalId)!!
+        val organizationInternalId = jdbc.queryForObject("SELECT organization_id FROM organization_member WHERE account_id = ? AND status = 'ACTIVE'", Long::class.java, accountInternalId)!!
         val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuId.toBytes())!!
         val orderId = UUID.randomUUID()
         val now = Instant.now()
         jdbc.update(
-            "INSERT INTO purchase_order (public_id, order_number, account_id, buyer_group_id, status, subtotal_amount, total_amount, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)",
+            "INSERT INTO purchase_order (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)",
             orderId.toBytes(),
             "PAY-${UUID.randomUUID()}",
             accountInternalId,
-            buyerGroupInternalId,
+            organizationInternalId,
             Timestamp.from(now),
         )
         val orderInternalId = jdbc.queryForObject("SELECT id FROM purchase_order WHERE public_id = ?", Long::class.java, orderId.toBytes())!!

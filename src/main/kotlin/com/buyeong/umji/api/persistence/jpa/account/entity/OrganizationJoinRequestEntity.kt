@@ -16,10 +16,10 @@ import java.util.UUID
 
 @Entity
 @Table(
-    name = "buyer_group_join_request",
-    uniqueConstraints = [UniqueConstraint(name = "UQ_buyer_group_join_request_public_id", columnNames = ["public_id"])],
+    name = "organization_join_request",
+    uniqueConstraints = [UniqueConstraint(name = "UQ_organization_join_request_public_id", columnNames = ["public_id"])],
 )
-class BuyerGroupJoinRequestEntity {
+class OrganizationJoinRequestEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -28,8 +28,8 @@ class BuyerGroupJoinRequestEntity {
     var publicId: UUID? = null
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "buyer_group_id", nullable = false)
-    lateinit var buyerGroup: BuyerGroupEntity
+    @JoinColumn(name = "organization_id", nullable = false)
+    lateinit var organization: OrganizationEntity
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "account_id", nullable = false)

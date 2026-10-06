@@ -12,15 +12,15 @@ import jakarta.persistence.Table
 import java.time.Instant
 
 @Entity
-@Table(name = "buyer_group_member")
-class BuyerGroupMemberEntity {
+@Table(name = "organization_member")
+class OrganizationMemberEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "buyer_group_id", nullable = false)
-    lateinit var buyerGroup: BuyerGroupEntity
+    @JoinColumn(name = "organization_id", nullable = false)
+    lateinit var organization: OrganizationEntity
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "account_id", nullable = false)

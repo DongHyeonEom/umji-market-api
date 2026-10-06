@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.account.model
 
 import com.buyeong.umji.api.account.model.BusinessGroupRegistration
-import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
+import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Email
@@ -9,11 +9,14 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
-@Schema(description = "사용자 구매자 그룹 최초 등록 요청")
-data class BuyerGroupRegistrationRequest(
+@Schema(description = "사용자 Organization 최초 등록 요청")
+data class OrganizationRegistrationRequest(
     @field:Pattern(regexp = "INDIVIDUAL|BUSINESS")
-    @field:Schema(description = "구매자 그룹 유형", example = "BUSINESS", required = true)
+    @field:Schema(description = "Organization 유형", example = "BUSINESS", required = true)
     val type: String,
+    @field:Pattern(regexp = "BUYER|SELLER")
+    @field:Schema(description = "Organization capability", example = "SELLER", required = false)
+    val capability: String = "BUYER",
     @field:Valid
     @field:Schema(
         description = "사업자 그룹 선택 시 입력할 사업자등록 내용",
@@ -22,7 +25,7 @@ data class BuyerGroupRegistrationRequest(
     )
     val business: BusinessGroupRegistrationRequest? = null,
 ) {
-    fun toCommand() = BuyerGroupRegistrationCommand(type, business?.toCommand())
+    fun toCommand() = OrganizationRegistrationCommand(type, business?.toCommand(), capability)
 }
 
 @Schema(description = "사업자 그룹 등록을 위한 사업자등록 내용")

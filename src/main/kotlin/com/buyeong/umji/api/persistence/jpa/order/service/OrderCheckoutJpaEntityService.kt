@@ -10,9 +10,9 @@ import com.buyeong.umji.api.order.model.OrderView
 import com.buyeong.umji.api.order.model.TaxInvoiceBuyer
 import com.buyeong.umji.api.order.model.TaxInvoiceSnapshot
 import com.buyeong.umji.api.order.model.TaxInvoiceSupplier
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupMemberRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderItemEntity
@@ -32,8 +32,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class OrderCheckoutJpaEntityService(
     private val accounts: AccountJpaEntityService,
-    private val buyerGroupMembers: BuyerGroupMemberRepository,
-    private val buyerGroups: BuyerGroupJpaEntityService,
+    private val organizationMembers: OrganizationMemberRepository,
+    private val organizations: OrganizationJpaEntityService,
     private val catalog: CatalogJpaEntityService,
     private val salesOffers: SalesOfferRepository,
     private val orders: OrderJpaEntityService,
@@ -54,12 +54,12 @@ class OrderCheckoutJpaEntityService(
     @Transactional
     fun save(draft: OrderDraft): OrderView {
         val account = account(draft.accountId)
-        val buyerGroup = buyerGroupMembers.findFirstByAccount_IdAndStatus(requireNotNull(account.id), "ACTIVE")?.buyerGroup
+        val organization = organizationMembers.findFirstByAccount_IdAndStatus(requireNotNull(account.id), "ACTIVE")?.organization
             ?.takeIf { it.status == "ACTIVE" }
             ?: throw ClientBadRequestException("주문 전 개인 또는 사업자 그룹 등록이 필요합니다.")
         val order = PurchaseOrderEntity().apply {
             this.account = account
-            this.buyerGroup = buyerGroup
+            this.organization = organization
             salesChannelCode = draft.channelCode
             orderNumber = nextOrderNumber(draft.orderedAt)
             status = draft.status
@@ -109,15 +109,15 @@ class OrderCheckoutJpaEntityService(
     }
 
     fun findAll(accountId: UUID, page: Int, size: Int): OrderPage {
-        val result = orders.findAll(buyerGroupInternalId(accountId), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
+        val result = orders.findAll(organizationInternalId(accountId), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
         return OrderPage(result.content.map { it.toView() }, result.number, result.size, result.totalElements, result.totalPages)
     }
 
     fun find(accountId: UUID, orderId: UUID): OrderView? =
-        orders.findWithItems(orderId, buyerGroupInternalId(accountId))?.toView()
+        orders.findWithItems(orderId, organizationInternalId(accountId))?.toView()
 
-    private fun buyerGroupInternalId(accountPublicId: UUID): Long =
-        requireNotNull(buyerGroups.activeForAccountPublicId(accountPublicId)?.id) { "계정의 활성 구매자 그룹을 찾을 수 없습니다." }
+    private fun organizationInternalId(accountPublicId: UUID): Long =
+        requireNotNull(organizations.activeBuyerForAccountPublicId(accountPublicId)?.id) { "계정의 활성 구매 Organization을 찾을 수 없습니다." }
 
     private fun account(publicId: UUID) = accounts.findByPublicId(publicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
 
@@ -195,7 +195,7 @@ class OrderCheckoutJpaEntityService(
                 requireNotNull(taxInvoiceSupplierEmail),
             ),
             buyer = TaxInvoiceBuyer(
-                buyerGroupId = requireNotNull(buyerGroup.publicId),
+                organizationId = requireNotNull(organization.publicId),
                 businessRegistrationNumber = taxInvoiceBuyerRegistrationNumber,
                 businessName = taxInvoiceBuyerBusinessName,
                 representativeName = taxInvoiceBuyerName,

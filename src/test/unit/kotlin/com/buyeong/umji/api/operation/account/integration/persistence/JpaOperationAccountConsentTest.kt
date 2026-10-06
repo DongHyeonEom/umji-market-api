@@ -4,7 +4,7 @@ import com.buyeong.umji.api.operation.account.model.ConsentCommand
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.ConsentHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
 import io.mockk.every
 import io.mockk.mockk
@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 
 class JpaOperationAccountConsentTest {
     private val accounts = mockk<AccountJpaEntityService>(relaxed = true)
-    private val adapter = OperationAccountJpaEntityService(accounts, mockk<JdbcTemplate>(relaxed = true), mockk<BuyerGroupJpaEntityService>(relaxed = true))
+    private val adapter = OperationAccountJpaEntityService(accounts, mockk<JdbcTemplate>(relaxed = true), mockk<OrganizationJpaEntityService>(relaxed = true))
 
     @Test
     fun `written consent stores the processing administrator and returns it in account data`() {
@@ -38,7 +38,6 @@ class JpaOperationAccountConsentTest {
         val persistedConsent = slot<ConsentHistoryEntity>()
         every { accounts.findByPublicId(accountId) } returns account
         every { accounts.findByPublicId(operatorId) } returns operator
-        every { accounts.profile(1) } returns null
         every { accounts.saveConsent(capture(persistedConsent)) } answers { firstArg() }
         every { accounts.consents(1) } returns listOf(savedConsent)
 

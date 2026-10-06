@@ -3,7 +3,7 @@ package com.buyeong.umji.api.operation.account.model
 import java.time.Instant
 import java.util.UUID
 
-data class BusinessProfileData(
+data class OrganizationProfileData(
     val businessName: String,
     val businessRegistrationNumber: String?,
     val representativeName: String?,
@@ -28,11 +28,19 @@ data class AccountData(
     val email: String?,
     val status: String,
     val tokenVersion: Long,
-    val profile: BusinessProfileData? = null,
+    val profile: OrganizationProfileData? = null,
     val consents: List<ConsentData> = emptyList(),
-    val buyerGroupId: UUID? = null,
+    val organizationId: UUID? = null,
+    val organizationCapabilities: Set<String> = emptySet(),
 )
-data class NewAccount(val name: String, val phone: String, val normalizedPhone: String, val email: String?, val profile: BusinessProfileData?)
+data class NewAccount(
+    val name: String,
+    val phone: String,
+    val normalizedPhone: String,
+    val email: String?,
+    val profile: OrganizationProfileData?,
+    val organizationCapability: String = "BUYER",
+)
 data class ConsentCommand(
     val consentType: String,
     val documentVersion: String,

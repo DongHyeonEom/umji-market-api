@@ -9,15 +9,38 @@
 기존 계정별 배송지는 V20에서 현재 계정의 구매자 그룹 공용 주소로 이관. 한 그룹에 여러 기본 배송지가 있으면 기존 기본 주소 중 하나만 승격.<br>
 대표자는 전화번호 초대와 가입 요청 처리를 수행. 대표자 지정·변경은 운영자 권한으로 제한.<br>
 최초 가입 계정은 그룹 onboarding 조회에서 현재 그룹과 전화번호가 일치하는 대기 초대를 확인하고, 초대 수락 후에만 그룹에 연결.<br>
-그룹이 없는 계정은 개인 그룹을 만들거나 휴대폰 번호로 그룹을 찾아 가입 요청 가능. 그룹 이동 전 주문의 귀속은 유지.<br>
-그룹 조회·등록·초대·가입 요청 흐름은 `BuyerGroupMembershipService → BuyerGroupMembershipJpaEntityService`로 처리.<br>
-공급받는자 세금계산서 정보는 `buyer_group_business_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 그룹 구성원이 공유.<br>
+그룹이 없는 계정은 개인 조직을 만들거나 휴대폰 번호로 구매 조직을 찾아 가입 요청 가능. 구매자와 판매자는 각각 Organization을 만들고 여러 계정을 구성원으로 연결 가능. 그룹 이동 전 주문의 귀속은 유지.<br>
+그룹 조회·등록·초대·가입 요청 흐름은 `OrganizationMembershipService → OrganizationMembershipJpaEntityService`로 처리.<br>
+공급받는자 세금계산서 정보는 `organization_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 Organization 구성원이 공유.<br>
 활성 그룹 구성원은 세금계산서 정보를 조회할 수 있고, 대표자와 `ADMIN_ACCOUNT_MANAGE` 운영자만 수정 가능. 개인 그룹은 세금계산서 정보를 등록하거나 발행 요청할 수 없음.<br>
-세금계산서 프로필 요청은 `BuyerGroupTaxInvoiceProfileService → BuyerGroupTaxInvoiceJpaEntityService` 흐름으로 처리.<br>
+세금계산서 프로필 요청은 `OrganizationTaxInvoiceProfileService → OrganizationTaxInvoiceJpaEntityService` 흐름으로 처리.<br>
 공급받는자 정보 완성 기준은 활성 `BUSINESS` 그룹과 사업자등록번호·상호·성명·사업자주소·업태·종목 입력. 이메일은 선택 항목.<br>
 주문별 발행 선택과 계정별 기본 발행 선택은 기존 계약을 유지. 발행을 요청한 주문에는 주문 시점의 그룹 세금계산서 정보를 snapshot하고, 이후 프로필 변경은 기존 주문을 변경하지 않음.<br>
 
 ## 사용자 계정·공용 배송지 흐름
+
+Organization 생성·구성원 변경 흐름.<br>
+
+```mermaid
+flowchart TD
+    REQ[조직 생성·조회·초대·가입 요청] --> AUTH[Access Token subject로 활성 ACCOUNT 확인]
+    AUTH --> ACTION{요청 작업}
+    ACTION -- 생성 --> CAP[capability와 조직 유형 검증]
+    CAP --> CAPOK{BUYER 또는 SELLER capability 유효}
+    CAPOK -- 아니오 --> INVALID[400 거부]
+    CAPOK -- 예 --> PROFILE[사업자 정보가 있으면 공통 organization_profile 검증]
+    PROFILE --> ORG[organization과 organization_capability 저장]
+    ORG --> MEMBER[요청 계정을 대표 구성원으로 연결]
+    ACTION -- 초대·가입 --> MEMBERAUTH[조직 capability·활성 구성원·대표자 권한 검증]
+    MEMBERAUTH --> DECISION{요청 유효·권한 허용}
+    DECISION -- 아니오 --> DENY[403 또는 범위 404]
+    DECISION -- 예 --> CHANGE[organization_member 및 초대·요청 상태 저장]
+    ACTION -- 조회·수정 --> SCOPE[활성 구성원과 capability 범위 검증]
+    SCOPE --> READWRITE[Organization 또는 공통 프로필 조회·수정]
+    MEMBER --> RESPONSE[Organization 응답]
+    CHANGE --> RESPONSE
+    READWRITE --> RESPONSE
+```
 
 ```mermaid
 flowchart TD
@@ -57,34 +80,35 @@ flowchart TD
 - `PUT /api/account/addresses/{addressId}`
 - `PUT /api/account/addresses/{addressId}/default`
 - `DELETE /api/account/addresses/{addressId}`
-- `GET /api/account/groups/current/tax-invoice-profile`
-- `PUT /api/account/groups/current/tax-invoice-profile` (활성 그룹 대표자 전용)
-- `GET /api/account/groups/onboarding`
-- `GET /api/account/groups/current`
-- `POST /api/account/groups/individual`
-- `POST /api/account/groups` (유형 선택형 최초 그룹 등록, 사업자 선택 시 국세청 폐업 상태 확인)
-- `GET /api/account/groups/search?phone=`
-- `POST /api/account/groups/invitations`
-- `GET /api/account/groups/invitations`
-- `POST /api/account/groups/invitations/{invitationId}/response`
-- `POST /api/account/groups/join-requests`
-- `GET /api/account/groups/join-requests`
-- `POST /api/account/groups/join-requests/{requestId}/response`
-- `PUT /api/operation/buyer-groups/{groupId}/representative`
+- `GET /api/account/organizations/current/tax-invoice-profile`
+- `PUT /api/account/organizations/current/tax-invoice-profile` (활성 구매 조직 대표자 전용)
+- `GET /api/account/organizations/onboarding`
+- `GET /api/account/organizations/current`
+- `POST /api/account/organizations/individual`
+- `POST /api/account/organizations` (구매 또는 판매 capability의 Organization 등록. `capability=BUYER|SELLER`)
+- `GET /api/account/organizations/search?phone=&capability=BUYER|SELLER` (구매 조직 가입 검색)
+- `POST /api/account/organizations/invitations`
+- `GET /api/account/organizations/invitations`
+- `POST /api/account/organizations/invitations/{invitationId}/response`
+- `POST /api/account/organizations/join-requests`
+- `GET /api/account/organizations/join-requests`
+- `POST /api/account/organizations/join-requests/{requestId}/response`
+- `PUT /api/operation/organizations/{organizationId}/representative`
 
 모든 endpoint는 Access Token의 subject가 가리키는 활성 계정을 사용. 계정 ID를 요청에서 받지 않음.<br>
 배송지 목록·수정 범위는 인증 계정이 속한 활성 구매자 그룹으로 제한.<br>
 주문 생성은 `shippingAddressId`를 필수 입력으로 받고 주문 요청의 구매자 그룹 배송지인지 확인.<br>
 세금계산서 정보 조회·수정은 인증 계정의 현재 활성 그룹을 사용하며 그룹 ID를 사용자 요청에서 받지 않음. 조회는 활성 구성원, 수정은 대표자만 허용.<br>
-`GET /api/account/groups/current/tax-invoice-profile` 응답은 `businessRegistrationVerificationStatus`, `businessRegistrationVerifiedAt`, `businessRegistrationConfirmedAt`, `complete`를 포함. 상태가 `ACTIVE` 또는 `TEMPORARILY_CLOSED`이면 화면에서 기존 사업자 정보를 입력·확인 단계로 노출. `complete`는 필수 정보·상태 확인·대표자 확인이 모두 완료된 경우에만 참.<br>
+`GET /api/account/organizations/current/tax-invoice-profile` 응답은 `businessRegistrationVerificationStatus`, `businessRegistrationVerifiedAt`, `businessRegistrationConfirmedAt`, `complete`를 포함. 상태가 `ACTIVE` 또는 `TEMPORARILY_CLOSED`이면 화면에서 기존 사업자 정보를 입력·확인 단계로 노출. `complete`는 필수 정보·상태 확인·대표자 확인이 모두 완료된 경우에만 참.<br>
 운영자 수정 endpoint는 [operation.md](operation.md)의 `ADMIN_ACCOUNT_MANAGE` 권한을 요구.<br>
 
 운영자 계정 생성·동의·프로필·승인 및 role 변경 흐름은 [operation.md](operation.md)를 기준으로 함.<br>
 
-## 구매자 그룹과 계정 관계
+## 구매 조직과 계정 관계
 
-구매자 그룹은 `BUSINESS` 또는 `INDIVIDUAL` 유형이며 사업자번호 보유 여부와 별개로 주문·공용 배송지의 공유 경계를 형성.<br>
-그룹은 여러 계정을 구성원으로 가질 수 있고, 계정은 한 번에 하나의 활성 그룹에만 소속.<br>
+Organization은 `BUSINESS` 또는 `INDIVIDUAL` 유형과 `BUYER`, `SELLER`, `OPERATOR` capability를 가짐. capability는 복수 지정 가능하며 주문·공용 배송지는 `BUYER` capability가 있는 조직의 공유 경계를 형성.<br>
+판매자도 `SELLER` capability Organization을 만들고 여러 계정을 구성원으로 연결 가능. 공통 사업자 정보는 `organization_profile` 단일 원본으로 관리.<br>
+Organization은 여러 계정을 구성원으로 가질 수 있고, 계정은 한 번에 하나의 활성 Organization에만 소속.<br>
 도매·소매는 그룹 유형이 아니라 판매 채널 정책으로 판정. 사업자번호 없는 업체와 개인 대량구매자도 그룹을 이용 가능.<br>
 운영자는 계정을 사업자 그룹에 명시적으로 연결하며 사업자번호만으로 그룹을 자동 병합하지 않음.<br>
 구성원 초대·가입 요청·역할과 그룹 프로필 관리 흐름은 이 문서의 단일 기준. 주문 소유권, 실제 주문자와 주문 조회 범위는 [주문 문서](order.md)를 기준으로 함.<br>
@@ -92,9 +116,9 @@ flowchart TD
 
 ## 대표자·일반구성원 화면 권한 설계
 
-현재 대표자는 `buyer_group.representative_account_id`와 활성 `buyer_group_member` 소속으로 식별. 활성 구성원 중 해당 계정만 대표자이며 나머지는 일반구성원. 대표 여부를 계정 role에 복제하지 않아 대표자 변경 시 역할 데이터가 어긋나는 것을 방지.<br>
+현재 대표자는 `organization.representative_account_id`와 활성 `organization_member` 소속으로 식별. 활성 구성원 중 해당 계정만 대표자이며 나머지는 일반구성원. 대표 여부를 계정 role에 복제하지 않아 대표자 변경 시 역할 데이터가 어긋나는 것을 방지.<br>
 
-목표 설계에서는 `buyer_group_role_permission`이 `REPRESENTATIVE`·`MEMBER`별 permission을 설정하고, `ui_screen_permission`이 각 사용자 화면을 보기 위한 permission을 지정. 그룹 onboarding/current 조회가 현재 그룹 역할, 허용 screen code, capability를 반환해 React가 화면·버튼을 표시.<br>
+목표 설계에서는 `organization_role_permission`이 `REPRESENTATIVE`·`MEMBER`별 permission을 설정하고, `ui_screen_permission`이 각 사용자 화면을 보기 위한 permission을 지정. 그룹 onboarding/current 조회가 현재 그룹 역할, 허용 screen code, capability를 반환해 React가 화면·버튼을 표시.<br>
 그룹 미소속 계정은 `UNASSIGNED` 역할로 onboarding 화면만 접근. `REPRESENTATIVE`와 `MEMBER`는 그룹 주문·공용 주소·거래 이력을 공유하며, 초대·가입 요청 관리 화면과 action은 대표자만 허용.<br>
 
 | 사용자 역할 | 노출 screen code 예시 | permission code 예시 |
@@ -122,7 +146,7 @@ flowchart TD
 
 신규 가입 후 그룹이 없는 사용자는 개인/사업자 유형을 먼저 선택. 개인 선택도 내부적으로 `INDIVIDUAL` 구매자 그룹과 활성 구성원 관계를 생성.<br>
 사업자 선택은 그룹 표시 정보와 사업자등록 필수 항목 입력·확인 후 `BUSINESS` 그룹과 최초 대표자 관계를 같은 트랜잭션으로 생성.<br>
-사업자등록번호·상호·대표자·사업자등록 주소·업태·종목은 `buyer_group_business_profile`에서 관리. 그룹 공용 배송지는 별도 `buyer_group_address`에 저장하며 사업자등록 주소에서 자동 생성하지 않음.<br>
+사업자등록번호·상호·대표자·사업자등록 주소·업태·종목은 `organization_profile`에서 관리. 그룹 공용 배송지는 별도 `organization_address`에 저장하며 사업자등록 주소에서 자동 생성하지 않음.<br>
 사용자가 최초 사업자 그룹을 만드는 경우 사업자등록번호를 국세청 사업자등록 상태조회 API로 확인. 폐업 상태는 거부하고 계속사업자·휴업자는 허용. 상호·대표자·주소·업태·종목은 사용자가 입력·확인.<br>
 상태조회는 국세청 원천 정보에서 30분 간격으로 갱신되며 신규 개업 정보는 반영에 1~2일이 걸릴 수 있음. API 개요는 [공공데이터포털 국세청 사업자등록정보 상태조회](https://www.data.go.kr/data/15081808/openapi.do)를 참고.<br>
 운영자가 그룹 초기값으로 사업자 프로필을 입력한 경우 사용자 그룹 생성 검증은 다시 요구하지 않음. 사업자번호 상태 확인을 백그라운드에서 진행하며 성공 후에만 대표자가 사전 입력 정보를 확인·완성. 폐업 결과는 발행 불가 상태로 노출. 활성 그룹에 소속된 사용자에게도 유형 선택·그룹 생성 흐름을 다시 노출하지 않고 기존 초대·가입 요청 처리를 유지.<br>

@@ -1,22 +1,24 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.account.model.BuyerGroupInvitation
-import com.buyeong.umji.api.account.model.BuyerGroupJoinRequest
-import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.model.BuyerGroupSearchResult
-import com.buyeong.umji.api.account.model.BuyerGroupSummary
+import com.buyeong.umji.api.account.model.OrganizationInvitation
+import com.buyeong.umji.api.account.model.OrganizationJoinRequest
+import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
+import com.buyeong.umji.api.account.model.OrganizationSearchResult
+import com.buyeong.umji.api.account.model.OrganizationSummary
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupBusinessProfileEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupInvitationEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupJoinRequestEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupMemberEntity
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupBusinessProfileRepository
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupInvitationRepository
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupJoinRequestRepository
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupMemberRepository
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupRepository
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationInvitationEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationJoinRequestEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationMemberEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationCapabilityRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationInvitationRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationJoinRequestRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationMemberRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
 import java.time.Instant
 import java.util.UUID
 import org.springframework.stereotype.Service
@@ -24,51 +26,54 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class BuyerGroupMembershipJpaEntityService(
+class OrganizationMembershipJpaEntityService(
     private val accounts: AccountJpaEntityService,
-    private val groups: BuyerGroupRepository,
-    private val members: BuyerGroupMemberRepository,
-    private val invitations: BuyerGroupInvitationRepository,
-    private val joinRequests: BuyerGroupJoinRequestRepository,
-    private val buyerGroupEntities: BuyerGroupJpaEntityService,
-    private val businessProfiles: BuyerGroupBusinessProfileRepository,
+    private val groups: OrganizationRepository,
+    private val members: OrganizationMemberRepository,
+    private val invitations: OrganizationInvitationRepository,
+    private val joinRequests: OrganizationJoinRequestRepository,
+    private val organizationEntities: OrganizationJpaEntityService,
+    private val organizationProfiles: OrganizationProfileRepository,
+    private val capabilities: OrganizationCapabilityRepository,
 ) {
-    fun current(accountId: UUID): BuyerGroupSummary? {
+    fun current(accountId: UUID): OrganizationSummary? {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val membership = members.findFirstByAccount_IdAndStatusOrderByJoinedAtDesc(requireNotNull(account.id), ACTIVE) ?: return null
-        val group = membership.buyerGroup.takeIf { it.status == ACTIVE } ?: return null
+        val group = membership.organization.takeIf { it.status == ACTIVE } ?: return null
         return group.toSummary(account)
     }
 
     @Transactional
-    fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary {
+    fun createIndividualGroup(accountId: UUID, name: String): OrganizationSummary {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         require(members.findFirstByAccount_IdAndStatus(requireNotNull(account.id), ACTIVE) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
         val group = groups.saveAndFlush(
-            BuyerGroupEntity().apply {
-                groupType = INDIVIDUAL
+            OrganizationEntity().apply {
+                organizationType = INDIVIDUAL
                 displayName = name
                 status = ACTIVE
                 representativeAccount = account
             },
         )
         members.saveAndFlush(
-            BuyerGroupMemberEntity().apply {
-                buyerGroup = group
+            OrganizationMemberEntity().apply {
+                organization = group
                 this.account = account
                 status = ACTIVE
             },
         )
+        capabilities.save(OrganizationCapabilityEntity().apply { organization = group; capabilityCode = BUYER })
         return group.toSummary(account)
     }
 
     @Transactional
-    fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary {
+    fun register(accountId: UUID, command: OrganizationRegistrationCommand): OrganizationSummary {
         val account = accounts.lockByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val accountInternalId = requireNotNull(account.id)
         require(members.findFirstByAccount_IdAndStatus(accountInternalId, ACTIVE) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
+        require(command.capability == BUYER || command.capability == SELLER) { "Organization capability는 BUYER 또는 SELLER여야 합니다." }
         val business = command.business
-        val groupType = when (command.type) {
+        val organizationType = when (command.type) {
             INDIVIDUAL -> {
                 require(business == null) { "개인 그룹 등록에는 사업자등록 정보가 없어야 합니다." }
                 INDIVIDUAL
@@ -80,24 +85,28 @@ class BuyerGroupMembershipJpaEntityService(
             else -> throw IllegalArgumentException("지원하지 않는 그룹 유형입니다.")
         }
         val group = groups.saveAndFlush(
-            BuyerGroupEntity().apply {
-                this.groupType = groupType
+            OrganizationEntity().apply {
+                this.organizationType = organizationType
                 displayName = business?.businessName?.trim() ?: account.name
                 status = ACTIVE
                 representativeAccount = account
             },
         )
         members.saveAndFlush(
-            BuyerGroupMemberEntity().apply {
-                buyerGroup = group
+            OrganizationMemberEntity().apply {
+                organization = group
                 this.account = account
                 status = ACTIVE
             },
         )
+        capabilities.save(OrganizationCapabilityEntity().apply {
+            organization = group
+            capabilityCode = command.capability
+        })
         if (business != null) {
-            businessProfiles.save(
-                BuyerGroupBusinessProfileEntity().apply {
-                    buyerGroup = group
+            organizationProfiles.save(
+                OrganizationProfileEntity().apply {
+                    organization = group
                     businessName = business.businessName.trim()
                     businessRegistrationNumber = business.businessRegistrationNumber
                     representativeName = business.representativeName.trim()
@@ -117,22 +126,34 @@ class BuyerGroupMembershipJpaEntityService(
         return group.toSummary(account)
     }
 
-    fun search(phoneNormalized: String): List<BuyerGroupSearchResult> =
-        groups.searchByPhone(phoneNormalized).map { BuyerGroupSearchResult(requireNotNull(it.publicId), it.groupType, it.displayName) }
+    fun search(phoneNormalized: String, capability: String): List<OrganizationSearchResult> =
+        groups.searchByPhone(phoneNormalized).filter { organization ->
+            capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(organization.id), capability)
+        }.map { organization ->
+            OrganizationSearchResult(
+                requireNotNull(organization.publicId),
+                organization.organizationType,
+                organization.displayName,
+                capabilities.findAllByOrganization_Id(requireNotNull(organization.id)).mapTo(linkedSetOf()) { it.capabilityCode },
+            )
+        }
 
     @Transactional
-    fun invite(accountId: UUID, phoneNormalized: String): BuyerGroupInvitation {
+    fun invite(accountId: UUID, phoneNormalized: String): OrganizationInvitation {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = representativeGroup(account) ?: throw ItemNotFoundException("대표자 권한이 있는 활성 그룹을 찾을 수 없습니다.")
+        require(capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER) || capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER)) {
+            "구성원을 초대할 수 있는 Organization이 아닙니다."
+        }
         lockGroup(requireNotNull(group.id))
         require(account.phoneNormalized != phoneNormalized) { "본인 휴대폰 번호는 초대할 수 없습니다." }
-        require(members.findAllByBuyerGroup_IdAndStatus(requireNotNull(group.id), ACTIVE).none { it.account.phoneNormalized == phoneNormalized }) {
+        require(members.findAllByOrganization_IdAndStatus(requireNotNull(group.id), ACTIVE).none { it.account.phoneNormalized == phoneNormalized }) {
             "이미 그룹 구성원인 휴대폰 번호입니다."
         }
-        val existing = invitations.findFirstByBuyerGroup_IdAndPhoneNormalizedAndStatus(requireNotNull(group.id), phoneNormalized, PENDING)
+        val existing = invitations.findFirstByOrganization_IdAndPhoneNormalizedAndStatus(requireNotNull(group.id), phoneNormalized, PENDING)
         val invitation = existing ?: invitations.save(
-            BuyerGroupInvitationEntity().apply {
-                buyerGroup = group
+            OrganizationInvitationEntity().apply {
+                organization = group
                 this.phoneNormalized = phoneNormalized
                 invitedBy = account
                 targetAccount = accounts.findByPhoneNormalized(phoneNormalized)
@@ -142,11 +163,11 @@ class BuyerGroupMembershipJpaEntityService(
         return invitation.toModel()
     }
 
-    fun invitations(accountId: UUID): List<BuyerGroupInvitation> {
+    fun invitations(accountId: UUID): List<OrganizationInvitation> {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val phone = account.phoneNormalized ?: return emptyList()
         return invitations.findAllByPhoneNormalizedAndStatus(phone, PENDING)
-            .filter { it.buyerGroup.status == ACTIVE }
+            .filter { it.organization.status == ACTIVE }
             .map { it.toModel() }
     }
 
@@ -157,7 +178,7 @@ class BuyerGroupMembershipJpaEntityService(
         val invitation = invitations.findAllByPhoneNormalizedAndStatus(phone, PENDING)
             .firstOrNull { it.publicId == invitationId }
             ?: throw ItemNotFoundException("대기 중인 그룹 초대를 찾을 수 없습니다.")
-        val group = lockGroup(requireNotNull(invitation.buyerGroup.id))
+        val group = lockGroup(requireNotNull(invitation.organization.id))
         if (accept) {
             moveIntoGroup(account, group)
             invitation.targetAccount = account
@@ -169,33 +190,36 @@ class BuyerGroupMembershipJpaEntityService(
     }
 
     @Transactional
-    fun requestToJoin(accountId: UUID, groupId: UUID) {
+    fun requestToJoin(accountId: UUID, organizationId: UUID) {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
-        val group = groups.findByPublicId(groupId)?.takeIf { it.status == ACTIVE }
+        val group = groups.findByPublicId(organizationId)?.takeIf { it.status == ACTIVE }
             ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
+        require(capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER) || capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER)) {
+            "구성원 가입을 허용하지 않는 Organization입니다."
+        }
         lockGroup(requireNotNull(group.id))
         val accountIdValue = requireNotNull(account.id)
-        require(members.findFirstByAccount_IdAndStatus(accountIdValue, ACTIVE)?.buyerGroup?.id != group.id) { "이미 해당 그룹의 구성원입니다." }
-        val currentGroup = members.findFirstByAccount_IdAndStatus(accountIdValue, ACTIVE)?.buyerGroup
-        require(currentGroup?.representativeAccount?.id != accountIdValue || currentGroup.groupType == INDIVIDUAL) {
+        require(members.findFirstByAccount_IdAndStatus(accountIdValue, ACTIVE)?.organization?.id != group.id) { "이미 해당 그룹의 구성원입니다." }
+        val currentOrganization = members.findFirstByAccount_IdAndStatus(accountIdValue, ACTIVE)?.organization
+        require(currentOrganization?.representativeAccount?.id != accountIdValue || currentOrganization.organizationType == INDIVIDUAL) {
             "사업자 그룹 대표자는 그룹 가입 요청 전에 운영자에게 대표자 변경을 요청해 주세요."
         }
-        require(joinRequests.findFirstByBuyerGroup_IdAndAccount_IdAndStatus(requireNotNull(group.id), accountIdValue, PENDING) == null) {
+        require(joinRequests.findFirstByOrganization_IdAndAccount_IdAndStatus(requireNotNull(group.id), accountIdValue, PENDING) == null) {
             "이미 가입 요청을 보냈습니다."
         }
         joinRequests.save(
-            BuyerGroupJoinRequestEntity().apply {
-                buyerGroup = group
+            OrganizationJoinRequestEntity().apply {
+                organization = group
                 this.account = account
                 status = PENDING
             },
         )
     }
 
-    fun pendingJoinRequests(accountId: UUID): List<BuyerGroupJoinRequest> {
+    fun pendingJoinRequests(accountId: UUID): List<OrganizationJoinRequest> {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = representativeGroup(account) ?: return emptyList()
-        return joinRequests.findAllByBuyerGroup_IdAndStatusOrderByRequestedAtAsc(requireNotNull(group.id), PENDING).map { it.toModel() }
+        return joinRequests.findAllByOrganization_IdAndStatusOrderByRequestedAtAsc(requireNotNull(group.id), PENDING).map { it.toModel() }
     }
 
     @Transactional
@@ -203,7 +227,7 @@ class BuyerGroupMembershipJpaEntityService(
         val representative = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val request = joinRequests.findFirstByPublicIdAndStatus(requestId, PENDING)
             ?: throw ItemNotFoundException("대기 중인 가입 요청을 찾을 수 없습니다.")
-        val group = lockGroup(requireNotNull(request.buyerGroup.id))
+        val group = lockGroup(requireNotNull(request.organization.id))
         require(group.representativeAccount?.id == representative.id) { "해당 그룹 대표자만 가입 요청을 처리할 수 있습니다." }
         if (approve) moveIntoGroup(request.account, group)
         request.status = if (approve) APPROVED else DECLINED
@@ -211,20 +235,20 @@ class BuyerGroupMembershipJpaEntityService(
         request.respondedBy = representative
     }
 
-    private fun representativeGroup(account: AccountEntity): BuyerGroupEntity? {
+    private fun representativeGroup(account: AccountEntity): OrganizationEntity? {
         val membership = members.findFirstByAccount_IdAndStatus(requireNotNull(account.id), ACTIVE) ?: return null
-        return membership.buyerGroup.takeIf { it.status == ACTIVE && it.representativeAccount?.id == account.id }
+        return membership.organization.takeIf { it.status == ACTIVE && it.representativeAccount?.id == account.id }
     }
 
-    private fun moveIntoGroup(account: AccountEntity, target: BuyerGroupEntity) {
+    private fun moveIntoGroup(account: AccountEntity, target: OrganizationEntity) {
         val accountId = requireNotNull(account.id)
         val current = members.findFirstByAccount_IdAndStatusOrderByJoinedAtDesc(accountId, ACTIVE)
-        if (current?.buyerGroup?.id == target.id) return
+        if (current?.organization?.id == target.id) return
         current?.let {
-            val oldGroup = lockGroup(requireNotNull(it.buyerGroup.id))
+            val oldGroup = lockGroup(requireNotNull(it.organization.id))
             if (oldGroup.representativeAccount?.id == accountId) {
-                require(oldGroup.groupType == INDIVIDUAL) { "사업자 그룹 대표자는 운영자만 소속을 변경할 수 있습니다." }
-                require(members.findAllByBuyerGroup_IdAndStatus(requireNotNull(oldGroup.id), ACTIVE).size == 1) {
+                require(oldGroup.organizationType == INDIVIDUAL) { "사업자 그룹 대표자는 운영자만 소속을 변경할 수 있습니다." }
+                require(members.findAllByOrganization_IdAndStatus(requireNotNull(oldGroup.id), ACTIVE).size == 1) {
                     "다른 구성원이 있는 개인 그룹 대표자는 운영자에게 대표자 변경을 요청해 주세요."
                 }
                 oldGroup.representativeAccount = null
@@ -233,11 +257,11 @@ class BuyerGroupMembershipJpaEntityService(
             it.status = LEFT
             members.saveAndFlush(it)
         }
-        val existingTarget = members.findFirstByBuyerGroup_IdAndAccount_Id(requireNotNull(target.id), accountId)
+        val existingTarget = members.findFirstByOrganization_IdAndAccount_Id(requireNotNull(target.id), accountId)
         if (existingTarget == null) {
             members.saveAndFlush(
-                BuyerGroupMemberEntity().apply {
-                    buyerGroup = target
+                OrganizationMemberEntity().apply {
+                    organization = target
                     this.account = account
                     status = ACTIVE
                 },
@@ -249,24 +273,27 @@ class BuyerGroupMembershipJpaEntityService(
         }
     }
 
-    private fun lockGroup(id: Long): BuyerGroupEntity =
+    private fun lockGroup(id: Long): OrganizationEntity =
         groups.findLockedById(id)?.takeIf { it.status == ACTIVE }
             ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
 
-    private fun BuyerGroupEntity.toSummary(account: AccountEntity) =
-        BuyerGroupSummary(requireNotNull(publicId), groupType, displayName, representativeAccount?.id == account.id)
+    private fun OrganizationEntity.toSummary(account: AccountEntity) =
+        OrganizationSummary(
+            requireNotNull(publicId), organizationType, displayName, representativeAccount?.id == account.id,
+            capabilities.findAllByOrganization_Id(requireNotNull(id)).mapTo(linkedSetOf()) { it.capabilityCode },
+        )
 
-    private fun BuyerGroupInvitationEntity.toModel() = BuyerGroupInvitation(
+    private fun OrganizationInvitationEntity.toModel() = OrganizationInvitation(
         requireNotNull(publicId),
-        requireNotNull(buyerGroup.publicId),
-        buyerGroup.displayName,
+        requireNotNull(organization.publicId),
+        organization.displayName,
         phoneNormalized.takeLast(4).padStart(phoneNormalized.length, '*'),
     )
 
-    private fun BuyerGroupJoinRequestEntity.toModel() = BuyerGroupJoinRequest(
+    private fun OrganizationJoinRequestEntity.toModel() = OrganizationJoinRequest(
         requireNotNull(publicId),
-        requireNotNull(buyerGroup.publicId),
-        buyerGroup.displayName,
+        requireNotNull(organization.publicId),
+        organization.displayName,
         account.name,
         account.phoneNormalized?.let { "***-****-${it.takeLast(4)}" } ?: "",
         requestedAt,
@@ -283,5 +310,7 @@ class BuyerGroupMembershipJpaEntityService(
         const val INDIVIDUAL = "INDIVIDUAL"
         const val BUSINESS = "BUSINESS"
         const val INACTIVE = "INACTIVE"
+        const val BUYER = "BUYER"
+        const val SELLER = "SELLER"
     }
 }

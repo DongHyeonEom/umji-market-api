@@ -19,13 +19,13 @@ interface PurchaseOrderRepository : JpaRepository<PurchaseOrderEntity, Long> {
     fun findForCancellation(@Param("publicId") publicId: UUID): PurchaseOrderEntity?
 
     @Query(
-        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder join fetch purchaseOrder.account left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId and purchaseOrder.buyerGroup.id = :buyerGroupId",
+        "select distinct purchaseOrder from PurchaseOrderEntity purchaseOrder join fetch purchaseOrder.account left join fetch purchaseOrder.items item where purchaseOrder.publicId = :publicId and purchaseOrder.organization.id = :organizationId",
     )
-    fun findWithItemsByPublicIdAndBuyerGroupId(
+    fun findWithItemsByPublicIdAndOrganizationId(
         @Param("publicId") publicId: UUID,
-        @Param("buyerGroupId") buyerGroupId: Long,
+        @Param("organizationId") organizationId: Long,
     ): PurchaseOrderEntity?
 
     @EntityGraph(attributePaths = ["account", "payment", "shipment"])
-    fun findAllByBuyerGroup_Id(buyerGroupId: Long, pageable: Pageable): Page<PurchaseOrderEntity>
+    fun findAllByOrganization_Id(organizationId: Long, pageable: Pageable): Page<PurchaseOrderEntity>
 }

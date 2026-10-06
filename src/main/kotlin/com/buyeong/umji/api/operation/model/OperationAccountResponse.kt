@@ -13,22 +13,24 @@ data class OperationAccountResponse(
     @field:Schema(description = "이메일 주소", example = "user@example.com", type = "string", required = true) val email: String?,
     @field:Schema(description = "현재 상태 코드", example = "ACTIVE", type = "string", required = true) val status: String,
     @field:Schema(description = "Token Version 정보", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class) val tokenVersion: Long,
-    @field:Schema(description = "Business Profile 정보", example = "예시 값", type = "object", required = true) val businessProfile: OperationBusinessProfileResponse?,
+    @field:Schema(description = "Organization 공통 사업자 프로필", example = "예시 값", type = "object", required = true) val organizationProfile: OperationOrganizationProfileResponse?,
     @field:ArraySchema(
         schema = Schema(implementation = OperationConsentResponse::class),
     ) @field:Schema(description = "Consents 정보", example = "[]", type = "array", required = true) val consents: List<OperationConsentResponse> = emptyList(),
     @field:Schema(
-        description = "구매자 그룹 공개 식별자(UUID)",
+        description = "Organization 공개 식별자(UUID)",
         example = "00000000-0000-0000-0000-000000000001",
         format = "uuid",
         type = "string",
         required = true,
-    ) val buyerGroupId: UUID? =
+    ) val organizationId: UUID? =
         null,
+    @field:Schema(description = "Organization capability 목록", example = "[\"SELLER\"]", required = true)
+    val organizationCapabilities: Set<String> = emptySet(),
 )
 
-@Schema(description = "OperationBusinessProfileResponse API 데이터 모델")
-data class OperationBusinessProfileResponse(
+@Schema(description = "OperationOrganizationProfileResponse API 데이터 모델")
+data class OperationOrganizationProfileResponse(
     @field:Schema(description = "사업자 상호명", example = "예시 값", type = "string", required = true) val businessName: String,
     @field:Schema(description = "사업자 등록 번호", example = "예시 값", type = "string", required = true) val businessRegistrationNumber: String?,
     @field:Schema(description = "사업자 대표자 이름", example = "예시 값", type = "string", required = true) val representativeName: String?,

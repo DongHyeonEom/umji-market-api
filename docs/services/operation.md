@@ -13,12 +13,12 @@ flowchart TD
     E -- 계정 동의 --> G[동의 방식·계정 조회]
     G --> H[동의 이력 추가 및 상태 전이]
     E -- 계정 프로필 --> I[계정·프로필 검증 및 저장]
-    E -- 구매자 그룹 지정 --> BG[계정 및 사업자 그룹 검증]
-    BG --> BGTYPE{활성 BUSINESS 그룹인가}
-    BGTYPE -- 아니오 --> BGERR[그룹 지정 거부]
-    BGTYPE -- 예 --> BGMEMBER[기존 소속을 LEFT로 보존하고 대상 그룹 활성 연결]
-    BGMEMBER --> BGRESULT[새 그룹 ID와 계정 정보 반환]
-    E -- 대표자 지정 --> BGREP[활성 그룹·대상 구성원 검증 후 대표 계정 변경]
+    E -- Organization 지정 --> BG[계정·Organization·capability 검증]
+    BG --> BGTYPE{활성 Organization·capability 유효}
+    BGTYPE -- 아니오 --> BGERR[연결 거부]
+    BGTYPE -- 예 --> BGMEMBER[기존 구성원 이력을 보존하고 Organization 구성원 연결]
+    BGMEMBER --> BGRESULT[Organization ID와 계정 정보 반환]
+    E -- 대표자 지정 --> BGREP[활성 Organization·대상 구성원 검증 후 대표 계정 변경]
     E -- 계정 승인 --> J{개인정보 동의 이력 존재}
     J -- 아니오 --> K[승인 거부]
     J -- 예 --> L[계정 활성화 및 token version 증가]
@@ -31,12 +31,14 @@ flowchart TD
     E -- 입금 확인 --> S[결제 상태 변경·주문/재고 처리]
     E -- 배송 변경 --> SHIPAUTH[SHIPMENT_WRITE 권한 검사]
     SHIPAUTH --> SHIP[송장 등록 또는 배송완료 상태 보정]
+    E -- Organization·공통 프로필 관리 --> ORG[Organization profile·capability·구성원 관계 검증 및 저장]
 
     F --> T[업무 변경 트랜잭션]
     H --> T
     I --> T
     BGMEMBER --> T
     BGREP --> T
+    ORG --> T
     L --> T
     O --> T
     Q --> T
@@ -101,8 +103,8 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 영업 인센티브 확정·지급 처리는 별도 permission으로 제한하고, 담당 영업자 본인은 자신에게 귀속된 내역만 조회.<br>
 
 화면별 조회 권한을 명시적으로 설정할 수 있도록 화면 리소스와 permission 연결을 DB에 둠. 화면 구성·route 구현은 React에 두고, DB는 안정적인 `screen_code`와 필요한 permission 연결을 관리.<br>
-운영자 화면은 `account_role → role_permission → screen` 관계로 계산. 운영자 한 계정에 여러 role을 부여할 수 있으며 permission은 role 전체의 합집합으로 계산하므로 운영자별 화면 구분 가능. 사용자 화면은 활성 구매자 그룹의 역할을 `REPRESENTATIVE` 또는 `MEMBER`로 판정한 뒤 `buyer_group_role_permission → screen` 관계로 계산.<br>
-대표자 역할은 `buyer_group.representative_account_id`로 판정하므로 사용자별 role을 `account_role`에 복제하지 않음. 가입·그룹 이동·대표자 변경 이후 화면 권한은 활성 그룹 기준으로 다시 계산.<br>
+운영자 화면은 `account_role → role_permission → screen` 관계로 계산. 운영자 한 계정에 여러 role을 부여할 수 있으며 permission은 role 전체의 합집합으로 계산하므로 운영자별 화면 구분 가능. 사용자 화면은 활성 구매자 그룹의 역할을 `REPRESENTATIVE` 또는 `MEMBER`로 판정한 뒤 `organization_role_permission → screen` 관계로 계산.<br>
+대표자 역할은 `organization.representative_account_id`로 판정하므로 사용자별 role을 `account_role`에 복제하지 않음. 가입·그룹 이동·대표자 변경 이후 화면 권한은 활성 그룹 기준으로 다시 계산.<br>
 화면 조회 권한과 버튼/action permission을 구분해 설정하되, 각 화면 내부의 동작과 모든 API는 같은 permission code로 서버에서 재검사. UI에 노출되지 않는 API 직접 호출도 거부.<br>
 
 설계 테이블(미구현):<br>
@@ -111,7 +113,7 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 | --- | --- | --- |
 | `ui_screen` | `id`, `screen_code`, `audience`(`ADMIN`/`BUYER`), `route_key`, `permission_match_mode`(`ALL`/`ANY`), `active`, `display_order` | 화면 코드·프론트엔드 route 식별 및 permission 결합 방식 |
 | `ui_screen_permission` | `ui_screen_id`, `permission_id` 복합 PK | 화면을 보기 위해 필요한 permission 연결 |
-| `buyer_group_role_permission` | `membership_role`, `permission_id` 복합 PK | 미소속·대표자·일반구성원 역할별 사용자 화면/API permission 설정 |
+| `organization_role_permission` | `membership_role`, `permission_id` 복합 PK | 미소속·대표자·일반구성원 역할별 사용자 화면/API permission 설정 |
 
 제안 컬럼·제약:<br>
 
@@ -119,14 +121,14 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 | --- | --- |
 | `ui_screen` | `id BIGINT PK`, `screen_code VARCHAR(100) UK`, `audience VARCHAR(20)`, `route_key VARCHAR(150)`, `permission_match_mode VARCHAR(10)`, `active BOOLEAN`, `display_order INT` |
 | `ui_screen_permission` | `ui_screen_id BIGINT FK`, `permission_id BIGINT FK`, 복합 PK. 같은 화면 permission 중복 연결 금지 |
-| `buyer_group_role_permission` | `membership_role VARCHAR(30)`, `permission_id BIGINT FK`, 복합 PK. role은 `UNASSIGNED`, `REPRESENTATIVE`, `MEMBER` |
+| `organization_role_permission` | `membership_role VARCHAR(30)`, `permission_id BIGINT FK`, 복합 PK. role은 `UNASSIGNED`, `REPRESENTATIVE`, `MEMBER` |
 
 `audience`·`membership_role`·`permission_match_mode`에는 DB check constraint를 적용. 화면별 permission 결합은 기본 all-of이며 필요한 경우에만 명시적으로 any-of 사용.<br>
 `UNASSIGNED`는 그룹 미소속 계정의 초대 확인·개인 그룹 생성·휴대폰 검색·가입 요청 onboarding 화면 접근에 사용.<br>
 미구현 access context 계약 제안: `GET /api/access-context?audience=ADMIN|BUYER`가 현재 role·permission·허용 `screen_code`를 반환. `BUYER` 응답은 활성 그룹이 없으면 `UNASSIGNED`, 있으면 `REPRESENTATIVE`/`MEMBER`와 활성 그룹 ID를 반환. 화면 코드는 실제 React page inventory와 대조해 등록.<br>
 screen 및 screen-permission mapping은 검토된 migration/운영 설정으로만 변경하고 임의 운영자가 자기 화면 권한을 확장하는 API는 제공하지 않음. 운영자 개인별 차이는 기존 `account_role`에 허용 role을 부여해 계산하며, 사용자 개인 권한은 활성 그룹 역할에서 계산.<br>
 
-관리자 측 `role_permission`과 사용자 측 `buyer_group_role_permission`을 같은 `permission` 코드에 연결해 화면 권한 및 API 권한 코드의 의미를 통일. 화면별 `permission_match_mode`에 따라 연결된 권한을 all-of 또는 any-of로 판정.<br>
+관리자 측 `role_permission`과 사용자 측 `organization_role_permission`을 같은 `permission` 코드에 연결해 화면 권한 및 API 권한 코드의 의미를 통일. 화면별 `permission_match_mode`에 따라 연결된 권한을 all-of 또는 any-of로 판정.<br>
 `ui_screen`은 메뉴 문구·레이아웃·권한 경계를 대신하지 않으며 프론트엔드가 모르는 `screen_code`는 응답에서 사용하지 않음.<br>
 Access context API는 현재 audience·화면별 permission 통과 여부·대표자/구성원 유형을 응답. access context 응답은 표시 편의용이며 업무 API에서 별도 인가 필수.<br>
 
@@ -149,11 +151,11 @@ flowchart TD
 ## 영업 담당 그룹 및 인센티브 DB 설계안
 
 아래 구조는 설계안이며 현재 schema·API에는 미적용.<br>
-기존 `buyer_group` 행에 현재 담당자와 요율을 덮어쓰지 않고 배정 이력과 주문별 확정 금액을 분리해 과거 정산 근거를 보존.<br>
+기존 `organization` 행에 현재 담당자와 요율을 덮어쓰지 않고 배정 이력과 주문별 확정 금액을 분리해 과거 정산 근거를 보존.<br>
 
 | 설계 테이블 | 주요 데이터 | 규칙 |
 | --- | --- | --- |
-| `buyer_group_sales_assignment` | 구매자 그룹, 영업 계정, 선택적 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 그룹당 시점별 담당 영업자 1명. 수수료 없는 담당 연결도 허용. 직원·그룹 연결별 요율이 다를 수 있으며 재배정은 기존 행 종료 후 새 행 추가 |
+| `organization_sales_assignment` | 구매자 그룹, 영업 계정, 선택적 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 그룹당 시점별 담당 영업자 1명. 수수료 없는 담당 연결도 허용. 직원·그룹 연결별 요율이 다를 수 있으며 재배정은 기존 행 종료 후 새 행 추가 |
 | `sales_commission` | 주문·그룹·담당 영업자·배정 ID, 적용 요율·상품 판매 기준액·인센티브액 snapshot, 상태(`NOT_APPLICABLE`, `WAITING`, `PAYABLE`, `PAID`, `REVERSED`), 확정·지급 시각 | 주문당 attribution/정산 요약 한 건. 담당자나 요율이 없어도 `NOT_APPLICABLE`로 snapshot해 미지급 근거를 보존. 취소·환불은 event로 보정 |
 | `sales_commission_event` | 원장 ID, `ACCRUED`·`REVERSED`·`PAID` 이벤트, 금액 증감, 처리 계정, 사유, 발생 시각 | 인센티브 상태 변경을 append-only로 기록. 중복 주문 이벤트 재처리 방지 key 보유 |
 
@@ -161,11 +163,11 @@ flowchart TD
 
 | Table | 컬럼·타입·제약 |
 | --- | --- |
-| `buyer_group_sales_assignment` | `id BIGINT PK`, `public_id BINARY(16) UK`, `buyer_group_id BIGINT FK`, `sales_account_id BIGINT FK`, `commission_rate_bps INT NULL`, `assignment_reason VARCHAR(30)`, `valid_from DATETIME(3)`, `valid_until DATETIME(3) NULL`, `assigned_by_account_id BIGINT FK`, `created_at DATETIME(3)`. 요율 `NULL`은 수수료 없음, 양수 요율은 해당 그룹 담당자의 판매 인센티브. `CHECK (commission_rate_bps IS NULL OR commission_rate_bps BETWEEN 1 AND 10000)`. 활성 그룹당 담당자 한 명을 generated active key unique로 보장하고, 재배정은 그룹 행 잠금으로 기간 중복 방지 |
-| `sales_commission` | `id BIGINT PK`, `public_id BINARY(16) UK`, `order_id BIGINT FK UK`, `buyer_group_id BIGINT FK`, `assignment_id BIGINT FK NULL`, `sales_account_id BIGINT FK NULL`, `rate_bps_snapshot INT NULL`, `basis_snapshot VARCHAR(30)` (`NET_ITEM_SALES`), `basis_amount BIGINT`, `commission_amount BIGINT`, `status VARCHAR(30)`, `qualified_at DATETIME(3) NULL`, `created_at DATETIME(3)`, `updated_at DATETIME(3)`. 주문 생성 시 담당/요율 부재면 `NOT_APPLICABLE`, 요율이 있으면 `WAITING` |
+| `organization_sales_assignment` | `id BIGINT PK`, `public_id BINARY(16) UK`, `organization_id BIGINT FK`, `sales_account_id BIGINT FK`, `commission_rate_bps INT NULL`, `assignment_reason VARCHAR(30)`, `valid_from DATETIME(3)`, `valid_until DATETIME(3) NULL`, `assigned_by_account_id BIGINT FK`, `created_at DATETIME(3)`. 요율 `NULL`은 수수료 없음, 양수 요율은 해당 그룹 담당자의 판매 인센티브. `CHECK (commission_rate_bps IS NULL OR commission_rate_bps BETWEEN 1 AND 10000)`. 활성 그룹당 담당자 한 명을 generated active key unique로 보장하고, 재배정은 그룹 행 잠금으로 기간 중복 방지 |
+| `sales_commission` | `id BIGINT PK`, `public_id BINARY(16) UK`, `order_id BIGINT FK UK`, `organization_id BIGINT FK`, `assignment_id BIGINT FK NULL`, `sales_account_id BIGINT FK NULL`, `rate_bps_snapshot INT NULL`, `basis_snapshot VARCHAR(30)` (`NET_ITEM_SALES`), `basis_amount BIGINT`, `commission_amount BIGINT`, `status VARCHAR(30)`, `qualified_at DATETIME(3) NULL`, `created_at DATETIME(3)`, `updated_at DATETIME(3)`. 주문 생성 시 담당/요율 부재면 `NOT_APPLICABLE`, 요율이 있으면 `WAITING` |
 | `sales_commission_event` | `id BIGINT PK`, `commission_id BIGINT FK`, `event_type VARCHAR(30)`, `amount_delta BIGINT`, `idempotency_key VARCHAR(150) UK`, `processed_by_account_id BIGINT FK NULL`, `reason_code VARCHAR(50) NULL`, `created_at DATETIME(3)` |
 
-`buyer_group`에는 `created_by_account_id BIGINT FK NULL`을 추가해 그룹 생성 주체를 기록. 영업자가 그룹을 생성하면 그룹·작성자·생성자를 초기 담당자로 한 배정 row를 한 트랜잭션으로 저장. 초기 요율은 `NULL`(미지급)이며 `SALES_GROUP_ASSIGN` 권한 운영자가 요율을 설정할 때 별도 유효기간 배정 row를 추가.<br>
+`organization`에는 `created_by_account_id BIGINT FK NULL`을 추가해 그룹 생성 주체를 기록. 영업자가 그룹을 생성하면 그룹·작성자·생성자를 초기 담당자로 한 배정 row를 한 트랜잭션으로 저장. 초기 요율은 `NULL`(미지급)이며 `SALES_GROUP_ASSIGN` 권한 운영자가 요율을 설정할 때 별도 유효기간 배정 row를 추가.<br>
 요율은 `commission_rate_bps`에 basis points로 저장. 예를 들어 `30`은 0.3%이며 고정 기본값을 강제하지 않음. 생성 영업자의 본인 담당 연결은 자동화하되, 요율 설정·담당자 재배정은 `SALES_GROUP_ASSIGN` permission에 제한.<br>
 주문 snapshot은 주문 생성 시점의 담당자·선택 요율·상품 판매 기준액을 고정. 주문 한 건당 요약 원장 한 건이며 `sales_commission_event`가 발생·reversal·지급 이력을 보존.<br>
 
@@ -275,22 +277,23 @@ COMMIT;
 모든 endpoint는 `ADMIN_ACCOUNT_MANAGE` 권한 필요.<br>
 부여 시 `granted_by`에는 요청자 계정이 기록됨.<br>
 
-### 구매자 그룹 지정
+### Organization과 계정 연결
 
-`ADMIN_ACCOUNT_MANAGE` 운영자가 계정 상세의 `buyerGroupId`를 확인한 뒤 사업자 그룹에 계정을 명시적으로 연결.<br>
-같은 사업자번호를 가진 계정도 자동 병합하지 않으며, 대상은 활성 `BUSINESS` 그룹으로 제한.<br>
-계정은 기존 그룹 소속 행 하나를 대상 그룹으로 변경. 과거 주문은 원래의 구매자 그룹에 유지하고 자동 이전하지 않음.<br>
-계정의 기존 구성원 이력은 `LEFT` 상태로 보존하고 새 그룹에 활성 구성원으로 연결.<br>
+`ADMIN_ACCOUNT_MANAGE` 운영자는 계정을 활성 Organization에 명시적으로 연결.<br>
+같은 사업자번호를 가진 Organization도 자동 병합하지 않음. 구매 주문·배송지 API는 `BUYER` capability가 있는 Organization만 대상으로 처리.<br>
+Organization은 `BUYER`, `SELLER`, `OPERATOR` capability를 복수로 가질 수 있고 여러 계정을 구성원으로 연결 가능.<br>
+운영 계정 생성 요청의 `organizationCapability`는 최초 Organization capability이며 생략하면 `BUYER`. 사업자 프로필은 계정 row가 아닌 `organization_profile`에 저장.<br>
+계정의 기존 구성원 이력은 보존. 기존 주문은 생성 시점 Organization에 유지하고 자동 이전하지 않음.<br>
 
 | Method | Endpoint | 동작 |
 | --- | --- | --- |
-| `PUT` | `/api/operation/accounts/{id}/buyer-group` | 요청 본문의 `buyerGroupId`로 계정을 사업자 그룹에 명시적으로 연결 |
-| `PUT` | `/api/operation/buyer-groups/{groupId}/representative` | 활성 구성원 중 대표자를 지정·변경 |
-| `GET` | `/api/operation/buyer-groups/{groupId}/tax-invoice-profile` | 구매자 그룹 세금계산서 정보 조회 |
-| `PUT` | `/api/operation/buyer-groups/{groupId}/tax-invoice-profile` | 구매자 그룹 세금계산서 정보 수정 |
+| `PUT` | `/api/operation/accounts/{id}/organization` | 요청 본문의 `organizationId`로 계정을 Organization에 연결 |
+| `PUT` | `/api/operation/organizations/{organizationId}/representative` | 활성 구성원 중 대표자를 지정·변경 |
+| `GET` | `/api/operation/organizations/{organizationId}/tax-invoice-profile` | 구매 capability Organization의 공통 프로필 조회 |
+| `PUT` | `/api/operation/organizations/{organizationId}/tax-invoice-profile` | 구매 capability Organization의 공통 프로필 수정 |
 
-성공 응답의 `buyerGroupId`는 새 그룹 공개 UUID.<br>
-구매자 그룹 세금계산서 정보 조회·수정은 `ADMIN_ACCOUNT_MANAGE` 권한 필요. 운영자 변경은 기존 운영 감사 로그에 대상 그룹 ID와 route만 기록하며, 사업자 정보 값은 감사 로그에 저장하지 않음.<br>
+성공 응답의 `organizationId`는 Organization 공개 UUID.<br>
+Organization과 세금계산서 정보 조회·수정은 `ADMIN_ACCOUNT_MANAGE` 권한 필요. 운영자 변경은 기존 운영 감사 로그에 대상 Organization ID와 route만 기록하며 사업자 정보 값은 감사 로그에 저장하지 않음.<br>
 
 ### 운영 변경 감사 로그
 
@@ -321,13 +324,29 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 
 ## 계정
 
+운영자 Organization 관리 흐름.<br>
+
+```mermaid
+flowchart TD
+    REQ[계정 생성·Organization 프로필 변경·Organization 연결] --> AUTH[ADMIN_ACCOUNT_MANAGE 권한 검사]
+    AUTH --> VALID{Organization·계정·capability 입력 유효}
+    VALID -- 아니오 --> ERROR[400·404 거부]
+    VALID -- 예 --> TYPE{구매·판매·운영 capability}
+    TYPE --> PROFILE[공통 organization_profile 검증]
+    PROFILE --> SAVE[Organization·capability·구성원·프로필 트랜잭션 저장]
+    SAVE --> AUDIT[대상 계정 또는 Organization만 운영 감사 로그에 기록]
+    AUDIT --> RESPONSE[Organization 식별자와 공개 응답 반환]
+```
+
 - `POST /api/operation/accounts`
 - `GET /api/operation/accounts?status=&page=&size=`
 - `GET /api/operation/accounts/{id}`
 - `PATCH /api/operation/accounts/{id}/status`
-- `PUT /api/operation/accounts/{id}/business-profile`
-- `PUT /api/operation/accounts/{id}/buyer-group`
-- `PUT /api/operation/buyer-groups/{groupId}/representative`
+- `PUT /api/operation/accounts/{id}/organization-profile`
+- `PUT /api/operation/accounts/{id}/organization`
+- `PUT /api/operation/organizations/{organizationId}/representative`
+- `GET /api/operation/organizations/{organizationId}/tax-invoice-profile`
+- `PUT /api/operation/organizations/{organizationId}/tax-invoice-profile`
 - `POST /api/operation/accounts/{id}/consents`
 - `POST /api/operation/accounts/{id}/approve`
 

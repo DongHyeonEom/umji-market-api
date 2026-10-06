@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.account.model
 
-import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfile
-import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfile
+import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfileCommand
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
@@ -9,8 +9,8 @@ import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.util.UUID
 
-@Schema(description = "구매자 그룹 공급받는자 세금계산서 정보 수정 요청")
-data class BuyerGroupTaxInvoiceProfileRequest(
+@Schema(description = "Organization 공급받는자 세금계산서 정보 수정 요청")
+data class OrganizationTaxInvoiceProfileRequest(
     @field:Size(max = 30) @field:Schema(description = "공급받는자 사업자등록번호. 세금계산서 발행 전 필수", example = "123-45-67890", type = "string", required = false) val businessRegistrationNumber: String? = null,
     @field:NotBlank @field:Size(max = 200) @field:Schema(description = "공급받는자 상호. 세금계산서 발행 시 필수", example = "엄지상사", type = "string", required = true) val businessName: String,
     @field:Size(max = 100) @field:Schema(description = "공급받는자 성명. 세금계산서 발행 전 필수", example = "홍길동", type = "string", required = false) val representativeName: String? = null,
@@ -21,7 +21,7 @@ data class BuyerGroupTaxInvoiceProfileRequest(
     @field:Size(max = 100) @field:Schema(description = "공급받는자 종목. 세금계산서 발행 전 필수", example = "철물·공구", type = "string", required = false) val businessItem: String? = null,
     @field:Email @field:Size(max = 255) @field:Schema(description = "공급받는자 세금계산서 수신 이메일. 선택 항목", example = "billing@example.com", type = "string", required = false) val email: String? = null,
 ) {
-    fun toCommand() = BuyerGroupTaxInvoiceProfileCommand(
+    fun toCommand() = OrganizationTaxInvoiceProfileCommand(
         businessRegistrationNumber,
         businessName,
         representativeName,
@@ -34,10 +34,10 @@ data class BuyerGroupTaxInvoiceProfileRequest(
     )
 }
 
-@Schema(description = "현재 구매자 그룹의 공급받는자 세금계산서 정보")
-data class BuyerGroupTaxInvoiceProfileResponse(
-    @field:Schema(description = "구매자 그룹 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = true) val buyerGroupId: UUID,
-    @field:Schema(description = "구매자 그룹 유형", example = "BUSINESS", type = "string", required = true) val groupType: String,
+@Schema(description = "현재 Organization의 공급받는자 세금계산서 정보")
+data class OrganizationTaxInvoiceProfileResponse(
+    @field:Schema(description = "Organization 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = true) val organizationId: UUID,
+    @field:Schema(description = "Organization 유형", example = "BUSINESS", type = "string", required = true) val organizationType: String,
     @field:Schema(description = "공급받는자 사업자등록번호", example = "123-45-67890", type = "string", required = true) val businessRegistrationNumber: String?,
     @field:Schema(description = "공급받는자 상호", example = "엄지상사", type = "string", required = true) val businessName: String?,
     @field:Schema(description = "공급받는자 성명", example = "홍길동", type = "string", required = true) val representativeName: String?,
@@ -60,9 +60,9 @@ data class BuyerGroupTaxInvoiceProfileResponse(
     val businessRegistrationConfirmedAt: Instant?,
 )
 
-fun BuyerGroupTaxInvoiceProfile.toResponse() = BuyerGroupTaxInvoiceProfileResponse(
-    buyerGroupId,
-    groupType,
+fun OrganizationTaxInvoiceProfile.toResponse() = OrganizationTaxInvoiceProfileResponse(
+    organizationId,
+    organizationType,
     businessRegistrationNumber,
     businessName,
     representativeName,

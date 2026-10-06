@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.order.service
 
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.repository.OrderShipmentRepository
@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional
 class OrderShipmentJpaEntityService(
     private val shipments: OrderShipmentRepository,
     private val accounts: AccountJpaEntityService,
-    private val buyerGroups: BuyerGroupJpaEntityService,
+    private val organizations: OrganizationJpaEntityService,
 ) {
     @Transactional
     fun initialize(order: PurchaseOrderEntity): OrderShipmentEntity = shipments.saveAndFlush(
@@ -35,10 +35,10 @@ class OrderShipmentJpaEntityService(
     fun readyOrderIds(): List<UUID> = shipments.findReadyOrderIds()
 
     fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> {
-        val buyerGroupId = requireNotNull(buyerGroups.activeForAccountPublicId(customerId)?.id) {
+        val organizationId = requireNotNull(organizations.activeBuyerForAccountPublicId(customerId)?.id) {
             "계정의 활성 구매자 그룹을 찾을 수 없습니다."
         }
-        return shipments.findTrackingCandidatesForBuyerGroup(buyerGroupId)
+        return shipments.findTrackingCandidatesForOrganization(organizationId)
     }
 
     @Transactional

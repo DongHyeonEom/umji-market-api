@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V37이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V38이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -11,8 +11,8 @@
   `BINARY` 공개 ID는 UUID를 16바이트로 저장함.<br>
 - 관계도 각 필드 뒤의 따옴표 안 문구가 해당 필드의 설명임.<br>
   타입은 읽기 편하게 기본 타입명으로 표시하며, 길이·default·check 제약은 migration 파일을 기준으로 확인함.<br>
-- `buyer_group_address`의 공개 UUID 및 그룹 단위 기본값 단일화 제약은 V20에 정의됨.<br>
-- V20은 V2의 `account_address` 데이터를 현재 계정의 구매자 그룹에 연결해 `buyer_group_address`로 이관함.<br>
+- `organization_address`의 공개 UUID 및 그룹 단위 기본값 단일화 제약은 V20에 정의됨.<br>
+- V20은 V2의 `account_address` 데이터를 현재 계정의 구매자 그룹에 연결해 `organization_address`로 이관함.<br>
   기본값 단일화는 구매자 그룹 행 잠금과 애플리케이션 트랜잭션으로 유지함.<br>
 - Nullable 필드는 설명에 표시했음.<br>
   `created_at`은 생성 시각, `updated_at`은 마지막 수정 시각이며 UTC `DATETIME(3)`임.<br>
@@ -84,10 +84,10 @@ erDiagram
         INT failure_count "로그인 실패 횟수"
         DATETIME updated_at "마지막 수정 시각"
     }
-    BUYER_GROUP_ADDRESS["BUYER_GROUP_ADDRESS · 구매자 그룹 공용 배송지"] {
+    ORGANIZATION_ADDRESS["ORGANIZATION_ADDRESS · 구매자 그룹 공용 배송지"] {
         BIGINT id PK "배송지 내부 ID"
         BINARY public_id UK "배송지 공개 UUID"
-        BIGINT buyer_group_id FK "소유 구매자 그룹 ID"
+        BIGINT organization_id FK "소유 구매자 그룹 ID"
         BIGINT created_by_account_id FK "생성 계정 ID"
         VARCHAR recipient_name "수령인 이름"
         VARCHAR recipient_phone "수령인 연락처"
@@ -98,7 +98,7 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUSINESS_PROFILE["BUSINESS_PROFILE · 사업자 등록·상태 확인 정보"] {
+    BUSINESS_PROFILE["BUSINESS_PROFILE · V38 이전 계정 사업자 프로필 보존 데이터"] {
         BIGINT id PK "업체 프로필 내부 ID"
         BIGINT account_id FK,UK "소유 계정 ID, 계정당 하나"
         VARCHAR business_name "업체명"
@@ -112,28 +112,34 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUYER_GROUP["BUYER_GROUP · 구매자 그룹 및 대표자"] {
+    ORGANIZATION["ORGANIZATION · 구매자·판매자·운영 Organization 및 대표자"] {
         BIGINT id PK "구매자 그룹 내부 ID"
         BINARY public_id UK "API 공개 UUID"
-        VARCHAR group_type "BUSINESS 또는 INDIVIDUAL"
+        VARCHAR organization_type "BUSINESS 또는 INDIVIDUAL"
         VARCHAR display_name "그룹 표시명"
         BIGINT representative_account_id FK "현재 대표 계정, nullable"
         VARCHAR status "그룹 상태"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUYER_GROUP_MEMBER["BUYER_GROUP_MEMBER · 그룹 구성원과 역할·소속 상태"] {
+    ORGANIZATION_MEMBER["ORGANIZATION_MEMBER · 그룹 구성원과 역할·소속 상태"] {
         BIGINT id PK "그룹 구성원 내부 ID"
-        BIGINT buyer_group_id FK "구매자 그룹 ID"
+        BIGINT organization_id FK "구매자 그룹 ID"
         BIGINT account_id FK "구성원 계정 ID"
         VARCHAR status "구성원 상태"
         BIGINT active_account_id UK "활성 소속 계정, 생성 컬럼"
         DATETIME joined_at "가입 시각"
         DATETIME created_at "생성 시각"
     }
-    BUYER_GROUP_BUSINESS_PROFILE["BUYER_GROUP_BUSINESS_PROFILE · 그룹 세금계산서 수취 정보"] {
+    ORGANIZATION_CAPABILITY["ORGANIZATION_CAPABILITY · Organization 구매·판매·운영 capability"] {
+        BIGINT id PK "내부 capability ID"
+        BIGINT organization_id FK "Organization ID"
+        VARCHAR capability_code "BUYER, SELLER 또는 OPERATOR"
+        DATETIME created_at "생성 시각"
+    }
+    ORGANIZATION_PROFILE["ORGANIZATION_PROFILE · 그룹 세금계산서 수취 정보"] {
         BIGINT id PK "사업자 프로필 내부 ID"
-        BIGINT buyer_group_id FK,UK "사업자 그룹 ID"
+        BIGINT organization_id FK,UK "사업자 그룹 ID"
         VARCHAR business_name "업체명"
         VARCHAR business_registration_number "사업자등록번호, nullable"
         DATETIME business_registration_verified_at "신규 사용자 그룹 생성 시 국세청 폐업 여부 확인 시각, nullable"
@@ -151,10 +157,10 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BUYER_GROUP_INVITATION["BUYER_GROUP_INVITATION · 그룹 구성원 초대"] {
+    ORGANIZATION_INVITATION["ORGANIZATION_INVITATION · 그룹 구성원 초대"] {
         BIGINT id PK "그룹 초대 내부 ID"
         BINARY public_id UK "초대 공개 UUID"
-        BIGINT buyer_group_id FK "초대 대상 그룹 ID"
+        BIGINT organization_id FK "초대 대상 그룹 ID"
         VARCHAR phone_normalized "초대 휴대폰 번호"
         BIGINT invited_by_account_id FK "초대한 대표 계정 ID"
         BIGINT target_account_id FK "가입 계정 ID, nullable"
@@ -163,10 +169,10 @@ erDiagram
         DATETIME responded_at "응답 시각, nullable"
         VARCHAR pending_phone UK "대기 중 번호, 생성 컬럼"
     }
-    BUYER_GROUP_JOIN_REQUEST["BUYER_GROUP_JOIN_REQUEST · 그룹 가입 요청과 처리 결과"] {
+    ORGANIZATION_JOIN_REQUEST["ORGANIZATION_JOIN_REQUEST · 그룹 가입 요청과 처리 결과"] {
         BIGINT id PK "가입 요청 내부 ID"
         BINARY public_id UK "가입 요청 공개 UUID"
-        BIGINT buyer_group_id FK "가입 요청 그룹 ID"
+        BIGINT organization_id FK "가입 요청 그룹 ID"
         BIGINT account_id FK "요청 계정 ID"
         VARCHAR status "PENDING·APPROVED·DECLINED"
         DATETIME requested_at "요청 시각"
@@ -363,7 +369,7 @@ erDiagram
         VARCHAR order_number UK "표시용 고유 주문번호"
         BIGINT account_id FK "실제 주문 계정 ID"
         VARCHAR sales_channel_code "주문 판매 채널"
-        BIGINT buyer_group_id FK "주문 귀속 구매자 그룹 ID"
+        BIGINT organization_id FK "주문 귀속 구매자 그룹 ID"
         VARCHAR status "주문 상태"
         BIGINT subtotal_amount "상품 소계"
         BIGINT total_amount "주문 총액"
@@ -515,19 +521,20 @@ erDiagram
     ROLE ||--o{ ROLE_PERMISSION : grants
     PERMISSION ||--o{ ROLE_PERMISSION : includes
     ACCOUNT ||--o{ REFRESH_TOKEN : owns
-    BUYER_GROUP ||--o{ BUYER_GROUP_ADDRESS : shares
-    ACCOUNT ||--o{ BUYER_GROUP_ADDRESS : creates
+    ORGANIZATION ||--o{ ORGANIZATION_ADDRESS : shares
+    ACCOUNT ||--o{ ORGANIZATION_ADDRESS : creates
     ACCOUNT ||--o| BUSINESS_PROFILE : has
-    ACCOUNT ||--o{ BUYER_GROUP_MEMBER : joins
-    BUYER_GROUP ||--o{ BUYER_GROUP_MEMBER : includes
-    ACCOUNT ||--o{ BUYER_GROUP : represents
-    BUYER_GROUP ||--o{ BUYER_GROUP_INVITATION : invites
-    ACCOUNT ||--o{ BUYER_GROUP_INVITATION : invites
-    ACCOUNT ||--o{ BUYER_GROUP_INVITATION : accepts
-    BUYER_GROUP ||--o{ BUYER_GROUP_JOIN_REQUEST : receives
-    ACCOUNT ||--o{ BUYER_GROUP_JOIN_REQUEST : requests
-    ACCOUNT ||--o{ BUYER_GROUP_JOIN_REQUEST : decides
-    BUYER_GROUP ||--o| BUYER_GROUP_BUSINESS_PROFILE : describes
+    ACCOUNT ||--o{ ORGANIZATION_MEMBER : joins
+    ORGANIZATION ||--o{ ORGANIZATION_MEMBER : includes
+    ORGANIZATION ||--o{ ORGANIZATION_CAPABILITY : supports
+    ACCOUNT ||--o{ ORGANIZATION : represents
+    ORGANIZATION ||--o{ ORGANIZATION_INVITATION : invites
+    ACCOUNT ||--o{ ORGANIZATION_INVITATION : invites
+    ACCOUNT ||--o{ ORGANIZATION_INVITATION : accepts
+    ORGANIZATION ||--o{ ORGANIZATION_JOIN_REQUEST : receives
+    ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : requests
+    ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : decides
+    ORGANIZATION ||--o| ORGANIZATION_PROFILE : describes
     ACCOUNT ||--o{ CONSENT_HISTORY : records
     CATEGORY ||--o{ CATEGORY : parent
     SALES_CHANNEL ||--o{ CATEGORY : owns
@@ -552,7 +559,7 @@ erDiagram
     PRODUCT_SKU ||--o{ CART_ITEM : selected
     SALES_OFFER ||--o{ CART_ITEM : priced
     ACCOUNT ||--o{ PURCHASE_ORDER : places
-    BUYER_GROUP ||--o{ PURCHASE_ORDER : owns
+    ORGANIZATION ||--o{ PURCHASE_ORDER : owns
     PURCHASE_ORDER ||--|{ ORDER_ITEM : contains
     PRODUCT_SKU ||--o{ ORDER_ITEM : snapshots
     SALES_OFFER ||--o{ ORDER_ITEM : snapshots
@@ -579,10 +586,10 @@ erDiagram
 - `refresh_token.expires_at`은 V6 이후 nullable임.<br>
   `account.phone_normalized`는 V6에서 추가된 unique 정규화 번호임.<br>
 - 구매자 그룹은 법적 사업자번호와 독립적인 주문 소유 범위임.<br>
-  한 그룹에 여러 계정이 속할 수 있고, 계정 하나는 한 그룹에만 속함. `(buyer_group_id, account_id)`와 `account_id`가 각각 unique임.<br>
-  `buyer_group_business_profile.business_registration_number`는 nullable이며 unique가 아님.<br>
-- `purchase_order.account_id`는 실제 주문한 계정, `purchase_order.buyer_group_id`는 주문의 그룹 소유 범위임.<br>
-  V18은 기존 계정마다 그룹 하나를 생성해 기존 주문을 backfill했으며, V19부터 `buyer_group_id`는 필수임.<br>
+  한 그룹에 여러 계정이 속할 수 있고, 계정 하나는 한 그룹에만 속함. `(organization_id, account_id)`와 `account_id`가 각각 unique임.<br>
+  `organization_profile.business_registration_number`는 nullable이며 unique가 아님.<br>
+- `purchase_order.account_id`는 실제 주문한 계정, `purchase_order.organization_id`는 주문의 그룹 소유 범위임.<br>
+  V18은 기존 계정마다 그룹 하나를 생성해 기존 주문을 backfill했으며, V19부터 `organization_id`는 필수임.<br>
   기존 `business_profile`은 유지하면서 그룹 프로필로 데이터를 복사함.<br>
 - 카테고리는 자기 참조 트리임.<br>
   상품은 카테고리를 반드시 가지며 브랜드는 선택임.<br>

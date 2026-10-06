@@ -4,11 +4,11 @@ import com.buyeong.umji.api.account.integration.BusinessRegistrationVerification
 import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
 import com.buyeong.umji.api.account.model.BusinessGroupRegistration
 import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
-import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
+import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfileCommand
 import com.buyeong.umji.api.account.model.SharedAddressCommand
-import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
-import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.account.service.OrganizationMembershipService
+import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.account.service.CustomerAccountService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
@@ -17,7 +17,7 @@ import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.payment.service.PaymentService
-import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.shipment.service.ShipmentService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
@@ -74,16 +74,16 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     private lateinit var customerAccounts: CustomerAccountService
 
     @Autowired
-    private lateinit var buyerGroups: BuyerGroupJpaEntityService
+    private lateinit var organizations: OrganizationJpaEntityService
 
     @Autowired
-    private lateinit var groupMembership: BuyerGroupMembershipService
+    private lateinit var groupMembership: OrganizationMembershipService
 
     @MockitoBean
     private lateinit var businessRegistrationStatus: BusinessRegistrationStatusClient
 
     @Autowired
-    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileService
+    private lateinit var taxInvoiceProfiles: OrganizationTaxInvoiceProfileService
 
     @Autowired
     private lateinit var businessRegistrationVerificationJob: BusinessRegistrationVerificationJob
@@ -172,7 +172,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         createBusinessGroup(accountId)
         taxInvoiceProfiles.updateForAccount(
             accountId,
-            BuyerGroupTaxInvoiceProfileCommand(
+            OrganizationTaxInvoiceProfileCommand(
                 "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", null, "Retail", "Hardware", "buyer@example.com",
             ),
         )
@@ -278,9 +278,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val memberId = createAccount()
         val otherId = createAccount()
         val businessGroupId = createBusinessGroup(ownerId)
-        buyerGroups.ensureForAccount(memberId)
-        buyerGroups.assignAccountToBusinessGroup(memberId, businessGroupId)
-        buyerGroups.ensureForAccount(otherId)
+        organizations.ensureForAccount(memberId)
+        organizations.assignAccountToOrganization(memberId, businessGroupId)
+        organizations.ensureForAccount(otherId)
 
         val sharedAddress = customerAccounts.createAddress(
             ownerId,
@@ -324,33 +324,33 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val memberId = createAccount()
         val otherId = createAccount()
         val businessGroupId = createBusinessGroup(ownerId)
-        buyerGroups.ensureForAccount(memberId)
-        buyerGroups.assignAccountToBusinessGroup(memberId, businessGroupId)
+        organizations.ensureForAccount(memberId)
+        organizations.assignAccountToOrganization(memberId, businessGroupId)
         val otherGroupId = createBusinessGroup(otherId)
         jdbc.update(
-            "UPDATE buyer_group_business_profile SET business_registration_number = NULL WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+            "UPDATE organization_profile SET business_registration_number = NULL WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
             businessGroupId.toBytes(),
         )
 
-        assertThat(jdbc.queryForObject("SELECT group_type FROM buyer_group WHERE public_id = ?", String::class.java, businessGroupId.toBytes()))
+        assertThat(jdbc.queryForObject("SELECT organization_type FROM organization WHERE public_id = ?", String::class.java, businessGroupId.toBytes()))
             .isEqualTo("BUSINESS")
         assertThat(
             jdbc.queryForObject(
-                "SELECT business_registration_number IS NULL FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                "SELECT business_registration_number IS NULL FROM organization_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
                 Boolean::class.java,
                 businessGroupId.toBytes(),
             ),
         ).isTrue()
         assertThat(
             jdbc.queryForObject(
-                "SELECT COUNT(*) FROM buyer_group_member WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?) AND status = 'ACTIVE'",
+                "SELECT COUNT(*) FROM organization_member WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?) AND status = 'ACTIVE'",
                 Int::class.java,
                 businessGroupId.toBytes(),
             ),
         ).isEqualTo(2)
         assertThat(
             jdbc.queryForObject(
-                "SELECT COUNT(*) FROM buyer_group_member WHERE account_id = (SELECT id FROM account WHERE public_id = ?) AND status = 'ACTIVE'",
+                "SELECT COUNT(*) FROM organization_member WHERE account_id = (SELECT id FROM account WHERE public_id = ?) AND status = 'ACTIVE'",
                 Int::class.java,
                 memberId.toBytes(),
             ),
@@ -373,7 +373,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(orders.list(otherId, 0, 20).items).isEmpty()
         assertThatThrownBy { orders.detail(otherId, memberOrder.id) }.isInstanceOf(ItemNotFoundException::class.java)
 
-        buyerGroups.assignAccountToBusinessGroup(memberId, otherGroupId)
+        organizations.assignAccountToOrganization(memberId, otherGroupId)
         assertThat(orders.list(memberId, 0, 20).items).isEmpty()
         assertThat(orders.list(ownerId, 0, 20).items.map { it.id }).containsExactlyInAnyOrder(ownerOrder.id, memberOrder.id)
     }
@@ -384,14 +384,14 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val invitedId = createAccount()
         val requestedId = createAccount()
         val businessGroupId = createBusinessGroup(representativeId)
-        buyerGroups.ensureForAccount(invitedId)
-        buyerGroups.ensureForAccount(requestedId)
+        organizations.ensureForAccount(invitedId)
+        organizations.ensureForAccount(requestedId)
 
         groupMembership.invite(representativeId, accountPhone(invitedId))
         assertThat(groupMembership.invitations(invitedId)).hasSize(1)
         groupMembership.respondInvitation(invitedId, groupMembership.invitations(invitedId).single().id, true)
         assertThat(groupMembership.current(invitedId)?.id).isEqualTo(businessGroupId)
-        assertThat(jdbc.queryForObject("SELECT status FROM buyer_group WHERE public_id = ?", String::class.java, personalGroupId(invitedId).toBytes()))
+        assertThat(jdbc.queryForObject("SELECT status FROM organization WHERE public_id = ?", String::class.java, personalGroupId(invitedId).toBytes()))
             .isEqualTo("INACTIVE")
 
         groupMembership.requestToJoin(requestedId, businessGroupId)
@@ -413,7 +413,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(firstGroupId).isNotEqualTo(secondGroupId)
         assertThat(
             jdbc.queryForObject(
-                "SELECT COUNT(DISTINCT buyer_group_id) FROM buyer_group_business_profile WHERE business_registration_number = '987-65-43210'",
+                "SELECT COUNT(DISTINCT organization_id) FROM organization_profile WHERE business_registration_number = '987-65-43210'",
                 Int::class.java,
             ),
         ).isGreaterThanOrEqualTo(2)
@@ -427,11 +427,11 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val memberId = createAccount()
         val applicantId = createAccount()
         val businessGroupId = createBusinessGroup(formerRepresentative)
-        buyerGroups.ensureForAccount(memberId)
-        buyerGroups.assignAccountToBusinessGroup(memberId, businessGroupId)
-        buyerGroups.ensureForAccount(applicantId)
+        organizations.ensureForAccount(memberId)
+        organizations.assignAccountToOrganization(memberId, businessGroupId)
+        organizations.ensureForAccount(applicantId)
 
-        operationAccounts.setBuyerGroupRepresentative(businessGroupId, memberId)
+        operationAccounts.setOrganizationRepresentative(businessGroupId, memberId)
         assertThat(groupMembership.pendingJoinRequests(formerRepresentative)).isEmpty()
         assertThatThrownBy { groupMembership.invite(formerRepresentative, accountPhone(applicantId)) }
             .isInstanceOf(ItemNotFoundException::class.java)
@@ -490,7 +490,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     }
 
     private fun createAddress(accountId: UUID): UUID {
-        buyerGroups.ensureForAccount(accountId)
+        organizations.ensureForAccount(accountId)
         return customerAccounts.createAddress(
             accountId,
             SharedAddressCommand("Recipient", "01012345678", "12345", "Seoul address", "Details", false),
@@ -498,20 +498,27 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     }
 
     private fun createBusinessGroup(accountId: UUID, verified: Boolean = true): UUID {
-        val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, accountId.toBytes())!!
-        jdbc.update(
-            "INSERT INTO business_profile (account_id, business_name, business_phone, status) VALUES (?, 'Group test business', '010-9000-0000', 'ACTIVE')",
-            accountInternalId,
+        val group = organizations.ensureForAccount(
+            accountId,
+            profileData = com.buyeong.umji.api.operation.account.model.OrganizationProfileData(
+                businessName = "Group test business",
+                businessRegistrationNumber = null,
+                representativeName = "Buyer",
+                businessPhone = "010-9000-0000",
+                postalCode = "12345",
+                address1 = "Registered Place",
+                address2 = null,
+                status = "ACTIVE",
+            ),
         )
-        val group = buyerGroups.ensureForAccount(accountId)
         if (verified) {
             jdbc.update(
-                "UPDATE buyer_group_business_profile SET business_registration_number = '987-65-43210', business_registration_verification_status = 'ACTIVE', business_registration_verified_at = CURRENT_TIMESTAMP(3), business_registration_confirmed_at = CURRENT_TIMESTAMP(3) WHERE buyer_group_id = ?",
+                "UPDATE organization_profile SET business_registration_number = '987-65-43210', business_registration_verification_status = 'ACTIVE', business_registration_verified_at = CURRENT_TIMESTAMP(3), business_registration_confirmed_at = CURRENT_TIMESTAMP(3) WHERE organization_id = ?",
                 group.id,
             )
         } else {
             jdbc.update(
-                "UPDATE buyer_group_business_profile SET business_registration_number = '987-65-43210' WHERE buyer_group_id = ?",
+                "UPDATE organization_profile SET business_registration_number = '987-65-43210' WHERE organization_id = ?",
                 group.id,
             )
         }
@@ -522,13 +529,13 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     @Test
     fun `buyer group tax invoice profile is shared and order snapshot becomes issuable on shipment start`() {
         val ownerId = createAccount()
-        val groupId = createBusinessGroup(ownerId)
-        val command = BuyerGroupTaxInvoiceProfileCommand(
+        val organizationId = createBusinessGroup(ownerId)
+        val command = OrganizationTaxInvoiceProfileCommand(
             "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", "Suite 2", "Retail", "Hardware", "buyer@example.com",
         )
         val saved = taxInvoiceProfiles.updateForAccount(ownerId, command)
         assertThat(saved.complete).isTrue()
-        assertThat(taxInvoiceProfiles.forGroup(groupId).email).isEqualTo("buyer@example.com")
+        assertThat(taxInvoiceProfiles.forGroup(organizationId).email).isEqualTo("buyer@example.com")
 
         val addressId = createAddress(ownerId)
         val categoryId = createCategory()
@@ -550,14 +557,14 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(ready?.supplyDate).isEqualTo(ready?.writtenDate)
 
         jdbc.update(
-            "UPDATE buyer_group_business_profile SET business_name = 'Changed later' WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
-            groupId.toBytes(),
+            "UPDATE organization_profile SET business_name = 'Changed later' WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
+            organizationId.toBytes(),
         )
         assertThat(orders.detail(ownerId, order.id).taxInvoiceSnapshot?.buyer?.businessName).isEqualTo("Group test business")
 
         val memberId = createAccount()
-        buyerGroups.ensureForAccount(memberId)
-        buyerGroups.assignAccountToBusinessGroup(memberId, groupId)
+        organizations.ensureForAccount(memberId)
+        organizations.assignAccountToOrganization(memberId, organizationId)
         assertThatThrownBy { taxInvoiceProfiles.updateForAccount(memberId, command) }
             .isInstanceOf(com.buyeong.umji.api.exception.ForbiddenOperationException::class.java)
     }
@@ -566,7 +573,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     fun `pre-registered group waits for background verification then representative confirmation`() {
         val ownerId = createAccount()
         createBusinessGroup(ownerId, verified = false)
-        val command = BuyerGroupTaxInvoiceProfileCommand(
+        val command = OrganizationTaxInvoiceProfileCommand(
             "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", null, "Retail", "Hardware", "buyer@example.com",
         )
 
@@ -590,12 +597,12 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     @Test
     fun `first group registration creates personal group or verifies business number and keeps registered address separate`() {
         val personalAccountId = createAccount()
-        val personalGroup = groupMembership.register(personalAccountId, BuyerGroupRegistrationCommand("INDIVIDUAL", null))
+        val personalGroup = groupMembership.register(personalAccountId, OrganizationRegistrationCommand("INDIVIDUAL", null))
         assertThat(personalGroup.type).isEqualTo("INDIVIDUAL")
         assertThat(groupMembership.current(personalAccountId)?.id).isEqualTo(personalGroup.id)
         assertThat(
             jdbc.queryForObject(
-                "SELECT COUNT(*) FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                "SELECT COUNT(*) FROM organization_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
                 Int::class.java,
                 personalGroup.id.toBytes(),
             ),
@@ -605,7 +612,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         Mockito.doNothing().`when`(businessRegistrationStatus).ensureNotClosed("1234567890")
         val businessGroup = groupMembership.register(
             businessAccountId,
-            BuyerGroupRegistrationCommand(
+            OrganizationRegistrationCommand(
                 "BUSINESS",
                 BusinessGroupRegistration(
                     "1234567890", "Buyer Business", "Buyer Owner", "12345", "Registered Place", "Building 1", "Retail", "Hardware", "billing@example.com", true,
@@ -616,19 +623,19 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         Mockito.verify(businessRegistrationStatus).ensureNotClosed("1234567890")
         assertThat(
             jdbc.queryForObject(
-                "SELECT business_registration_verified_at IS NOT NULL FROM buyer_group_business_profile WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                "SELECT business_registration_verified_at IS NOT NULL FROM organization_profile WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
                 Boolean::class.java,
                 businessGroup.id.toBytes(),
             ),
         ).isTrue()
         assertThat(
             jdbc.queryForObject(
-                "SELECT COUNT(*) FROM buyer_group_address WHERE buyer_group_id = (SELECT id FROM buyer_group WHERE public_id = ?)",
+                "SELECT COUNT(*) FROM organization_address WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",
                 Int::class.java,
                 businessGroup.id.toBytes(),
             ),
         ).isZero()
-        assertThatThrownBy { groupMembership.register(businessAccountId, BuyerGroupRegistrationCommand("INDIVIDUAL", null)) }
+        assertThatThrownBy { groupMembership.register(businessAccountId, OrganizationRegistrationCommand("INDIVIDUAL", null)) }
             .isInstanceOf(IllegalArgumentException::class.java)
     }
 
@@ -640,7 +647,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThatThrownBy {
             groupMembership.register(
                 closedAccountId,
-                BuyerGroupRegistrationCommand(
+                OrganizationRegistrationCommand(
                     "BUSINESS",
                     BusinessGroupRegistration(
                         "1234567890", "Closed Business", "Owner", "12345", "Registered Place", null, "Retail", "Hardware", null, true,
@@ -673,7 +680,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     private fun personalGroupId(accountId: UUID): UUID {
         val groupBytes = jdbc.queryForObject(
-            "SELECT buyer_group.public_id FROM buyer_group JOIN buyer_group_member ON buyer_group_member.buyer_group_id = buyer_group.id WHERE buyer_group_member.account_id = (SELECT id FROM account WHERE public_id = ?) AND buyer_group.group_type = 'INDIVIDUAL'",
+            "SELECT organization.public_id FROM organization JOIN organization_member ON organization_member.organization_id = organization.id WHERE organization_member.account_id = (SELECT id FROM account WHERE public_id = ?) AND organization.organization_type = 'INDIVIDUAL'",
             ByteArray::class.java,
             accountId.toBytes(),
         )!!

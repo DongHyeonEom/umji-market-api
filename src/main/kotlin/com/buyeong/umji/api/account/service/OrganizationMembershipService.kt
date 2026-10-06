@@ -1,33 +1,33 @@
 package com.buyeong.umji.api.account.service
 
-import com.buyeong.umji.api.account.model.BuyerGroupInvitation
-import com.buyeong.umji.api.account.model.BuyerGroupJoinRequest
-import com.buyeong.umji.api.account.model.BuyerGroupSearchResult
-import com.buyeong.umji.api.account.model.BuyerGroupSummary
-import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
+import com.buyeong.umji.api.account.model.OrganizationInvitation
+import com.buyeong.umji.api.account.model.OrganizationJoinRequest
+import com.buyeong.umji.api.account.model.OrganizationSearchResult
+import com.buyeong.umji.api.account.model.OrganizationSummary
+import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
 import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
 import com.buyeong.umji.api.util.PhoneNumberHelper
-import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupMembershipJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationMembershipJpaEntityService
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.stereotype.Service
 import java.util.UUID
 
 @Service
-class BuyerGroupMembershipService(
-    private val groups: BuyerGroupMembershipJpaEntityService,
+class OrganizationMembershipService(
+    private val groups: OrganizationMembershipJpaEntityService,
     private val registrationStatus: BusinessRegistrationStatusClient,
 ) {
     @Transactional(readOnly = true)
-    fun current(accountId: UUID): BuyerGroupSummary? = groups.current(accountId)
+    fun current(accountId: UUID): OrganizationSummary? = groups.current(accountId)
 
     @Transactional
-    fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary {
-        require(name.isNotBlank() && name.length <= 200) { "그룹 이름은 1자 이상 200자 이하여야 합니다." }
+    fun createIndividualGroup(accountId: UUID, name: String): OrganizationSummary {
+        require(name.isNotBlank() && name.length <= 200) { "Organization 이름은 1자 이상 200자 이하여야 합니다." }
         return groups.createIndividualGroup(accountId, name.trim())
     }
 
-    fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary {
-        require(groups.current(accountId) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
+    fun register(accountId: UUID, command: OrganizationRegistrationCommand): OrganizationSummary {
+        require(groups.current(accountId) == null) { "이미 활성 Organization에 소속되어 있습니다." }
         require(command.type == INDIVIDUAL || command.type == BUSINESS) { "그룹 유형은 INDIVIDUAL 또는 BUSINESS여야 합니다." }
         if (command.type == INDIVIDUAL) {
             require(command.business == null) { "개인 그룹 등록에는 사업자등록 정보를 입력할 수 없습니다." }
@@ -50,25 +50,27 @@ class BuyerGroupMembershipService(
     }
 
     @Transactional(readOnly = true)
-    fun search(phone: String): List<BuyerGroupSearchResult> =
-        groups.search(PhoneNumberHelper.normalizeMobilePhoneNumber(phone))
+    fun search(phone: String, capability: String = "BUYER"): List<OrganizationSearchResult> {
+        require(capability == "BUYER" || capability == "SELLER") { "Organization capability는 BUYER 또는 SELLER여야 합니다." }
+        return groups.search(PhoneNumberHelper.normalizeMobilePhoneNumber(phone), capability)
+    }
 
     @Transactional
-    fun invite(accountId: UUID, phone: String): BuyerGroupInvitation =
+    fun invite(accountId: UUID, phone: String): OrganizationInvitation =
         groups.invite(accountId, PhoneNumberHelper.normalizeMobilePhoneNumber(phone))
 
     @Transactional(readOnly = true)
-    fun invitations(accountId: UUID): List<BuyerGroupInvitation> = groups.invitations(accountId)
+    fun invitations(accountId: UUID): List<OrganizationInvitation> = groups.invitations(accountId)
 
     @Transactional
     fun respondInvitation(accountId: UUID, invitationId: UUID, accept: Boolean) =
         groups.respondInvitation(accountId, invitationId, accept)
 
     @Transactional
-    fun requestToJoin(accountId: UUID, groupId: UUID) = groups.requestToJoin(accountId, groupId)
+    fun requestToJoin(accountId: UUID, organizationId: UUID) = groups.requestToJoin(accountId, organizationId)
 
     @Transactional(readOnly = true)
-    fun pendingJoinRequests(accountId: UUID): List<BuyerGroupJoinRequest> = groups.pendingJoinRequests(accountId)
+    fun pendingJoinRequests(accountId: UUID): List<OrganizationJoinRequest> = groups.pendingJoinRequests(accountId)
 
     @Transactional
     fun respondJoinRequest(accountId: UUID, requestId: UUID, approve: Boolean) =
