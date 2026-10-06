@@ -22,7 +22,7 @@ flowchart TD
     E -- 계정 승인 --> J{개인정보 동의 이력 존재}
     J -- 아니오 --> K[승인 거부]
     J -- 예 --> L[계정 활성화 및 token version 증가]
-    E -- role 변경 --> M{허용된 운영 role}
+    E -- role 변경 --> M{PRODUCT·ORDER·INVENTORY·SHIPPING·SALES 운영 role인가}
     M -- 아니오 --> N[role 변경 거부]
     M -- 예 --> O[role 변경 및 실제 변경 시 token version 증가]
     E -- 카탈로그 변경 --> P[입력·연관 리소스 검증]
@@ -75,11 +75,12 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 | `ORDER_MANAGER` | `ORDER_READ`, `ORDER_WRITE` |
 | `INVENTORY_MANAGER` | `INVENTORY_READ`, `INVENTORY_WRITE` |
 | `SHIPPING_MANAGER` | `SHIPMENT_WRITE` |
+| `SALES_MANAGER` | `SALES_GROUP_CREATE`, `SALES_GROUP_READ`, `SALES_COMMISSION_READ` |
 
 ## 운영자 화면·업무영역 권한 설계
 
 배송 role과 인가 범위는 현재 구현이며, 화면별 접근 설정과 영업 role·permission은 미구현 설계 범위.<br>
-현재는 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`가 존재함. `SHIPPING_MANAGER`는 배송 변경 권한만 보유하며, 영업 전용 role·permission은 미구현.<br>
+현재 role은 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SALES_MANAGER`. `SALES_MANAGER`는 V37에서 `SALES_GROUP_CREATE`, `SALES_GROUP_READ`, `SALES_COMMISSION_READ`만 부여되며 실제 영업 그룹·인센티브 API는 미구현.<br>
 
 | 운영 role | 책임 화면·업무 | 목표 permission |
 | --- | --- | --- |
@@ -95,7 +96,8 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 | `ADMIN_SALES_COMMISSION_LIST` | `ADMIN` | `SALES_COMMISSION_READ` | 지급 확정에 `SALES_COMMISSION_SETTLE` |
 | `ADMIN_ACCOUNT_ROLE_SETTINGS` | `ADMIN` | `ADMIN_ACCOUNT_MANAGE` | role 부여·회수에 `ADMIN_ACCOUNT_MANAGE` |
 
-상품·주문·재고 전용 기존 role은 호환을 위해 유지. 배송 정보 변경 endpoint는 `SHIPMENT_WRITE`만 요구하고 결제·취소·휴무일 endpoint는 계속 `ORDER_WRITE`를 요구해 배송 담당자에게 결제·취소 권한이 열리지 않도록 구성.<br>
+상품·주문·재고 전용 기존 role은 호환을 위해 유지. `SALES_MANAGER`는 그룹 생성, 본인 담당 그룹 조회, 본인 인센티브 조회 범위로 제한하며 담당자 재배정·요율 변경·지급 확정 권한은 포함하지 않음.<br>
+`SHIPPING_MANAGER`와 `SALES_MANAGER`는 배송·영업 업무 role로 MFA 대상 관리자 role에서 제외. 배송 정보 변경 endpoint는 `SHIPMENT_WRITE`만 요구하고 결제·취소·휴무일 endpoint는 계속 `ORDER_WRITE`를 요구해 배송 담당자에게 결제·취소 권한이 열리지 않도록 구성.<br>
 영업 인센티브 확정·지급 처리는 별도 permission으로 제한하고, 담당 영업자 본인은 자신에게 귀속된 내역만 조회.<br>
 
 화면별 조회 권한을 명시적으로 설정할 수 있도록 화면 리소스와 permission 연결을 DB에 둠. 화면 구성·route 구현은 React에 두고, DB는 안정적인 `screen_code`와 필요한 permission 연결을 관리.<br>
@@ -216,9 +218,9 @@ flowchart TD
 | 재고 조회·변동 조회 endpoint | `INVENTORY_READ` |
 | 재고 조정 endpoint | `INVENTORY_WRITE` |
 
-기본 role-permission 매핑은 Flyway V10, 감사 로그 조회 permission은 V11에서 적용함.<br>
+기본 role-permission 매핑은 Flyway V10, 감사 로그 조회 permission은 V11, 배송 전용 role·permission은 V23, 영업 role·permission은 V37에서 적용함.<br>
 `ADMIN_ACCOUNT_MANAGE` 권한으로 role 관리 endpoint를 이용할 수 있음.<br>
-운영 API에서 관리 가능한 role은 `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`로 제한하며 `ADMIN`, `SUPER_ADMIN`, `CUSTOMER`는 API로 부여·회수할 수 없음.<br>
+운영 API에서 관리 가능한 role은 `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SALES_MANAGER`로 제한하며 `ADMIN`, `SUPER_ADMIN`, `CUSTOMER`는 API로 부여·회수할 수 없음.<br>
 중복 부여와 이미 회수된 role의 회수는 멱등 처리.<br>
 role이 실제 변경되면 대상 계정의 token version을 증가시켜 기존 Access Token을 즉시 거부하며, 새 토큰에 변경된 권한을 반영함.<br>
 Access Token에 발급 당시 permission을 담음.<br>

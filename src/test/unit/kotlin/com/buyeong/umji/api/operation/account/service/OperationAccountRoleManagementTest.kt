@@ -22,11 +22,11 @@ class OperationAccountRoleManagementTest : DescribeSpec({
 
     describe("관리자 role 부여·회수 정책") {
         it("허용된 운영 role만 부여한다") {
-            every { accounts.grantRole(accountId, "INVENTORY_MANAGER", operatorId) } returns emptyList()
+            every { accounts.grantRole(accountId, "SALES_MANAGER", operatorId) } returns emptyList()
 
-            service.grantRole(accountId, "INVENTORY_MANAGER", operatorId) shouldContainExactly emptyList()
+            service.grantRole(accountId, "SALES_MANAGER", operatorId) shouldContainExactly emptyList()
 
-            verify(exactly = 1) { accounts.grantRole(accountId, "INVENTORY_MANAGER", operatorId) }
+            verify(exactly = 1) { accounts.grantRole(accountId, "SALES_MANAGER", operatorId) }
         }
 
         it("관리자와 고객 role 부여를 거부한다") {

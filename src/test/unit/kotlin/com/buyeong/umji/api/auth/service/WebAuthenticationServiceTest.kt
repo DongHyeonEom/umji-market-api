@@ -96,6 +96,16 @@ class WebAuthenticationServiceTest : DescribeSpec({
             service.login(WebLoginCommand("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1")).tokens.accessToken shouldBe "access"
             verify(exactly = 0) { totp.verify(any(), any()) }
         }
+
+        it("영업관리자만 보유한 계정에는 TOTP를 요구하지 않는다") {
+            val sales = regularAccount.copy(roles = setOf("SALES_MANAGER"))
+            every { credentials.findByNormalizedPhone("01012345678") } returns sales
+            every { encoder.matches(any(), any()) } returns true
+            every { accessTokens.issue(any(), any(), any()) } returns "access"
+
+            service.login(WebLoginCommand("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1")).tokens.accessToken shouldBe "access"
+            verify(exactly = 0) { totp.verify(any(), any()) }
+        }
     }
 
     describe("관리자 TOTP 등록") {

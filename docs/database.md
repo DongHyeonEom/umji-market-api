@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V36으로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V37로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -60,6 +60,7 @@
 | V34 | 기존 사업자 상태확인 시각을 대표자 정보 확인 시각으로 backfill |
 | V35 | `sales_channel`, 채널별 `category`, `channel_product_listing`, `sales_offer` 추가 및 기존 상품·SKU·장바구니·주문 `WHOLESALE` backfill; 주문 채널·오퍼 참조 추가 |
 | V36 | `sales_offer.units_per_sale` 및 `order_item.units_per_sale` 추가, 기존 데이터는 1로 backfill |
+| V37 | `SALES_MANAGER` role 및 그룹 생성·조회, 본인 인센티브 조회 permission 추가. `ADMIN`·`SUPER_ADMIN`에는 영업 permission 전체 연결 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 

@@ -5,6 +5,7 @@ INSERT INTO role (code, name, is_system) VALUES
     ('ORDER_MANAGER', '주문 관리자', TRUE),
     ('INVENTORY_MANAGER', '재고 관리자', TRUE),
     ('SHIPPING_MANAGER', '배송 관리자', TRUE),
+    ('SALES_MANAGER', '영업 관리자', TRUE),
     ('SUPER_ADMIN', '최고 관리자', TRUE)
 ON DUPLICATE KEY UPDATE name = VALUES(name), is_system = VALUES(is_system);
 
@@ -14,5 +15,8 @@ INSERT INTO permission (code, name) VALUES
     ('INVENTORY_READ', '재고 조회'), ('INVENTORY_WRITE', '재고 관리'),
     ('ADMIN_ACCOUNT_MANAGE', '관리자 계정 관리'),
     ('ADMIN_AUDIT_READ', '운영 감사 로그 조회'),
-    ('SHIPMENT_WRITE', '배송 정보 변경')
+    ('SHIPMENT_WRITE', '배송 정보 변경'),
+    ('SALES_GROUP_CREATE', '영업 담당 그룹 생성'),
+    ('SALES_GROUP_READ', '영업 담당 그룹 조회'),
+    ('SALES_COMMISSION_READ', '본인 인센티브 조회')
 ON DUPLICATE KEY UPDATE name = VALUES(name);

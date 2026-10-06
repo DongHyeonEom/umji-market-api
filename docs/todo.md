@@ -217,7 +217,7 @@
 - [x] 운영 업무 role과 화면 접근 테이블 설계안을 기존 `role`·`permission` 구조와 구분해 문서화
 - [x] 영업 담당 이력·주문 인센티브 원장 후보 table과 미확정 산정 정책을 문서화
 - [x] 직원·업체 배정별 선택 요율 및 요율 미설정(인센티브 없음), 상품 판매액 기준 설계 반영
-- [ ] 운영자 role을 전체 관리자·배송 관리자·영업 관리자로 정리하고 기존 permission과 업무 경계를 재설계
+- [x] 전체 관리자(`ADMIN`/`SUPER_ADMIN`)·배송 관리자·영업 관리자 role과 기존 상품·주문·재고 role 경계 정리 및 `SALES_MANAGER` 제한 permission mapping 구현
 - [x] 배송 관리자에게 결제·취소 권한이 섞이지 않도록 배송 전용 permission과 endpoint 인가 적용
 - [x] `SHIPPING_MANAGER` role과 `SHIPMENT_WRITE` permission을 추가하고 운영자 role 부여 API에서 관리
 - [x] 송장 등록·배송완료 보정 endpoint만 `SHIPMENT_WRITE`를 요구하고 결제·취소 API 접근 차단
@@ -230,7 +230,9 @@
 
 ### 서비스 자동화 테스트 개발 및 테스트
 
-- [ ] 운영 role·screen mapping과 API 직접 호출의 별도 권한 검사 자동화 테스트 개발 및 실행
+- [x] `SALES_MANAGER` 운영 role 부여 허용, 전용 permission 경계 및 TOTP 제외 자동화 테스트 개발 및 실행
+- [ ] 운영 role 관리 HTTP endpoint permission 검사 자동화 테스트 개발 및 실행
+- [ ] screen mapping과 API 직접 호출의 별도 권한 검사 자동화 테스트 개발 및 실행
 - [ ] 대표자·일반구성원 그룹별 화면·API 권한, 대표자 변경 후 권한 재계산 테스트 개발 및 실행
 - [ ] 배송 role의 결제·취소 접근 거부 및 전체 관리자 허용 테스트 개발 및 실행
 - [ ] 그룹 담당 배정 변경 후 과거 주문 담당자·요율 snapshot 보존 검증
