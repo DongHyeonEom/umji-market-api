@@ -81,6 +81,6 @@ flowchart TD
 | 업무 | 문서 | 상태 |
 | --- | --- | --- |
 | 파일 업로드·민감 증빙 조회 | [file.md](file.md) | 구현 전. 저장 장비·접근 정책 결정 필요 |
-| 주문·결제·배송 알림 | [notification.md](notification.md) | 업무 이벤트 outbox, 기기 token 관리 구현. FCM/APNs 발송 adapter 미구현 |
+| 주문·결제·배송 알림 | [notification.md](notification.md) | 업무 이벤트 outbox, 기기 token 관리 및 FCM/APNs 발송 integration 구현 |
 
 화면별 권한 설정, 운영 업무 role 및 영업 인센티브의 설계안·미구현 범위는 [operation.md](operation.md), 대표자·일반구성원 판정은 [account.md](account.md)를 기준으로 함.<br>

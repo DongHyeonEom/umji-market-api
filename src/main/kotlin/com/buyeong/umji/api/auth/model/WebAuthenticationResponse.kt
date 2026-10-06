@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.auth.model
 
-import com.buyeong.umji.api.auth.application.model.WebLoginResult
+import com.buyeong.umji.api.auth.model.WebLoginResult
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(description = "웹 로그인 인증 token과 계정 요약")

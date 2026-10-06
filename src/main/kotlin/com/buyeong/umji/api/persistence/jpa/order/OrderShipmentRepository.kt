@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.persistence.jpa.order
 
-import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
+import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
@@ -13,7 +13,7 @@ interface OrderShipmentRepository : JpaRepository<OrderShipmentEntity, Long> {
     fun findReadyOrderIds(): List<UUID>
 
     @Query(
-        "select new com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate(" +
+        "select new com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate(" +
             "purchaseOrder.publicId, shipment.status, shipment.carrierCode, shipment.trackingNumber) " +
             "from OrderShipmentEntity shipment join shipment.order purchaseOrder " +
             "where shipment.status = 'IN_TRANSIT' and shipment.carrierCode is not null and shipment.trackingNumber is not null " +

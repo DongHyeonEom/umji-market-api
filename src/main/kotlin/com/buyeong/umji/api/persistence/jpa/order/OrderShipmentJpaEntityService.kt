@@ -2,7 +2,7 @@ package com.buyeong.umji.api.persistence.jpa.order
 
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
-import com.buyeong.umji.api.shipment.application.model.ShipmentTrackingCandidate
+import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant

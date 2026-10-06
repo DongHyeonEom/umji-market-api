@@ -2,14 +2,14 @@ package com.buyeong.umji.api.persistence.jpa.order
 
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.order.application.model.OrderDraft
-import com.buyeong.umji.api.order.application.model.OrderItemDraft
-import com.buyeong.umji.api.order.application.model.OrderItemView
-import com.buyeong.umji.api.order.application.model.OrderPage
-import com.buyeong.umji.api.order.application.model.OrderView
-import com.buyeong.umji.api.order.application.model.TaxInvoiceBuyer
-import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshot
-import com.buyeong.umji.api.order.application.model.TaxInvoiceSupplier
+import com.buyeong.umji.api.order.model.OrderDraft
+import com.buyeong.umji.api.order.model.OrderItemDraft
+import com.buyeong.umji.api.order.model.OrderItemView
+import com.buyeong.umji.api.order.model.OrderPage
+import com.buyeong.umji.api.order.model.OrderView
+import com.buyeong.umji.api.order.model.TaxInvoiceBuyer
+import com.buyeong.umji.api.order.model.TaxInvoiceSnapshot
+import com.buyeong.umji.api.order.model.TaxInvoiceSupplier
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository

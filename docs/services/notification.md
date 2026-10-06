@@ -3,9 +3,9 @@
 ## 구현 상태
 
 주문·취소·입금·배송 상태 변경을 업무 트랜잭션과 함께 기록하는 notification outbox 구현 완료.<br>
-outbox batch claim·lease·worker 재시도 처리는 구현됨. 실제 발송 adapter가 아직 없어 scheduler는 비활성 상태.<br>
+outbox batch claim·lease·worker 재시도 처리는 구현됨. 발송 provider 설정이 없으면 scheduler는 비활성 상태.<br>
 인증 활성 계정의 Android FCM·iOS APNs token 등록·갱신·해제 API와 소유 계정 검사는 구현됨.<br>
-FCM/APNs outbound adapter와 활성 기기 fanout은 구현됨. delivery 이력 및 운영자 실패 조회·재처리 API는 미구현임.<br>
+FCM/APNs outbound integration과 활성 기기 fanout은 구현됨. delivery 이력 및 운영자 실패 조회·재처리 API는 미구현임.<br>
 SMS 본인 확인 코드 발송도 미구현임.<br>
 
 ## 발송 정책
@@ -18,7 +18,7 @@ token은 `ANDROID_FCM` 또는 `IOS_APNS` platform과 연결. Android FCM token�
 DB에는 전송용 token 원문과 전역 중복 식별용 SHA-256 hash를 저장. API 응답에는 공개 ID·platform·등록 시각만 포함하고 token 원문은 로그에 남기지 않음.<br>
 datasource-proxy가 SQL parameter를 기록하지 않도록 기기 token 테이블을 포함하는 query log를 제외.<br>
 알림 기능은 통합 API 안에서 notification Service와 persistence·외부 연동 구현으로 구성하며, 별도 배포 서비스로 분리하지 않음.<br>
-초기에는 메시지 broker를 도입하지 않으며, 비동기 worker가 DB outbox를 직접 조회해 FCM/APNs outbound adapter를 호출.<br>
+초기에는 메시지 broker를 도입하지 않으며, 비동기 worker가 DB outbox를 조회해 FCM/APNs outbound integration을 호출.<br>
 주문·결제·배송 API는 상태 변경과 outbox 기록까지만 담당하고, DB commit 후 worker 전송 완료를 기다리지 않고 응답.<br>
 클라이언트에는 기기 token 등록·해제 API만 제공하고 임의 메시지 발송 API는 노출하지 않음.<br>
 웹 브라우저 push는 현재 범위에 포함하지 않음.<br>

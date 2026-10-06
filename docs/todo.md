@@ -294,14 +294,17 @@
 
 ### 서비스 개발
 
-- [ ] 모든 도메인 요청 흐름을 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`로 통일
-- [ ] UseCase·Port 계약 및 위임 adapter 제거, 구체 Service·JpaEntityService 직접 주입으로 전환
-- [ ] 트랜잭션 경계를 도메인 Service에 통합하고 모든 wrapper 제거
-- [ ] `AGENTS.md`·README·architecture·서비스 문서 및 구현 현황을 새 경계에 맞춰 갱신
+- [x] 모든 도메인 요청 흐름을 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`로 통일
+- [x] `adapter/in/web` Controller와 `application` Service·model을 도메인별 `controller`·`service`·`model` 패키지로 이동
+- [x] UseCase·Port 계약 및 위임 adapter 제거, 구체 Service·JpaEntityService 직접 주입으로 전환
+- [x] 외부 연동 구현을 `integration` 패키지로 이동하고 SDK callback/provider 인터페이스만 내부 구현 세부로 유지
+- [x] Controller에서 인증 조회 전용 Port를 거치지 않고 구체 인증 Service 직접 호출
+- [x] 트랜잭션 경계를 도메인 Service에 통합하고 모든 wrapper 제거
+- [x] `AGENTS.md`·README·architecture·서비스 문서 및 구현 현황을 새 패키지 경계에 맞춰 갱신
 
 ### 서비스 자동화 테스트 개발 및 테스트
 
-- [ ] Service 단위 테스트 및 Controller·JPA 통합 테스트를 계층별로 작성·실행
+- [x] Service 단위 테스트 및 Controller·JPA 통합 테스트를 계층별로 작성·실행
 - [ ] 전체 기존 동작·권한·트랜잭션 회귀 검증
 
 ## 마지막 Task — 파일 및 object storage

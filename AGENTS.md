@@ -11,6 +11,8 @@
 - UseCase·Port·Adapter 목적의 서비스 인터페이스 및 위임 wrapper를 새로 만들지 않음
 - Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider interface는 유지 가능
 - JPA Entity는 영속성 처리에 사용하고, 외부 HTTP 응답에는 전용 DTO를 사용함
+- 도메인 패키지는 `controller`, `service`, `model`, `integration`으로 구분하고 영속성 구현은 `persistence/jpa`에 둠
+- `adapter`, `application`, `port`를 계층 패키지로 새로 사용하지 않으며 세부 기준은 `docs/architecture.md`를 따름
 - 세부 패키지 경계와 전환 수용 기준은 `docs/architecture.md`를 기준으로 함
 
 ## 역할

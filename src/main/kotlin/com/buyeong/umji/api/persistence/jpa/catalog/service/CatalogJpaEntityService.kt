@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 
 @Service
 @Transactional(readOnly = true)
@@ -56,6 +57,9 @@ class CatalogJpaEntityService(
         listings.findPublicListing(channelCode, productId, displayStatus, salesStatus)
     fun activeSalesOffers(channelCode: String, salesStatus: String, productId: Long) =
         offers.findAllBySalesChannel_CodeAndSalesStatusAndProductSku_Product_IdOrderBySalePriceAsc(channelCode, salesStatus, productId)
+    fun salesOffer(id: UUID): SalesOfferEntity? = offers.findByPublicId(id)
+    fun salesOffer(channelCode: String, skuId: UUID): SalesOfferEntity? =
+        offers.findBySalesChannel_CodeAndProductSku_PublicId(channelCode, skuId)
 
     @Transactional fun save(category: CategoryEntity): CategoryEntity = categories.save(category)
 

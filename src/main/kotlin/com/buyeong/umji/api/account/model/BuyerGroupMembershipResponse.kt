@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.account.model
 
-import com.buyeong.umji.api.account.application.model.BuyerGroupInvitation
-import com.buyeong.umji.api.account.application.model.BuyerGroupJoinRequest
-import com.buyeong.umji.api.account.application.model.BuyerGroupSearchResult
-import com.buyeong.umji.api.account.application.model.BuyerGroupSummary
+import com.buyeong.umji.api.account.model.BuyerGroupInvitation
+import com.buyeong.umji.api.account.model.BuyerGroupJoinRequest
+import com.buyeong.umji.api.account.model.BuyerGroupSearchResult
+import com.buyeong.umji.api.account.model.BuyerGroupSummary
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank

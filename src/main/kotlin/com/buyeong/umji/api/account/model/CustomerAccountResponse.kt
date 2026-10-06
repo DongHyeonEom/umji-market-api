@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.account.model
 
-import com.buyeong.umji.api.account.application.model.CustomerProfile
-import com.buyeong.umji.api.account.application.model.SharedAddress
+import com.buyeong.umji.api.account.model.CustomerProfile
+import com.buyeong.umji.api.account.model.SharedAddress
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
 import java.util.UUID

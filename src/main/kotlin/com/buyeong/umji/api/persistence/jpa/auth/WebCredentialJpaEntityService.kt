@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.auth
 
-import com.buyeong.umji.api.auth.application.model.AccountRecord
-import com.buyeong.umji.api.auth.application.model.WebAccountCredentials
+import com.buyeong.umji.api.auth.model.AccountRecord
+import com.buyeong.umji.api.auth.model.WebAccountCredentials
 
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
