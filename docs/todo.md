@@ -312,6 +312,26 @@
 - [x] Service 단위 테스트 및 Controller·JPA 통합 테스트를 계층별로 작성·실행
 - [ ] 전체 기존 동작·권한·트랜잭션 회귀 검증
 
+## Task 12 — Organization 구조와 공통 사업자 정보
+
+### 서비스 개발
+
+- [x] `ACCOUNT`와 분리된 `organization`, 공통 사업자 프로필, 구성원 모델 적용. 조직은 구매자·판매자·운영 capability를 복수로 보유 가능
+- [x] 구매자 조직의 주문·초대·가입·배송지 경계를 보존하고 판매자 조직도 복수 계정 구성원을 가질 수 있도록 지원
+- [x] 계정 단위 `business_profile`과 그룹 단위 `buyer_group_business_profile`을 공통 Organization 프로필로 통합하는 신규 Flyway migration 및 값 보존 로직 추가
+- [x] 운영자 계정 생성·수정 및 사업자 등록 API를 계정 프로필 저장에서 Organization 생성·연결 API로 전환
+- [x] 사용자 그룹 기반 API 경로·요청·응답을 Organization 용어로 전환하고 구매자 조직의 세금계산서·국세청 확인은 capability 검증
+- [x] Organization 조회·수정·생성·구성원 연결 API와 서버 권한 검사 적용. 판매자도 Organization 생성 및 구성원 초대·가입 가능
+- [x] 기존 개인 조직·계정 인증·구매 조직 주문·배송지 계약 유지 및 관련 문서·OpenAPI 갱신
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [ ] Flyway migration의 기존 계정·그룹 사업자 데이터 이관과 관계·필드 보존 검증
+- [ ] 사용자 사업자 등록·구매/판매 Organization 생성·세금계산서·국세청 상태 확인의 Organization 연결 검증
+- [ ] 운영자 Organization 등록·수정·계정 연결·권한 검사 검증
+- [ ] 복수 capability Organization, 단일 Organization 소속 계정, 구매자·판매자 다중 구성원 접근 범위 및 capability별 API 권한 검증
+- [ ] 개인 그룹과 기존 주문·주소·세금계산서 snapshot 회귀 검증
+
 ## 마지막 Task — 파일 및 object storage
 
 ### 서비스 개발

@@ -3,17 +3,17 @@ package com.buyeong.umji.api.operation.account.controller
 import com.buyeong.umji.api.auth.service.CurrentAccountService
 import com.buyeong.umji.api.auth.service.WebAuthenticationService
 import com.buyeong.umji.api.operation.account.model.AccountData
-import com.buyeong.umji.api.operation.account.model.BusinessProfileData
+import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
 import com.buyeong.umji.api.operation.account.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.model.ManagedRole
 import com.buyeong.umji.api.operation.account.model.NewAccount
 import com.buyeong.umji.api.operation.account.service.OperationAccountService
-import com.buyeong.umji.api.operation.model.AssignBuyerGroupRequest
-import com.buyeong.umji.api.operation.model.BusinessProfileRequest
+import com.buyeong.umji.api.operation.model.AssignOrganizationRequest
+import com.buyeong.umji.api.operation.model.OrganizationProfileRequest
 import com.buyeong.umji.api.operation.model.CreateConsentRequest
 import com.buyeong.umji.api.operation.model.CreateOperationAccountRequest
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
-import com.buyeong.umji.api.operation.model.OperationBusinessProfileResponse
+import com.buyeong.umji.api.operation.model.OperationOrganizationProfileResponse
 import com.buyeong.umji.api.operation.model.OperationConsentResponse
 import com.buyeong.umji.api.operation.model.OperationRoleResponse
 import com.buyeong.umji.api.operation.model.UpdateAccountStatusRequest
@@ -81,7 +81,8 @@ class OperationAccountController(
             request.phone.trim(),
             PhoneNumberHelper.normalizeMobilePhoneNumber(request.phone),
             request.email.clean(),
-            request.businessProfile?.toData(),
+            request.organizationProfile?.toData(),
+            request.organizationCapability,
         ),
     ).toResponse()
 
@@ -108,19 +109,19 @@ class OperationAccountController(
         @Valid @RequestBody request: UpdateAccountStatusRequest,
     ) = useCase.status(id, request.status).toResponse()
 
-    @Operation(summary = "사용자 프로필수정", description = "운영자 계정·상태·역할·그룹·동의 관리 API. /{id}/business-profile 경로에서 사용자 프로필수정를 수행")
-    @PutMapping("/{id}/business-profile")
+    @Operation(summary = "사용자 프로필수정", description = "운영자 계정·상태·역할·그룹·동의 관리 API. /{id}/organization-profile 경로에서 사용자 프로필수정를 수행")
+    @PutMapping("/{id}/organization-profile")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     fun profile(
         @Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID,
-        @Valid @RequestBody request: BusinessProfileRequest,
+        @Valid @RequestBody request: OrganizationProfileRequest,
     ) = useCase.profile(id, request.toData()).toResponse()
 
-    @Operation(summary = "구매자 그룹수정", description = "운영자 계정·상태·역할·그룹·동의 관리 API. /{id}/buyer-group 경로에서 구매자 그룹수정를 수행")
-    @PutMapping("/{id}/buyer-group")
+    @Operation(summary = "Organization수정", description = "운영자 계정·상태·역할·그룹·동의 관리 API. /{id}/organization 경로에서 Organization수정를 수행")
+    @PutMapping("/{id}/organization")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
-    fun assignBuyerGroup(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID, @Valid @RequestBody request: AssignBuyerGroupRequest) =
-        useCase.assignBuyerGroup(id, request.buyerGroupId).toResponse()
+    fun assignOrganization(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID, @Valid @RequestBody request: AssignOrganizationRequest) =
+        useCase.assignOrganization(id, request.organizationId).toResponse()
 
     @Operation(summary = "계정 약관 동의 등록", description = "계정 약관 동의 등록 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PostMapping("/{id}/consents")
@@ -152,7 +153,7 @@ class OperationAccountController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun resetAdminTotp(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID) = webAuthentication.resetTotp(id)
 
-    private fun BusinessProfileRequest.toData() = BusinessProfileData(
+    private fun OrganizationProfileRequest.toData() = OrganizationProfileData(
         businessName.trim(),
         businessRegistrationNumber.clean(),
         representativeName.clean(),
@@ -161,7 +162,7 @@ class OperationAccountController(
         address1.clean(),
         address2.clean(),
     )
-    private fun BusinessProfileData.toResponse() = OperationBusinessProfileResponse(
+    private fun OrganizationProfileData.toResponse() = OperationOrganizationProfileResponse(
         businessName,
         businessRegistrationNumber,
         representativeName,
@@ -183,7 +184,8 @@ class OperationAccountController(
         consents.map {
             OperationConsentResponse(it.consentType, it.documentVersion, it.consentMethod, it.evidenceReference, it.processedBy, it.consentedAt)
         },
-        buyerGroupId,
+        organizationId,
+        organizationCapabilities,
     )
     private fun String?.clean() = this?.trim()?.ifBlank { null }
 }

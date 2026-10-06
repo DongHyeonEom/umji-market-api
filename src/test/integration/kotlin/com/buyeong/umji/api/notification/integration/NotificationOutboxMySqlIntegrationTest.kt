@@ -92,24 +92,24 @@ class NotificationOutboxMySqlIntegrationTest {
             Long::class.java,
             accountId.toBytes(),
         )!!
-        val groupId = UUID.randomUUID()
+        val organizationId = UUID.randomUUID()
         jdbc.update(
-            "INSERT INTO buyer_group (public_id, group_type, display_name, status) VALUES (?, 'INDIVIDUAL', 'Outbox test', 'ACTIVE')",
-            groupId.toBytes(),
+            "INSERT INTO organization (public_id, organization_type, display_name, status) VALUES (?, 'INDIVIDUAL', 'Outbox test', 'ACTIVE')",
+            organizationId.toBytes(),
         )
         val internalGroupId = jdbc.queryForObject(
-            "SELECT id FROM buyer_group WHERE public_id = ?",
+            "SELECT id FROM organization WHERE public_id = ?",
             Long::class.java,
-            groupId.toBytes(),
+            organizationId.toBytes(),
         )!!
         jdbc.update(
-            "INSERT INTO buyer_group_member (buyer_group_id, account_id, status) VALUES (?, ?, 'ACTIVE')",
+            "INSERT INTO organization_member (organization_id, account_id, status) VALUES (?, ?, 'ACTIVE')",
             internalGroupId,
             internalAccountId,
         )
         val orderId = UUID.randomUUID()
         jdbc.update(
-            "INSERT INTO purchase_order (public_id, order_number, account_id, buyer_group_id, status, subtotal_amount, total_amount, tax_invoice_requested, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, FALSE, ?)",
+            "INSERT INTO purchase_order (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, tax_invoice_requested, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, FALSE, ?)",
             orderId.toBytes(),
             "OUT-${UUID.randomUUID()}",
             internalAccountId,

@@ -1,7 +1,8 @@
 package com.buyeong.umji.api.account.model
-data class BuyerGroupRegistrationCommand(
+data class OrganizationRegistrationCommand(
     val type: String,
     val business: BusinessGroupRegistration?,
+    val capability: String = "BUYER",
 )
 
 data class BusinessGroupRegistration(

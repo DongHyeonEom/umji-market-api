@@ -14,8 +14,8 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "buyer_group")
-class BuyerGroupEntity {
+@Table(name = "organization")
+class OrganizationEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -23,8 +23,8 @@ class BuyerGroupEntity {
     @Column(name = "public_id", nullable = false, updatable = false)
     var publicId: UUID? = null
 
-    @Column(name = "group_type", nullable = false)
-    lateinit var groupType: String
+    @Column(name = "organization_type", nullable = false)
+    lateinit var organizationType: String
 
     @Column(name = "display_name", nullable = false)
     lateinit var displayName: String

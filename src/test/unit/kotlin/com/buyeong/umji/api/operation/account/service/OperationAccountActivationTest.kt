@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.operation.account.service
 
 import com.buyeong.umji.api.operation.account.model.AccountData
-import com.buyeong.umji.api.operation.account.model.BusinessProfileData
+import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
 import com.buyeong.umji.api.operation.account.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.model.ConsentData
 import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
@@ -23,7 +23,7 @@ class OperationAccountActivationTest : DescribeSpec({
     fun account(
         status: String,
         tokenVersion: Long = 0,
-        profile: BusinessProfileData? = null,
+        profile: OrganizationProfileData? = null,
         consents: List<ConsentData> = emptyList(),
     ) = AccountData(accountId, "테스트 회원", "01012345678", null, status, tokenVersion, profile, consents)
 
@@ -69,7 +69,7 @@ class OperationAccountActivationTest : DescribeSpec({
         }
 
         it("동의 등록 시 프로필이 있는 계정은 운영 검토 대기로 이동한다") {
-            val profile = BusinessProfileData("엄지상회", null, null, null, null, "주소", null)
+            val profile = OrganizationProfileData("엄지상회", null, null, null, null, "주소", null)
             val current = account(status = "PENDING_CONSENT", profile = profile)
             val next = account(status = "PENDING_REVIEW", profile = profile)
             val consent = ConsentCommand("PERSONAL_INFORMATION", "v1", "ONLINE", "evidence", operatorId)
@@ -83,7 +83,7 @@ class OperationAccountActivationTest : DescribeSpec({
 
         it("프로필이 등록되면 프로필 대기 계정은 운영 검토 대기로 이동한다") {
             val current = account(status = "PENDING_PROFILE")
-            val profile = BusinessProfileData("엄지상회", null, null, null, null, "주소", null)
+            val profile = OrganizationProfileData("엄지상회", null, null, null, null, "주소", null)
             val next = account(status = "PENDING_REVIEW", profile = profile)
             every { accounts.find(accountId) } returns current
             every { accounts.updateProfile(accountId, profile, "PENDING_REVIEW") } returns next

@@ -2,7 +2,7 @@ package com.buyeong.umji.api.account.integration
 
 import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
 import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
-import com.buyeong.umji.api.persistence.jpa.account.repository.BuyerGroupBusinessProfileRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationProfileRepository
 import java.time.Instant
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Component
 class BusinessRegistrationVerificationJob(
-    private val profiles: BuyerGroupBusinessProfileRepository,
+    private val profiles: OrganizationProfileRepository,
     private val registrationStatus: BusinessRegistrationStatusClient,
 ) {
     @Scheduled(fixedDelayString = "\${umji.business-registration.status.worker-delay-ms:60000}")

@@ -14,7 +14,7 @@ data class TaxInvoiceSupplier(
 )
 
 data class TaxInvoiceBuyer(
-    val buyerGroupId: UUID,
+    val organizationId: UUID,
     val businessRegistrationNumber: String?,
     val businessName: String?,
     val representativeName: String?,

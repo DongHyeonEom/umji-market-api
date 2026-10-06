@@ -30,18 +30,18 @@ class CustomerAccountService(
     fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommand): SharedAddress {
         validate(command)
         return accounts.updateAddress(accountPublicId, addressPublicId, command)
-            ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
+            ?: throw ItemNotFoundException("Organization 배송지를 찾을 수 없습니다.")
     }
 
     @Transactional
     fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddress =
         accounts.setDefaultAddress(accountPublicId, addressPublicId)
-            ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
+            ?: throw ItemNotFoundException("Organization 배송지를 찾을 수 없습니다.")
 
     @Transactional
     fun deleteAddress(accountPublicId: UUID, addressPublicId: UUID) {
         if (!accounts.deleteAddress(accountPublicId, addressPublicId)) {
-            throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
+            throw ItemNotFoundException("Organization 배송지를 찾을 수 없습니다.")
         }
     }
 

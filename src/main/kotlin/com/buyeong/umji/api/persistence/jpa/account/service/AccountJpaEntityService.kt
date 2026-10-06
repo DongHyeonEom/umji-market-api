@@ -1,10 +1,8 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.ConsentHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.AccountRepository
-import com.buyeong.umji.api.persistence.jpa.account.repository.BusinessProfileRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.ConsentHistoryRepository
 import java.util.UUID
 import org.springframework.data.domain.Page
@@ -16,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class AccountJpaEntityService(
     private val accounts: AccountRepository,
-    private val profiles: BusinessProfileRepository,
     private val consents: ConsentHistoryRepository,
 ) {
     fun findById(id: Long): AccountEntity? = accounts.findById(id).orElse(null)
@@ -25,13 +22,10 @@ class AccountJpaEntityService(
     fun findByPhoneNormalized(phone: String): AccountEntity? = accounts.findByPhoneNormalized(phone)
     fun findAllByStatus(status: String, pageable: Pageable): Page<AccountEntity> = accounts.findAllByStatus(status, pageable)
     fun findAll(pageable: Pageable): Page<AccountEntity> = accounts.findAll(pageable)
-    fun profile(accountId: Long): BusinessProfileEntity? = profiles.findByAccountId(accountId)
     fun consents(accountId: Long): List<ConsentHistoryEntity> = consents.findAllByAccountIdOrderByConsentedAtDesc(accountId)
     fun hasConsent(accountId: Long, consentType: String): Boolean = consents.existsByAccountIdAndConsentType(accountId, consentType)
 
     @Transactional fun save(account: AccountEntity): AccountEntity = accounts.save(account)
-
-    @Transactional fun saveProfile(profile: BusinessProfileEntity): BusinessProfileEntity = profiles.save(profile)
 
     @Transactional fun saveConsent(consent: ConsentHistoryEntity): ConsentHistoryEntity = consents.save(consent)
 }

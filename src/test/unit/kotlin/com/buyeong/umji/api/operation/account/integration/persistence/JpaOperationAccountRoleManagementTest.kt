@@ -2,7 +2,7 @@ package com.buyeong.umji.api.operation.account.integration.persistence
 
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -16,7 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 class JpaOperationAccountRoleManagementTest : DescribeSpec({
     val accounts = mockk<AccountJpaEntityService>(relaxed = true)
     val jdbc = mockk<JdbcTemplate>(relaxed = true)
-    val adapter = OperationAccountJpaEntityService(accounts, jdbc, mockk<BuyerGroupJpaEntityService>(relaxed = true))
+    val adapter = OperationAccountJpaEntityService(accounts, jdbc, mockk<OrganizationJpaEntityService>(relaxed = true))
     val targetPublicId = UUID.randomUUID()
     val operatorPublicId = UUID.randomUUID()
     val targetDatabaseId = 42L

@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.shipment.integration
 
-import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
-import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
+import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
+import com.buyeong.umji.api.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.order.service.CustomerOrderListingService
 import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.OrderService
@@ -51,7 +51,7 @@ class OrderShipmentMySqlIntegrationTest {
     private lateinit var payments: PaymentService
 
     @Autowired
-    private lateinit var groupMembership: BuyerGroupMembershipService
+    private lateinit var groupMembership: OrganizationMembershipService
 
     @MockitoBean
     private lateinit var trackingSource: OfficialCarrierTrackingGateway
@@ -252,7 +252,7 @@ class OrderShipmentMySqlIntegrationTest {
             suffix,
             "555${UUID.randomUUID().toString().take(7)}",
         )
-        groupMembership.register(publicId, BuyerGroupRegistrationCommand("INDIVIDUAL", null))
+        groupMembership.register(publicId, OrganizationRegistrationCommand("INDIVIDUAL", null))
         return publicId
     }
 
@@ -309,7 +309,7 @@ class OrderShipmentMySqlIntegrationTest {
 
     private fun createOrder(customerId: UUID, skuId: UUID, reservationKey: UUID): UUID {
         val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, customerId.toBytes())!!
-        val buyerGroupInternalId = jdbc.queryForObject("SELECT buyer_group_id FROM buyer_group_member WHERE account_id = ? AND status = 'ACTIVE'", Long::class.java, accountInternalId)!!
+        val organizationInternalId = jdbc.queryForObject("SELECT organization_id FROM organization_member WHERE account_id = ? AND status = 'ACTIVE'", Long::class.java, accountInternalId)!!
         val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuId.toBytes())!!
         val offerInternalId = jdbc.queryForObject(
             "SELECT id FROM sales_offer WHERE product_sku_id = ?",
@@ -320,13 +320,13 @@ class OrderShipmentMySqlIntegrationTest {
         val now = Instant.now()
         jdbc.update(
             """INSERT INTO purchase_order
-                (public_id, order_number, account_id, buyer_group_id, status, subtotal_amount, total_amount, ordered_at)
+                (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, ordered_at)
                 VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)
             """.trimIndent(),
             orderId.toBytes(),
             "SHIP-${UUID.randomUUID().toString().take(8)}",
             accountInternalId,
-            buyerGroupInternalId,
+            organizationInternalId,
             Timestamp.from(now),
         )
         val orderInternalId = jdbc.queryForObject("SELECT id FROM purchase_order WHERE public_id = ?", Long::class.java, orderId.toBytes())!!

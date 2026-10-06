@@ -16,10 +16,10 @@ import java.util.UUID
 
 @Entity
 @Table(
-    name = "buyer_group_address",
-    uniqueConstraints = [UniqueConstraint(name = "UQ_buyer_group_address_public_id", columnNames = ["public_id"])],
+    name = "organization_address",
+    uniqueConstraints = [UniqueConstraint(name = "UQ_organization_address_public_id", columnNames = ["public_id"])],
 )
-class BuyerGroupAddressEntity {
+class OrganizationAddressEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -28,8 +28,8 @@ class BuyerGroupAddressEntity {
     var publicId: UUID? = null
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "buyer_group_id", nullable = false)
-    lateinit var buyerGroup: BuyerGroupEntity
+    @JoinColumn(name = "organization_id", nullable = false)
+    lateinit var organization: OrganizationEntity
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by_account_id", nullable = false)

@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.auth.security
 
-import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import com.buyeong.umji.api.auth.config.JwtProperties
 import com.buyeong.umji.api.auth.config.SecurityConfig
@@ -16,7 +16,7 @@ import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.notification.model.NotificationDeviceTokenRegistration
 import com.buyeong.umji.api.notification.service.NotificationDeviceTokenService
 import com.buyeong.umji.api.operation.account.controller.OperationAccountController
-import com.buyeong.umji.api.operation.account.controller.OperationBuyerGroupController
+import com.buyeong.umji.api.operation.account.controller.OperationOrganizationController
 import com.buyeong.umji.api.operation.account.service.OperationAccountService
 import com.buyeong.umji.api.operation.audit.controller.OperationAuditController
 import com.buyeong.umji.api.operation.audit.model.OperationAuditPage
@@ -61,7 +61,7 @@ import java.util.UUID
 @WebMvcTest(
     controllers = [
         AuthenticationController::class,
-        OperationAccountController::class, OperationBuyerGroupController::class, OperationAuditController::class, OperationCatalogController::class,
+        OperationAccountController::class, OperationOrganizationController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
     ],
@@ -76,7 +76,7 @@ class OperationEndpointAuthorizationTest(
     private lateinit var accounts: OperationAccountService
 
     @MockitoBean
-    private lateinit var taxInvoiceProfiles: BuyerGroupTaxInvoiceProfileService
+    private lateinit var taxInvoiceProfiles: OrganizationTaxInvoiceProfileService
 
     @MockitoBean
     private lateinit var catalog: OperationCatalogService
@@ -227,9 +227,9 @@ class OperationEndpointAuthorizationTest(
 
     @Test
     fun `buyer group representative change requires account management permission`() {
-        val groupId = UUID.randomUUID()
+        val organizationId = UUID.randomUUID()
         mockMvc.perform(
-            put("/api/operation/buyer-groups/$groupId/representative")
+            put("/api/operation/organizations/$organizationId/representative")
                 .with(authorities("ORDER_READ"))
                 .with(csrf())
                 .contentType("application/json")
@@ -237,7 +237,7 @@ class OperationEndpointAuthorizationTest(
         ).andExpect(status().isForbidden)
 
         mockMvc.perform(
-            put("/api/operation/buyer-groups/$groupId/representative")
+            put("/api/operation/organizations/$organizationId/representative")
                 .with(authorities("ADMIN_ACCOUNT_MANAGE"))
                 .with(csrf())
                 .contentType("application/json")
@@ -248,32 +248,32 @@ class OperationEndpointAuthorizationTest(
     @Test
     fun `assigning buyer group requires account management permission`() {
         val accountId = UUID.randomUUID()
-        val groupId = UUID.randomUUID()
+        val organizationId = UUID.randomUUID()
         mockMvc.perform(
-            put("/api/operation/accounts/$accountId/buyer-group")
+            put("/api/operation/accounts/$accountId/organization")
                 .with(authorities("ORDER_READ"))
                 .with(csrf())
                 .contentType("application/json")
-                .content("""{"buyerGroupId":"$groupId"}"""),
+                .content("""{"organizationId":"$organizationId"}"""),
         ).andExpect(status().isForbidden)
 
-        Mockito.`when`(accounts.assignBuyerGroup(accountId, groupId)).thenReturn(
-            com.buyeong.umji.api.operation.account.model.AccountData(accountId, "Buyer", "01012345678", null, "ACTIVE", 1, buyerGroupId = groupId),
+        Mockito.`when`(accounts.assignOrganization(accountId, organizationId)).thenReturn(
+            com.buyeong.umji.api.operation.account.model.AccountData(accountId, "Buyer", "01012345678", null, "ACTIVE", 1, organizationId = organizationId),
         )
         mockMvc.perform(
-            put("/api/operation/accounts/$accountId/buyer-group")
+            put("/api/operation/accounts/$accountId/organization")
                 .with(authorities("ADMIN_ACCOUNT_MANAGE"))
                 .with(csrf())
                 .contentType("application/json")
-                .content("""{"buyerGroupId":"$groupId"}"""),
+                .content("""{"organizationId":"$organizationId"}"""),
         ).andExpect(status().isOk)
-        Mockito.verify(accounts).assignBuyerGroup(accountId, groupId)
+        Mockito.verify(accounts).assignOrganization(accountId, organizationId)
     }
 
     @Test
     fun `buyer group tax invoice profile requires account management permission`() {
         mockMvc.perform(
-            get("/api/operation/buyer-groups/${UUID.randomUUID()}/tax-invoice-profile")
+            get("/api/operation/organizations/${UUID.randomUUID()}/tax-invoice-profile")
                 .with(authorities("ORDER_READ")),
         ).andExpect(status().isForbidden)
     }

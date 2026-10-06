@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V37로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V38로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -41,7 +41,7 @@
 | V15 | 결제 이슈 검토 상태 허용 |
 | V16 | 공휴일 일정, 주문 취소 이력, 환불 상태 허용 |
 | V17 | 배송 상태 `DELIVERED` 허용 |
-| V18 | `buyer_group`, `buyer_group_member`, `buyer_group_business_profile`; 주문 구매자 그룹 귀속 및 기존 데이터 backfill |
+| V18 | `organization`, `organization_member`, `organization_profile`; 주문 구매자 그룹 귀속 및 기존 데이터 backfill |
 | V19 | 계정당 그룹 한 곳으로 제한, 그룹 UUID 저장 형식 정규화, 주문 그룹 귀속 필수화 |
 | V20 | 계정별 배송지를 그룹 공용 배송지로 이관, 주문 배송지 snapshot 컬럼 추가 |
 | V21 | 그룹 대표자, 활성 구성원 재가입 이력, 전화번호 초대 및 가입 요청 테이블 추가 |
@@ -61,6 +61,7 @@
 | V35 | `sales_channel`, 채널별 `category`, `channel_product_listing`, `sales_offer` 추가 및 기존 상품·SKU·장바구니·주문 `WHOLESALE` backfill; 주문 채널·오퍼 참조 추가 |
 | V36 | `sales_offer.units_per_sale` 및 `order_item.units_per_sale` 추가, 기존 데이터는 1로 backfill |
 | V37 | `SALES_MANAGER` role 및 그룹 생성·조회, 본인 인센티브 조회 permission 추가. `ADMIN`·`SUPER_ADMIN`에는 영업 permission 전체 연결 |
+| V38 | 구매자 그룹·구성원·초대·주소·사업자 프로필·주문 FK를 Organization 명칭으로 전환. `organization_capability` 추가 및 기존 조직의 `BUYER` capability backfill. account 사업자 정보 중 기존 공통 프로필에서 비어 있는 값 이관 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -82,31 +83,32 @@
 - `web_login_attempt`은 전화번호·원격 주소 SHA-256 hash별 최근 실패 횟수만 저장함.<br>
   15분 내 동일 조합 5회 또는 전화번호 전체 합계 10회 실패 시 로그인 거부, 15분이 지난 행은 매시 정리.<br>
 - 업체 동의 이력은 기존 행을 덮어쓰지 않고 새 이력으로 추가함.<br>
-- 구매 주문은 `buyer_group_id`로 그룹에 귀속하고, 기존 `purchase_order.account_id`는 실제 주문한 계정으로 유지함.<br>
+- 구매 주문은 `organization_id`로 구매 Organization에 귀속하고, 기존 `purchase_order.account_id`는 실제 주문한 계정으로 유지함.<br>
   현재 각 기존 계정에 개인 또는 사업자 구매자 그룹 하나를 생성해 기존 주문·프로필을 backfill함.<br>
-  V19에서 `buyer_group_id`를 필수화하며 신규 주문 생성 시 활성 계정의 그룹 ID를 저장해야 함.<br>
-- `buyer_group.group_type`은 `BUSINESS` 또는 `INDIVIDUAL`이며, 사업자번호는 선택 정보임.<br>
+  V19에서 `organization_id`를 필수화하며 신규 주문 생성 시 활성 계정의 그룹 ID를 저장해야 함.<br>
+- `organization.organization_type`은 `BUSINESS` 또는 `INDIVIDUAL`이며, 사업자번호는 선택 정보임.<br>
   사업자 그룹 식별자나 그룹 병합 키로 사용하지 않음.<br>
-- `buyer_group_member`는 구성원 소속 이력을 보존하며, 계정당 동시 활성 그룹 소속은 하나로 제한함.<br>
+- `organization_capability`는 `BUYER`, `SELLER`, `OPERATOR` 중 Organization이 수행하는 역할을 저장. Organization은 capability를 복수로 보유 가능하며 V38에서 기존 Organization 전체에 `BUYER`를 backfill.<br>
+- `organization_member`는 구성원 소속 이력을 보존하며, 계정당 동시 활성 그룹 소속은 하나로 제한함.<br>
   V21의 generated `active_account_id` unique 제약으로 동시 활성 소속을 하나로 제한.<br>
   그룹 이동 시 이전 소속은 `LEFT`로 종료하고 새 활성 소속을 추가. 주문의 과거 그룹 귀속은 변경하지 않음.<br>
-- `buyer_group.representative_account_id`는 현재 대표 계정이며 반드시 활성 구성원이어야 함.<br>
+- `organization.representative_account_id`는 현재 대표 계정이며 반드시 활성 구성원이어야 함.<br>
   대표자 지정·변경은 운영자 권한으로만 수행. 개인 그룹 최초 생성자는 대표자로 지정됨.<br>
-- `buyer_group_invitation`은 대표자가 전화번호로 보낸 초대 이력이며, 초대 대상 계정이 수락해야 그룹 소속 변경.<br>
+- `organization_invitation`은 대표자가 전화번호로 보낸 초대 이력이며, 초대 대상 계정이 수락해야 그룹 소속 변경.<br>
   초대 수락은 기존 그룹 대표자 계정에 대해 허용하지 않음.<br>
-- `buyer_group_join_request`는 일반 구성원의 가입 요청 및 대표자의 처리 이력.<br>
+- `organization_join_request`는 일반 구성원의 가입 요청 및 대표자의 처리 이력.<br>
   대표자만 그룹 가입 요청을 승인·거절할 수 있음.<br>
-- `buyer_group_address`는 구매자 그룹 공용 배송지임.<br>
+- `organization_address`는 구매자 그룹 공용 배송지임.<br>
   그룹 구성원은 주소를 공동 조회·관리하고 기본 배송지는 그룹당 최대 하나로 유지함.<br>
   생성 계정은 이력 식별용이며 주소 접근 범위는 구매자 그룹 기준.<br>
 - `purchase_order`의 배송지 snapshot은 주문 당시 수령인·연락처·주소를 보존함.<br>
   주소 원본과 외래 키를 두지 않아 그룹 주소 변경·삭제가 기존 주문에 영향을 주지 않음.<br>
 - `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. RETAIL은 1, WHOLESALE은 박스 입수 수량으로 사용.<br>
 - `order_item.quantity`와 `unit_price`는 판매 단위 기준이며 `units_per_sale`은 주문 시점 snapshot. 재고 예약 수량은 두 수량의 곱.<br>
-- `business_profile`은 기존 계정 기능의 호환을 위해 유지하고, V18 시점의 사업자 프로필은 `buyer_group_business_profile`로 복사함.<br>
+- `business_profile`은 V38 이관 후 레거시 보존 테이블이며 애플리케이션에서 읽거나 쓰지 않음. 운영자·판매자·구매자의 현재 사업자 정보 원본은 `organization_profile`임.<br>
   V31부터 그룹 발행 프로필에 업태·종목·선택 이메일을 보관함. 주문은 발행 요청 당시 공급자·공급받는자 정보를 복사하며 기존 그룹 정보 변경의 영향을 받지 않음.<br>
 - 세금계산서 품목은 주문 항목의 상품명·SKU 코드·수량·`line_amount`를 사용. 품목 공급가액과 합계는 주문 당시 확정 금액이며 별도로 재산출하지 않음.<br>
-- 사업자등록 주소는 `buyer_group_business_profile`의 사업자등록 프로필에 저장. 배송지는 `buyer_group_address`에서 별도 관리하며 두 주소는 자동 동기화하지 않음.<br>
+- 사업자등록 주소는 `organization_profile`의 사업자등록 프로필에 저장. 배송지는 `organization_address`에서 별도 관리하며 두 주소는 자동 동기화하지 않음.<br>
 - 사용자가 사업자 그룹을 최초 생성할 때 국세청 사업자등록 상태조회에서 폐업 상태가 아님을 확인하고 `business_registration_verified_at`을 기록. 운영자가 초기 사업자 프로필을 입력한 그룹에는 해당 시각이 없으며 신규 생성 검증을 다시 요구하지 않음.<br>
 - 주문 생성 시 발행 정보는 `WAITING_FOR_SHIPMENT` 상태로 snapshot. 배송 관리자의 최초 송장 등록 시 `ordered_at`의 KST 날짜를 작성일자와 제공일자로 함께 저장하고 `READY_FOR_ISSUANCE`로 전환.<br>
 

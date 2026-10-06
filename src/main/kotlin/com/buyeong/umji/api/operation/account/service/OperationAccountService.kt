@@ -2,7 +2,7 @@ package com.buyeong.umji.api.operation.account.service
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.model.AccountData
-import com.buyeong.umji.api.operation.account.model.BusinessProfileData
+import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
 import com.buyeong.umji.api.operation.account.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.model.ManagedRole
 import com.buyeong.umji.api.operation.account.model.NewAccount
@@ -24,13 +24,13 @@ class OperationAccountService(private val accounts: OperationAccountJpaEntitySer
         require(status != ACTIVE) { "개인정보 동의 확인 후 승인 API를 이용해야 합니다." }
         return accounts.updateStatus(id, status) ?: missing()
     }
-    fun profile(id: UUID, profile: BusinessProfileData): AccountData {
+    fun profile(id: UUID, profile: OrganizationProfileData): AccountData {
         val account = accounts.find(id) ?: missing()
         val nextStatus = if (account.status == PENDING_PROFILE) PENDING_REVIEW else account.status
         return accounts.updateProfile(id, profile, nextStatus) ?: missing()
     }
-    fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData = accounts.assignBuyerGroup(id, buyerGroupId) ?: missing()
-    fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = accounts.setBuyerGroupRepresentative(groupId, accountId)
+    fun assignOrganization(id: UUID, organizationId: UUID): AccountData = accounts.assignOrganization(id, organizationId) ?: missing()
+    fun setOrganizationRepresentative(organizationId: UUID, accountId: UUID) = accounts.setOrganizationRepresentative(organizationId, accountId)
     fun consent(id: UUID, consent: ConsentCommand): AccountData {
         require(consent.consentMethod in METHODS) { "유효하지 않은 동의 방식입니다." }
         val account = accounts.find(id) ?: missing()

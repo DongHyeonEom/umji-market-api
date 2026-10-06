@@ -1,13 +1,12 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
 import com.buyeong.umji.api.operation.account.model.AccountData
-import com.buyeong.umji.api.operation.account.model.BusinessProfileData
+import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
 import com.buyeong.umji.api.operation.account.model.ConsentCommand
 import com.buyeong.umji.api.operation.account.model.ConsentData
 import com.buyeong.umji.api.operation.account.model.ManagedRole
 import com.buyeong.umji.api.operation.account.model.NewAccount
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.BusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.ConsentHistoryEntity
 import java.time.Instant
 import java.util.UUID
@@ -22,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional
 class OperationAccountJpaEntityService(
     private val accounts: AccountJpaEntityService,
     private val jdbc: JdbcTemplate,
-    private val buyerGroups: BuyerGroupJpaEntityService,
+    private val organizations: OrganizationJpaEntityService,
 ) {
     fun create(command: NewAccount): AccountData {
         val entity = accounts.save(
@@ -34,8 +33,7 @@ class OperationAccountJpaEntityService(
                 status = "PENDING_CONSENT"
             },
         )
-        command.profile?.let { saveProfile(entity, it) }
-        buyerGroups.ensureForAccount(requireNotNull(entity.publicId))
+        organizations.ensureForAccount(requireNotNull(entity.publicId), command.organizationCapability, command.profile)
         return data(entity)
     }
 
@@ -56,18 +54,18 @@ class OperationAccountJpaEntityService(
         data(entity)
     }
 
-    fun updateProfile(id: UUID, profile: BusinessProfileData, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
-        saveProfile(entity, profile)
+    fun updateProfile(id: UUID, profile: OrganizationProfileData, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+        organizations.updateBusinessProfileForAccount(id, profile)
         entity.status = nextStatus
         data(entity)
     }
 
-    fun assignBuyerGroup(id: UUID, buyerGroupId: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
-        buyerGroups.assignAccountToBusinessGroup(id, buyerGroupId)
+    fun assignOrganization(id: UUID, organizationId: UUID): AccountData? = accounts.findByPublicId(id)?.let { entity ->
+        organizations.assignAccountToOrganization(id, organizationId)
         data(entity, true)
     }
 
-    fun setBuyerGroupRepresentative(groupId: UUID, accountId: UUID) = buyerGroups.setRepresentative(groupId, accountId)
+    fun setOrganizationRepresentative(organizationId: UUID, accountId: UUID) = organizations.setRepresentative(organizationId, accountId)
 
     fun addConsent(id: UUID, consent: ConsentCommand, nextStatus: String): AccountData? = accounts.findByPublicId(id)?.let { entity ->
         val processor = accounts.findByPublicId(consent.processedBy)
@@ -143,23 +141,10 @@ class OperationAccountJpaEntityService(
         accountId,
     )
 
-    private fun saveProfile(entity: AccountEntity, data: BusinessProfileData) {
-        val profile = accounts.profile(requireNotNull(entity.id)) ?: BusinessProfileEntity().apply { account = entity }
-        profile.businessName = data.businessName
-        profile.businessRegistrationNumber = data.businessRegistrationNumber
-        profile.representativeName = data.representativeName
-        profile.businessPhone = data.businessPhone
-        profile.postalCode = data.postalCode
-        profile.address1 = data.address1
-        profile.address2 = data.address2
-        profile.status = data.status
-        accounts.saveProfile(profile)
-    }
-
     private fun data(entity: AccountEntity, includeConsents: Boolean = false): AccountData {
         val accountId = requireNotNull(entity.id)
-        val profile = accounts.profile(accountId)?.let {
-            BusinessProfileData(it.businessName, it.businessRegistrationNumber, it.representativeName, it.businessPhone, it.postalCode, it.address1, it.address2, it.status)
+        val profile = organizations.profileForAccount(requireNotNull(entity.publicId))?.let {
+            OrganizationProfileData(it.businessName, it.businessRegistrationNumber, it.representativeName, it.businessPhone, it.postalCode, it.address1, it.address2, it.status)
         }
         val consents = if (includeConsents) {
             accounts.consents(accountId).map {
@@ -168,7 +153,9 @@ class OperationAccountJpaEntityService(
         } else {
             emptyList()
         }
-        val buyerGroupId = buyerGroups.activeForAccount(requireNotNull(entity.id))?.publicId
-        return AccountData(requireNotNull(entity.publicId), entity.name, entity.phone, entity.email, entity.status, entity.tokenVersion, profile, consents, buyerGroupId)
+        val organization = organizations.activeForAccount(requireNotNull(entity.id))
+        val organizationId = organization?.publicId
+        val organizationCapabilities = organization?.id?.let(organizations::capabilitiesForOrganization).orEmpty()
+        return AccountData(requireNotNull(entity.publicId), entity.name, entity.phone, entity.email, entity.status, entity.tokenVersion, profile, consents, organizationId, organizationCapabilities)
     }
 }
