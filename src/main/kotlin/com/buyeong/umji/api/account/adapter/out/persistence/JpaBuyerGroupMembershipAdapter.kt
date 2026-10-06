@@ -4,6 +4,7 @@ import com.buyeong.umji.api.account.application.model.BuyerGroupInvitation
 import com.buyeong.umji.api.account.application.model.BuyerGroupJoinRequest
 import com.buyeong.umji.api.account.application.model.BuyerGroupSearchResult
 import com.buyeong.umji.api.account.application.model.BuyerGroupSummary
+import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
 import com.buyeong.umji.api.account.application.port.out.BuyerGroupMembershipPort
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
@@ -17,6 +18,8 @@ import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberEntity
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupRepository
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupBusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupBusinessProfileRepository
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -30,6 +33,7 @@ class JpaBuyerGroupMembershipAdapter(
     private val invitations: BuyerGroupInvitationRepository,
     private val joinRequests: BuyerGroupJoinRequestRepository,
     private val buyerGroupEntities: BuyerGroupJpaEntityService,
+    private val businessProfiles: BuyerGroupBusinessProfileRepository,
 ) : BuyerGroupMembershipPort {
     @Transactional(readOnly = true)
     override fun current(accountId: UUID): BuyerGroupSummary? {
@@ -58,6 +62,61 @@ class JpaBuyerGroupMembershipAdapter(
                 status = ACTIVE
             },
         )
+        return group.toSummary(account)
+    }
+
+    @Transactional
+    override fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary {
+        val account = accounts.lockByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
+        val accountInternalId = requireNotNull(account.id)
+        require(members.findFirstByAccount_IdAndStatus(accountInternalId, ACTIVE) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
+        val business = command.business
+        val groupType = when (command.type) {
+            INDIVIDUAL -> {
+                require(business == null) { "개인 그룹 등록에는 사업자등록 정보가 없어야 합니다." }
+                INDIVIDUAL
+            }
+            BUSINESS -> {
+                requireNotNull(business) { "사업자 그룹 등록 정보가 필요합니다." }
+                BUSINESS
+            }
+            else -> throw IllegalArgumentException("지원하지 않는 그룹 유형입니다.")
+        }
+        val group = groups.saveAndFlush(
+            BuyerGroupEntity().apply {
+                this.groupType = groupType
+                displayName = business?.businessName?.trim() ?: account.name
+                status = ACTIVE
+                representativeAccount = account
+            },
+        )
+        members.saveAndFlush(
+            BuyerGroupMemberEntity().apply {
+                buyerGroup = group
+                this.account = account
+                status = ACTIVE
+            },
+        )
+        if (business != null) {
+            businessProfiles.save(
+                BuyerGroupBusinessProfileEntity().apply {
+                    buyerGroup = group
+                    businessName = business.businessName.trim()
+                    businessRegistrationNumber = business.businessRegistrationNumber
+                    representativeName = business.representativeName.trim()
+                    postalCode = business.postalCode.trim()
+                    address1 = business.address1.trim()
+                    address2 = business.address2?.trim()?.ifBlank { null }
+                    businessIndustry = business.businessIndustry.trim()
+                    businessItem = business.businessItem.trim()
+                    taxInvoiceEmail = business.email?.trim()?.ifBlank { null }
+                    status = COMPLETED
+                    businessRegistrationVerifiedAt = Instant.now()
+                    businessRegistrationVerificationStatus = "ACTIVE"
+                    businessRegistrationConfirmedAt = Instant.now()
+                },
+            )
+        }
         return group.toSummary(account)
     }
 
@@ -220,6 +279,7 @@ class JpaBuyerGroupMembershipAdapter(
     )
 
     private companion object {
+        const val COMPLETED = "COMPLETED"
         const val ACTIVE = "ACTIVE"
         const val LEFT = "LEFT"
         const val PENDING = "PENDING"
@@ -227,6 +287,7 @@ class JpaBuyerGroupMembershipAdapter(
         const val DECLINED = "DECLINED"
         const val APPROVED = "APPROVED"
         const val INDIVIDUAL = "INDIVIDUAL"
+        const val BUSINESS = "BUSINESS"
         const val INACTIVE = "INACTIVE"
     }
 }

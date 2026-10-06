@@ -1,0 +1,3 @@
+UPDATE buyer_group_business_profile
+SET business_registration_confirmed_at = business_registration_verified_at
+WHERE business_registration_verified_at IS NOT NULL;

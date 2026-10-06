@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
+import java.time.Instant
 import java.util.UUID
 
 @Schema(description = "구매자 그룹 공급받는자 세금계산서 정보 수정 요청")
@@ -47,6 +48,16 @@ data class BuyerGroupTaxInvoiceProfileResponse(
     @field:Schema(description = "공급받는자 종목", example = "철물·공구", type = "string", required = true) val businessItem: String?,
     @field:Schema(description = "공급받는자 세금계산서 이메일", example = "billing@example.com", type = "string", required = true) val email: String?,
     @field:Schema(description = "세금계산서 발행 필수 정보 완성 여부", example = "true", type = "boolean", required = true, implementation = Boolean::class) val complete: Boolean,
+    @field:Schema(
+        description = "사업자등록 상태조회 결과: PENDING, ACTIVE, TEMPORARILY_CLOSED, CLOSED, UNKNOWN, ERROR, NOT_REQUIRED",
+        example = "ACTIVE",
+        type = "string",
+        required = true,
+    ) val businessRegistrationVerificationStatus: String,
+    @field:Schema(description = "사업자등록 상태조회 완료 시각", type = "string", format = "date-time", required = false)
+    val businessRegistrationVerifiedAt: Instant?,
+    @field:Schema(description = "대표자의 사업자정보 확인 시각", type = "string", format = "date-time", required = false)
+    val businessRegistrationConfirmedAt: Instant?,
 )
 
 fun BuyerGroupTaxInvoiceProfile.toResponse() = BuyerGroupTaxInvoiceProfileResponse(
@@ -62,4 +73,7 @@ fun BuyerGroupTaxInvoiceProfile.toResponse() = BuyerGroupTaxInvoiceProfileRespon
     businessItem,
     email,
     complete,
+    businessRegistrationVerificationStatus,
+    businessRegistrationVerifiedAt,
+    businessRegistrationConfirmedAt,
 )

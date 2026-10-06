@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V31이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V34가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -104,9 +104,6 @@ erDiagram
         VARCHAR business_registration_number "사업자등록번호, nullable"
         VARCHAR representative_name "대표자명, nullable"
         VARCHAR business_phone "업체 연락처, nullable"
-        VARCHAR business_industry "세금계산서 업태, nullable"
-        VARCHAR business_item "세금계산서 종목, nullable"
-        VARCHAR tax_invoice_email "세금계산서 이메일, nullable"
         VARCHAR postal_code "우편번호, nullable"
         VARCHAR address1 "기본 주소, nullable"
         VARCHAR address2 "상세 주소, nullable"
@@ -138,8 +135,14 @@ erDiagram
         BIGINT buyer_group_id FK,UK "사업자 그룹 ID"
         VARCHAR business_name "업체명"
         VARCHAR business_registration_number "사업자등록번호, nullable"
+        DATETIME business_registration_verified_at "신규 사용자 그룹 생성 시 국세청 폐업 여부 확인 시각, nullable"
+        VARCHAR business_registration_verification_status "사업자 상태조회 결과"
+        DATETIME business_registration_confirmed_at "대표자 정보 확인 시각, nullable"
         VARCHAR representative_name "대표자명, nullable"
         VARCHAR business_phone "업체 연락처, nullable"
+        VARCHAR business_industry "업태, nullable"
+        VARCHAR business_item "종목, nullable"
+        VARCHAR tax_invoice_email "세금계산서 이메일, nullable"
         VARCHAR postal_code "우편번호, nullable"
         VARCHAR address1 "기본 주소, nullable"
         VARCHAR address2 "상세 주소, nullable"
@@ -576,6 +579,9 @@ erDiagram
 | V29 | 기존 상위 관리자 token version 및 refresh session 무효화 |
 | V30 | 웹 로그인 시도 제한 집계 테이블 추가 |
 | V31 | 그룹 세금계산서 부가 정보 및 주문별 공급자·공급받는자 snapshot과 발행일자 컬럼 추가 |
+| V32 | 신규 사업자 그룹 등록 시 사업자 상태 확인 시각 추가 |
+| V33 | 운영자 사전등록 사업자 상태조회 및 대표자 확인 상태 추가 |
+| V34 | 기존 사업자 상태확인 시각의 대표자 확인 시각 backfill |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

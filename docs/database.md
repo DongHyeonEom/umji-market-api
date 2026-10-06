@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V31으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V34으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -55,6 +55,9 @@
 | V29 | MFA 적용 전 상위 관리자 token version 갱신 및 기존 refresh session 폐기 |
 | V30 | 웹 로그인 실패 횟수 제한용 전화번호·원격 주소 hash와 15분 window 저장 |
 | V31 | 그룹 세금계산서 업태·종목·이메일, 주문별 공급자·공급받는자 snapshot 및 송장 등록 후 발행 준비 일자 추가 |
+| V32 | 사용자 신규 사업자 그룹 등록 시 국세청 상태 확인 완료 시각 저장 |
+| V33 | 운영자 사전등록 사업자 그룹 상태조회 및 대표자 확인 상태 저장 |
+| V34 | 기존 사업자 상태확인 시각을 대표자 정보 확인 시각으로 backfill |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -97,6 +100,8 @@
 - `business_profile`은 기존 계정 기능의 호환을 위해 유지하고, V18 시점의 사업자 프로필은 `buyer_group_business_profile`로 복사함.<br>
   V31부터 그룹 발행 프로필에 업태·종목·선택 이메일을 보관함. 주문은 발행 요청 당시 공급자·공급받는자 정보를 복사하며 기존 그룹 정보 변경의 영향을 받지 않음.<br>
 - 세금계산서 품목은 주문 항목의 상품명·SKU 코드·수량·`line_amount`를 사용. 품목 공급가액과 합계는 주문 당시 확정 금액이며 별도로 재산출하지 않음.<br>
+- 사업자등록 주소는 `buyer_group_business_profile`의 사업자등록 프로필에 저장. 배송지는 `buyer_group_address`에서 별도 관리하며 두 주소는 자동 동기화하지 않음.<br>
+- 사용자가 사업자 그룹을 최초 생성할 때 국세청 사업자등록 상태조회에서 폐업 상태가 아님을 확인하고 `business_registration_verified_at`을 기록. 운영자가 초기 사업자 프로필을 입력한 그룹에는 해당 시각이 없으며 신규 생성 검증을 다시 요구하지 않음.<br>
 - 주문 생성 시 발행 정보는 `WAITING_FOR_SHIPMENT` 상태로 snapshot. 배송 관리자의 최초 송장 등록 시 `ordered_at`의 KST 날짜를 작성일자와 제공일자로 함께 저장하고 `READY_FOR_ISSUANCE`로 전환.<br>
 
 ## 아직 없는 스키마

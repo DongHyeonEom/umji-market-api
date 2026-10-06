@@ -15,6 +15,9 @@ data class BuyerGroupTaxInvoiceProfile(
     val businessItem: String?,
     val email: String?,
     val complete: Boolean,
+    val businessRegistrationVerificationStatus: String,
+    val businessRegistrationVerifiedAt: java.time.Instant?,
+    val businessRegistrationConfirmedAt: java.time.Instant?,
 )
 
 data class BuyerGroupTaxInvoiceProfileCommand(

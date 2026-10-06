@@ -58,6 +58,7 @@ interface BuyerGroupJoinRequestRepository : JpaRepository<BuyerGroupJoinRequestE
 
 interface BuyerGroupBusinessProfileRepository : JpaRepository<BuyerGroupBusinessProfileEntity, Long> {
     fun findByBuyerGroup_Id(buyerGroupId: Long): BuyerGroupBusinessProfileEntity?
+    fun findTop100ByBusinessRegistrationVerificationStatusOrderByIdAsc(status: String): List<BuyerGroupBusinessProfileEntity>
 }
 
 interface BuyerGroupAddressRepository : JpaRepository<BuyerGroupAddressEntity, Long> {

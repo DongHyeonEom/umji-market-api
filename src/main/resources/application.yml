@@ -72,6 +72,10 @@ management:
         enabled: true
 
 umji:
+  business-registration:
+    status:
+      base-url: ${UMJI_BUSINESS_REGISTRATION_STATUS_BASE_URL:https://api.odcloud.kr/api}
+      service-key: ${UMJI_BUSINESS_REGISTRATION_STATUS_SERVICE_KEY:}
   tax-invoice:
     supplier:
       business-registration-number: ${UMJI_TAX_INVOICE_SUPPLIER_BUSINESS_REGISTRATION_NUMBER:}

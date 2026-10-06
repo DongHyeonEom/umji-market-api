@@ -15,6 +15,7 @@ class AccountJpaEntityService(
 ) {
     fun findById(id: Long): AccountEntity? = accounts.findById(id).orElse(null)
     fun findByPublicId(id: UUID): AccountEntity? = accounts.findByPublicId(id)
+    @Transactional fun lockByPublicId(id: UUID): AccountEntity? = accounts.findLockedByPublicId(id)
     fun findByPhoneNormalized(phone: String): AccountEntity? = accounts.findByPhoneNormalized(phone)
     fun findAllByStatus(status: String, pageable: Pageable): Page<AccountEntity> = accounts.findAllByStatus(status, pageable)
     fun findAll(pageable: Pageable): Page<AccountEntity> = accounts.findAll(pageable)

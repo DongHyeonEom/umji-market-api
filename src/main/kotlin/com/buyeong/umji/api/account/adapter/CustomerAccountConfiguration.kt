@@ -6,6 +6,7 @@ import com.buyeong.umji.api.account.application.CustomerAccountService
 import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
 import com.buyeong.umji.api.account.application.port.`in`.CustomerAccountUseCase
 import com.buyeong.umji.api.account.application.port.out.BuyerGroupMembershipPort
+import com.buyeong.umji.api.account.application.port.out.BusinessRegistrationStatusPort
 import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupTaxInvoiceProfileUseCase
 import com.buyeong.umji.api.account.application.port.out.BuyerGroupTaxInvoiceProfilePort
 import com.buyeong.umji.api.account.application.port.out.CustomerAccountPort
@@ -18,7 +19,10 @@ class CustomerAccountConfiguration {
     fun customerAccountUseCase(accounts: CustomerAccountPort): CustomerAccountUseCase = CustomerAccountService(accounts)
 
     @Bean
-    fun buyerGroupMembershipUseCase(groups: BuyerGroupMembershipPort): BuyerGroupMembershipUseCase = BuyerGroupMembershipService(groups)
+    fun buyerGroupMembershipUseCase(
+        groups: BuyerGroupMembershipPort,
+        registrationStatus: BusinessRegistrationStatusPort,
+    ): BuyerGroupMembershipUseCase = BuyerGroupMembershipService(groups, registrationStatus)
 
     @Bean
     fun buyerGroupTaxInvoiceProfileUseCase(profiles: BuyerGroupTaxInvoiceProfilePort): BuyerGroupTaxInvoiceProfileUseCase =

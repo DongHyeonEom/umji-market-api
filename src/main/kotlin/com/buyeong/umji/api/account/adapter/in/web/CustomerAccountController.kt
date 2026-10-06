@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.account.adapter.`in`.web
 
 import com.buyeong.umji.api.account.model.BuyerGroupOnboardingResponse
+import com.buyeong.umji.api.account.model.BuyerGroupRegistrationRequest
 import com.buyeong.umji.api.account.model.CreateIndividualGroupRequest
 import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileRequest
 import com.buyeong.umji.api.account.model.CustomerProfileResponse
@@ -102,6 +103,12 @@ class CustomerAccountController(
     @ResponseStatus(HttpStatus.CREATED)
     fun createIndividualGroup(@Valid @RequestBody request: CreateIndividualGroupRequest) =
         groups.createIndividualGroup(currentAccounts.activeAccountPublicId(), request.name).toResponse()
+
+    @Operation(summary = "구매자 그룹 유형 등록", description = "미소속 사용자의 개인 또는 사업자 그룹 등록. 사업자 그룹은 사업자등록 상태 확인 후 등록")
+    @PostMapping("/groups")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun registerGroup(@Valid @RequestBody request: BuyerGroupRegistrationRequest) =
+        groups.register(currentAccounts.activeAccountPublicId(), request.toCommand()).toResponse()
 
     @Operation(summary = "구매자 그룹조회", description = "사용자 프로필·배송지·구매자 그룹 가입 API. /groups/search 경로에서 구매자 그룹조회를 수행")
     @GetMapping("/groups/search")

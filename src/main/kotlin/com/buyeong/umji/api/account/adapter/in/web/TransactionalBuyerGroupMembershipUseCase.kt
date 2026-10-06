@@ -4,6 +4,7 @@ import com.buyeong.umji.api.account.application.model.BuyerGroupInvitation
 import com.buyeong.umji.api.account.application.model.BuyerGroupJoinRequest
 import com.buyeong.umji.api.account.application.model.BuyerGroupSearchResult
 import com.buyeong.umji.api.account.application.model.BuyerGroupSummary
+import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
 import com.buyeong.umji.api.account.application.port.`in`.BuyerGroupMembershipUseCase
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,6 +17,8 @@ class TransactionalBuyerGroupMembershipUseCase(private val groups: BuyerGroupMem
 
     @Transactional
     fun createIndividualGroup(accountId: UUID, name: String): BuyerGroupSummary = groups.createIndividualGroup(accountId, name)
+
+    fun register(accountId: UUID, command: BuyerGroupRegistrationCommand): BuyerGroupSummary = groups.register(accountId, command)
 
     @Transactional(readOnly = true)
     fun search(phone: String): List<BuyerGroupSearchResult> = groups.search(phone)

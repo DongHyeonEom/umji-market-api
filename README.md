@@ -27,6 +27,8 @@ Controller는 입력 adapter, application UseCase는 업무 흐름, JPA 구현�
 
 공급자 세금계산서 정보는 `application.yml`에서 `UMJI_TAX_INVOICE_SUPPLIER_BUSINESS_REGISTRATION_NUMBER`, `UMJI_TAX_INVOICE_SUPPLIER_BUSINESS_NAME`, `UMJI_TAX_INVOICE_SUPPLIER_NAME`, `UMJI_TAX_INVOICE_SUPPLIER_ADDRESS`, `UMJI_TAX_INVOICE_SUPPLIER_INDUSTRY`, `UMJI_TAX_INVOICE_SUPPLIER_ITEM`, `UMJI_TAX_INVOICE_SUPPLIER_EMAIL` 환경 변수로 주입. 일곱 값이 모두 설정되어야 발행 요청 주문 생성 가능. 실제 공급자 값은 저장소에 저장하지 않음.
 
+사용자가 사업자 구매자 그룹을 새로 생성할 때 국세청 사업자등록 상태조회 API를 호출. 공공데이터포털에서 발급한 인증키를 `UMJI_BUSINESS_REGISTRATION_STATUS_SERVICE_KEY`로 주입. 운영자 사전등록 그룹은 백그라운드 상태 확인 후 계속사업자·휴업자인 경우 대표자가 사업자 정보를 확인·완성. 폐업·확인 오류·미확인 상태에서는 세금계산서 발행 정보 확정 불가. 배송지는 사업자등록 주소와 별도로 그룹 공용 배송지에 등록.
+
 FCM 발송 사용 시 `UMJI_NOTIFICATION_FCM_ENABLED=true`, `UMJI_NOTIFICATION_FCM_PROJECT_ID`와 Google Application Default Credentials를 설정함. APNs 발송 사용 시 `UMJI_NOTIFICATION_APNS_ENABLED=true`, `UMJI_NOTIFICATION_APNS_TEAM_ID`, `UMJI_NOTIFICATION_APNS_KEY_ID`, `UMJI_NOTIFICATION_APNS_PRIVATE_KEY_PATH`, `UMJI_NOTIFICATION_APNS_TOPIC`, `UMJI_NOTIFICATION_APNS_ENVIRONMENT`를 설정함. provider 미사용이 기본값이며 자격 증명은 저장소 밖에서 주입.
 
 로컬 프로필은 인증을 우회하는 `BYPASS` 설정을 사용함.
