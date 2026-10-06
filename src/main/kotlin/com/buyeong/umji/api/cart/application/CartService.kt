@@ -86,6 +86,7 @@ class CartService(
                 it.sku.salesStatus,
                 it.sku.salesOfferId,
                 it.sku.channelCode,
+                it.sku.unitsPerSale,
             )
         },
     )
@@ -132,6 +133,7 @@ class CartService(
         productSku.name,
         salePrice,
         salesStatus,
+        unitsPerSale,
     )
 
     private companion object {

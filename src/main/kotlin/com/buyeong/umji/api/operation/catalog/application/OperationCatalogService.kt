@@ -48,6 +48,8 @@ class OperationCatalogService(private val catalog: OperationCatalogJpaEntityServ
         val channelCode = channel(command.channelCode)
         require(command.salePrice >= 0) { "판매 가격은 0원 이상이어야 합니다." }
         require(command.listPrice == null || command.listPrice >= 0) { "정가는 0원 이상이어야 합니다." }
+        require(command.unitsPerSale == null || command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
+        require(channelCode != "RETAIL" || command.unitsPerSale == null || command.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
         validateSales(command.salesStatus)
         return catalog.updateSalesOffer(command.copy(channelCode = channelCode)) ?: missing()
     }

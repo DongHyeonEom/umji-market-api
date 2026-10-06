@@ -58,7 +58,7 @@ class CartController(
 
     private fun CartView.toResponse() = CartResponse(
         items.map {
-            CartItemResponse(it.id, it.skuId, it.skuCode, it.productName, it.skuName, it.quantity, it.unitPrice, it.salesStatus, it.salesOfferId, it.channelCode)
+            CartItemResponse(it.id, it.skuId, it.skuCode, it.productName, it.skuName, it.quantity, it.unitPrice, it.salesStatus, it.salesOfferId, it.channelCode, it.unitsPerSale)
         },
     )
 }

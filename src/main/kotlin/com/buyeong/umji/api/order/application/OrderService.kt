@@ -1,26 +1,26 @@
 package com.buyeong.umji.api.order.application
 
+import com.buyeong.umji.api.cart.application.CartService
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.notification.application.model.NotificationEventType
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.notification.application.NotificationEventService
+import com.buyeong.umji.api.notification.application.model.NotificationEventType
 import com.buyeong.umji.api.order.application.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.application.model.OrderDraft
 import com.buyeong.umji.api.order.application.model.OrderItemDraft
 import com.buyeong.umji.api.order.application.model.OrderPage
 import com.buyeong.umji.api.order.application.model.OrderView
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshotDraft
-import com.buyeong.umji.api.cart.application.CartService
-import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.payment.adapter.BankAccountInstructionsService
+import com.buyeong.umji.api.payment.adapter.TaxInvoiceSupplierAdapter
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.OrderCheckoutJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
-import com.buyeong.umji.api.payment.adapter.TaxInvoiceSupplierAdapter
-import com.buyeong.umji.api.exception.ClientBadRequestException
-import java.time.Instant
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -98,7 +98,7 @@ class OrderService(
         val bankAccount = if (selectedPreference) bankAccounts.taxInvoice() else bankAccounts.standard()
         val lines = checkoutCart.cart(accountPublicId).items.map {
             com.buyeong.umji.api.order.application.model.CheckoutLine(
-                it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus, it.salesOfferId, it.channelCode,
+                it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus, it.salesOfferId, it.channelCode, it.unitsPerSale,
             )
         }
         require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
@@ -119,8 +119,10 @@ class OrderService(
                 reservationKey = UUID.randomUUID(),
                 status = RESERVED,
                 salesOfferId = line.salesOfferId,
+                unitsPerSale = line.unitsPerSale,
             )
         }
+        items.forEach { Math.multiplyExact(it.quantity, it.unitsPerSale) }
         val subtotal = items.sumOf { it.lineAmount }
         val saved = orders.save(
             OrderDraft(
@@ -138,7 +140,7 @@ class OrderService(
         if (updateDefaultTaxInvoicePreference && selectedPreference != defaultPreference) {
             orders.updateDefaultTaxInvoiceRequested(accountPublicId, selectedPreference)
         }
-        saved.items.forEach { item -> inventory.reserve(item.skuId, item.quantity, item.reservationKey, null) }
+        saved.items.forEach { item -> inventory.reserve(item.skuId, Math.multiplyExact(item.quantity, item.unitsPerSale), item.reservationKey, null) }
         checkoutCart.clearForCheckout(accountPublicId)
         notifications.record(NotificationEventType.ORDER_CREATED, saved.id)
         return saved

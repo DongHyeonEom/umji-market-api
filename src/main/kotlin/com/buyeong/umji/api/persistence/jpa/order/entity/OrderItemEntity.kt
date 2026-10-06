@@ -57,6 +57,9 @@ class OrderItemEntity {
     @Column(nullable = false)
     var quantity: Int = 0
 
+    @Column(name = "units_per_sale", nullable = false)
+    var unitsPerSale: Int = 1
+
     @Column(name = "line_amount", nullable = false)
     var lineAmount: Long = 0
 

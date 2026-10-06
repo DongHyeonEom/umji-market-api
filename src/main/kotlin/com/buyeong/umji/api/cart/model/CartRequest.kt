@@ -14,10 +14,10 @@ data class AddCartItemRequest(
     ) val skuId: UUID? = null,
     @field:Schema(description = "채널별 판매 오퍼 공개 식별자(UUID)", format = "uuid", type = "string") val salesOfferId: UUID? = null,
     @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", required = true) val channelCode: String = "WHOLESALE",
-    @field:Min(1) @field:Schema(description = "수량", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
+    @field:Min(1) @field:Schema(description = "판매 단위 수량. WHOLESALE은 박스 수, RETAIL은 낱개 수", example = "2", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
 )
 
 @Schema(description = "UpdateCartItemRequest API 데이터 모델")
 data class UpdateCartItemRequest(
-    @field:Min(1) @field:Schema(description = "수량", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
+    @field:Min(1) @field:Schema(description = "판매 단위 수량. WHOLESALE은 박스 수, RETAIL은 낱개 수", example = "2", format = "int32", type = "integer", required = true, implementation = Int::class) val quantity: Int,
 )

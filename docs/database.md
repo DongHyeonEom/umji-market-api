@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마는 MySQL 8.0 이상과 Flyway V2–V35으로 관리함.<br>
+현재 스키마는 MySQL 8.0 이상과 Flyway V2–V36으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -59,6 +59,7 @@
 | V33 | 운영자 사전등록 사업자 그룹 상태조회 및 대표자 확인 상태 저장 |
 | V34 | 기존 사업자 상태확인 시각을 대표자 정보 확인 시각으로 backfill |
 | V35 | `sales_channel`, 채널별 `category`, `channel_product_listing`, `sales_offer` 추가 및 기존 상품·SKU·장바구니·주문 `WHOLESALE` backfill; 주문 채널·오퍼 참조 추가 |
+| V36 | `sales_offer.units_per_sale` 및 `order_item.units_per_sale` 추가, 기존 데이터는 1로 backfill |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -99,6 +100,8 @@
   생성 계정은 이력 식별용이며 주소 접근 범위는 구매자 그룹 기준.<br>
 - `purchase_order`의 배송지 snapshot은 주문 당시 수령인·연락처·주소를 보존함.<br>
   주소 원본과 외래 키를 두지 않아 그룹 주소 변경·삭제가 기존 주문에 영향을 주지 않음.<br>
+- `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. RETAIL은 1, WHOLESALE은 박스 입수 수량으로 사용.<br>
+- `order_item.quantity`와 `unit_price`는 판매 단위 기준이며 `units_per_sale`은 주문 시점 snapshot. 재고 예약 수량은 두 수량의 곱.<br>
 - `business_profile`은 기존 계정 기능의 호환을 위해 유지하고, V18 시점의 사업자 프로필은 `buyer_group_business_profile`로 복사함.<br>
   V31부터 그룹 발행 프로필에 업태·종목·선택 이메일을 보관함. 주문은 발행 요청 당시 공급자·공급받는자 정보를 복사하며 기존 그룹 정보 변경의 영향을 받지 않음.<br>
 - 세금계산서 품목은 주문 항목의 상품명·SKU 코드·수량·`line_amount`를 사용. 품목 공급가액과 합계는 주문 당시 확정 금액이며 별도로 재산출하지 않음.<br>

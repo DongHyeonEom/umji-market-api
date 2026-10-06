@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.inventory.adapter.`in`.web
 
+import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.inventory.application.model.MovementPageState
 import com.buyeong.umji.api.inventory.application.model.MovementState
 import com.buyeong.umji.api.inventory.application.model.StockView
-import com.buyeong.umji.api.inventory.application.InventoryService
 import com.buyeong.umji.api.inventory.model.AdjustInventoryRequest
 import com.buyeong.umji.api.inventory.model.InventoryMovementPageResponse
 import com.buyeong.umji.api.inventory.model.InventoryMovementResponse
@@ -54,7 +54,10 @@ class OperationInventoryController(
         @Parameter(description = "페이지당 조회할 항목 수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
     ): InventoryMovementPageResponse = inventoryService.movements(skuId, page, size).toResponse()
 
-    private fun StockView.toResponse() = InventoryStockResponse(skuId, skuCode, onHand, reserved, available, safety)
+    private fun StockView.toResponse() = InventoryStockResponse(
+        skuId, skuCode, onHand, reserved, available, safety, unitsPerSale, onHandBoxes, onHandRemainder,
+        reservedBoxes, reservedRemainder, availableBoxes, availableRemainder,
+    )
     private fun MovementPageState.toResponse() = InventoryMovementPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
     private fun MovementState.toResponse() = InventoryMovementResponse(id, sku.id, sku.code, type, delta, referenceType, referenceId, memo, occurredAt)
 }

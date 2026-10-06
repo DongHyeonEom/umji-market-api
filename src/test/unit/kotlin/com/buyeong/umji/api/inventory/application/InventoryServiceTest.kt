@@ -2,8 +2,9 @@ package com.buyeong.umji.api.inventory.application
 
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import com.buyeong.umji.api.persistence.jpa.inventory.InventoryJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.inventory.InventoryMovementEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.InventoryStockEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.StockReservationEntity
 import io.kotest.assertions.throwables.shouldThrow
@@ -17,11 +18,13 @@ import java.util.UUID
 class InventoryServiceTest : DescribeSpec({
     val catalog = mockk<CatalogJpaEntityService>()
     val inventory = mockk<InventoryJpaEntityService>()
-    val service = InventoryService(catalog, inventory)
+    val salesOffers = mockk<SalesOfferRepository>()
+    val service = InventoryService(catalog, inventory, salesOffers)
     val skuId = UUID.randomUUID()
     val skuEntity = mockk<ProductSkuEntity>()
 
     beforeTest {
+        every { salesOffers.findBySalesChannel_CodeAndProductSku_PublicId("WHOLESALE", skuId) } returns mockk<SalesOfferEntity> { every { unitsPerSale } returns 12 }
         every { catalog.sku(skuId) } returns skuEntity
         every { skuEntity.id } returns 9L
         every { skuEntity.publicId } returns skuId
@@ -47,6 +50,13 @@ class InventoryServiceTest : DescribeSpec({
 
             result.onHand shouldBe 15
             result.available shouldBe 13
+            result.unitsPerSale shouldBe 12
+            result.onHandBoxes shouldBe 1
+            result.onHandRemainder shouldBe 3
+            result.reservedBoxes shouldBe 0
+            result.reservedRemainder shouldBe 2
+            result.availableBoxes shouldBe 1
+            result.availableRemainder shouldBe 1
             verify(exactly = 1) {
                 inventory.saveMovement(match { it.movementType == "ADJUSTMENT" && it.quantityDelta == 5 && it.referenceType == "INITIAL_RECEIPT" })
             }

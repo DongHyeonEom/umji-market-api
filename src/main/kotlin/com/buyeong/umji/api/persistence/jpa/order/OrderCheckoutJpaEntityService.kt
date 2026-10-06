@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.order
 
-import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.order.application.model.OrderDraft
 import com.buyeong.umji.api.order.application.model.OrderItemDraft
 import com.buyeong.umji.api.order.application.model.OrderItemView
@@ -11,8 +11,8 @@ import com.buyeong.umji.api.order.application.model.TaxInvoiceBuyer
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSnapshot
 import com.buyeong.umji.api.order.application.model.TaxInvoiceSupplier
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupMemberRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import org.springframework.data.domain.PageRequest
@@ -20,7 +20,6 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.ZoneOffset
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -134,6 +133,7 @@ class OrderCheckoutJpaEntityService(
         skuCode = this@toEntity.skuCode
         unitPrice = this@toEntity.unitPrice
         quantity = this@toEntity.quantity
+        unitsPerSale = this@toEntity.unitsPerSale
         lineAmount = this@toEntity.lineAmount
         reservationKey = this@toEntity.reservationKey
         status = this@toEntity.status
@@ -153,6 +153,7 @@ class OrderCheckoutJpaEntityService(
                 productName = item.productName, skuName = item.skuName, skuCode = item.skuCode,
                 unitPrice = item.unitPrice, quantity = item.quantity, lineAmount = item.lineAmount, status = item.status,
                 salesOfferId = requireNotNull(item.salesOffer.publicId),
+                unitsPerSale = item.unitsPerSale,
             )
         },
         paymentMethod = payment.paymentMethod,

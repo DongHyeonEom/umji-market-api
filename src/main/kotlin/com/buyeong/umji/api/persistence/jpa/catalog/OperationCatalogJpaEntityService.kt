@@ -5,9 +5,9 @@ import com.buyeong.umji.api.operation.catalog.application.model.BrandCommand
 import com.buyeong.umji.api.operation.catalog.application.model.BrandView
 import com.buyeong.umji.api.operation.catalog.application.model.CatalogResource
 import com.buyeong.umji.api.operation.catalog.application.model.CategoryCommand
+import com.buyeong.umji.api.operation.catalog.application.model.CategoryView
 import com.buyeong.umji.api.operation.catalog.application.model.ChannelCategoryCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ChannelListingCommand
-import com.buyeong.umji.api.operation.catalog.application.model.CategoryView
 import com.buyeong.umji.api.operation.catalog.application.model.ImageCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ImageView
 import com.buyeong.umji.api.operation.catalog.application.model.OptionCommand
@@ -17,11 +17,10 @@ import com.buyeong.umji.api.operation.catalog.application.model.ProductCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductPageView
 import com.buyeong.umji.api.operation.catalog.application.model.ProductStatusCommand
 import com.buyeong.umji.api.operation.catalog.application.model.ProductView
-import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
-import com.buyeong.umji.api.operation.catalog.application.model.SkuView
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferCommand
 import com.buyeong.umji.api.operation.catalog.application.model.SalesOfferView
-
+import com.buyeong.umji.api.operation.catalog.application.model.SkuCommand
+import com.buyeong.umji.api.operation.catalog.application.model.SkuView
 import com.buyeong.umji.api.persistence.jpa.catalog.BrandEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.CategoryEntity
@@ -31,8 +30,8 @@ import com.buyeong.umji.api.persistence.jpa.catalog.ProductOptionEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductOptionValueEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ChannelProductListingEntity
-import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesChannelEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesChannelRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
@@ -121,6 +120,7 @@ class OperationCatalogJpaEntityService(
     }
 
     fun updateSalesOffer(command: SalesOfferCommand): SalesOfferView? {
+        require(command.unitsPerSale == null || command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
         val channel = channel(command.channelCode)
         val sku = catalog.sku(command.skuId) ?: return null
         val offer = offers.findBySalesChannel_IdAndProductSku_Id(requireNotNull(channel.id), requireNotNull(sku.id))
@@ -131,6 +131,8 @@ class OperationCatalogJpaEntityService(
         offer.salePrice = command.salePrice
         offer.listPrice = command.listPrice
         offer.salesStatus = command.salesStatus
+        offer.unitsPerSale = command.unitsPerSale ?: offer.unitsPerSale
+        require(command.channelCode != RETAIL || offer.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
         return offers.save(offer).toView()
     }
     fun createBrand(
@@ -293,11 +295,18 @@ class OperationCatalogJpaEntityService(
         offer.salePrice = salePrice
         offer.listPrice = listPrice
         offer.salesStatus = salesStatus
+        offer.unitsPerSale = 1
         offers.save(offer)
     }
 
     private fun SalesOfferEntity.toView() = SalesOfferView(
-        requireNotNull(publicId), salesChannel.code, requireNotNull(productSku.publicId), salePrice, listPrice, salesStatus,
+        requireNotNull(publicId),
+        salesChannel.code,
+        requireNotNull(productSku.publicId),
+        salePrice,
+        listPrice,
+        salesStatus,
+        unitsPerSale,
     )
 
     private fun ProductEntity.toView(details: Boolean = false): ProductView {
@@ -341,5 +350,6 @@ class OperationCatalogJpaEntityService(
 
     private companion object {
         const val WHOLESALE = "WHOLESALE"
+        const val RETAIL = "RETAIL"
     }
 }
