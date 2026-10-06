@@ -2,7 +2,7 @@ package com.buyeong.umji.api.notification.adapter
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.notification.application.model.NotificationDevicePlatform
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationDeviceTokenUseCase
+import com.buyeong.umji.api.notification.application.NotificationDeviceTokenService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -25,7 +25,7 @@ class NotificationDeviceTokenMySqlIntegrationTest {
     private lateinit var jdbc: JdbcTemplate
 
     @Autowired
-    private lateinit var tokens: NotificationDeviceTokenUseCase
+    private lateinit var tokens: NotificationDeviceTokenService
 
     @Test
     fun `duplicate token registration transfers owner, keeps one row, and revocation is owner scoped`() {

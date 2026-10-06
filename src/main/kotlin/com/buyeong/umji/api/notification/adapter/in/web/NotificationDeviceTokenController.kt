@@ -3,7 +3,7 @@ package com.buyeong.umji.api.notification.adapter.`in`.web
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.notification.application.model.NotificationDevicePlatform
-import com.buyeong.umji.api.notification.application.port.`in`.NotificationDeviceTokenUseCase
+import com.buyeong.umji.api.notification.application.NotificationDeviceTokenService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -25,7 +25,7 @@ import java.util.UUID
 @Tag(name = "알림 기기 token", description = "인증 계정의 FCM·APNs 기기 token 관리 API")
 class NotificationDeviceTokenController(
     private val currentAccounts: CurrentAccountPort,
-    private val tokens: NotificationDeviceTokenUseCase,
+    private val tokens: NotificationDeviceTokenService,
 ) {
     @Operation(summary = "기기 token 등록·갱신", description = "현재 활성 계정의 기기 push token을 등록하거나 동일 token을 멱등 갱신")
     @PostMapping
