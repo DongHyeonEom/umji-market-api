@@ -42,4 +42,4 @@ flowchart TD
 - 장바구니 가격은 현재 카탈로그 가격이며 주문 가격을 확정하지 않음.<br>
 - 주문 생성 시 상품/SKU/가격을 주문 항목에 복사하고 재고를 예약한 뒤 장바구니를 초기화.<br>
 
-application UseCase는 장바구니 Port에 의존하고 JPA adapter가 저장 모델을 변환함.<br>
+`CartController`가 구체 `CartService`를 호출하고 Service가 `CartJpaEntityService`·`CatalogJpaEntityService`를 통해 영속 모델을 처리함.<br>

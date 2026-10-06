@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.cart.adapter.`in`.web
 
 import com.buyeong.umji.api.auth.application.port.`in`.CurrentAccountPort
+import com.buyeong.umji.api.cart.application.CartService
 import com.buyeong.umji.api.cart.application.model.AddCartItemCommand
 import com.buyeong.umji.api.cart.application.model.CartView
 import com.buyeong.umji.api.cart.application.model.UpdateCartItemCommand
-import com.buyeong.umji.api.cart.application.port.`in`.CartUseCase
 import com.buyeong.umji.api.cart.model.AddCartItemRequest
 import com.buyeong.umji.api.cart.model.CartItemResponse
 import com.buyeong.umji.api.cart.model.CartResponse
@@ -30,7 +30,7 @@ import java.util.UUID
 @Tag(name = "장바구니", description = "구매자 그룹 장바구니 조회와 상품 수량 변경 API")
 class CartController(
     private val currentAccounts: CurrentAccountPort,
-    private val carts: CartUseCase,
+    private val carts: CartService,
 ) {
     @Operation(summary = "장바구니 조회", description = "장바구니 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping
