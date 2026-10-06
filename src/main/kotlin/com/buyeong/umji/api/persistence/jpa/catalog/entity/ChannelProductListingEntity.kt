@@ -1,7 +1,5 @@
 package com.buyeong.umji.api.persistence.jpa.catalog.entity
 
-import com.buyeong.umji.api.persistence.jpa.catalog.CategoryEntity
-import com.buyeong.umji.api.persistence.jpa.catalog.ProductEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

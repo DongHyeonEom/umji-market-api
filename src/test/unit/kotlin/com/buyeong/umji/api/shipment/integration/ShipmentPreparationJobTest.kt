@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.shipment.integration
 
-import com.buyeong.umji.api.shipment.service.ShipmentService
 import com.buyeong.umji.api.order.service.ShippingHolidayService
+import com.buyeong.umji.api.shipment.service.ShipmentService
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every

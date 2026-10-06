@@ -1,13 +1,13 @@
 package com.buyeong.umji.api.auth.integration.security
 
-import com.buyeong.umji.api.auth.model.AccountRecord
 import com.buyeong.umji.api.auth.config.JwtProperties
+import com.buyeong.umji.api.auth.model.AccountRecord
+import java.time.Instant
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.security.oauth2.jwt.JwtClaimsSet
 import org.springframework.security.oauth2.jwt.JwtEncoder
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters
 import org.springframework.stereotype.Component
-import java.time.Instant
 
 @Component
 class JwtAccessTokenIssuer(

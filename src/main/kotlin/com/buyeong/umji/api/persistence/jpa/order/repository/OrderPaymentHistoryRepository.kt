@@ -1,5 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.order
+package com.buyeong.umji.api.persistence.jpa.order.repository
 
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderPaymentHistoryEntity
 import org.springframework.data.jpa.repository.JpaRepository
 
 interface OrderPaymentHistoryRepository : JpaRepository<OrderPaymentHistoryEntity, Long>

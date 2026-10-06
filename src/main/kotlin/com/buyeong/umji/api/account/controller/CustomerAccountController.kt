@@ -1,12 +1,9 @@
 package com.buyeong.umji.api.account.controller
 
 import com.buyeong.umji.api.account.model.BuyerGroupOnboardingResponse
-import com.buyeong.umji.api.account.service.CustomerAccountService
-import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
-import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
 import com.buyeong.umji.api.account.model.BuyerGroupRegistrationRequest
-import com.buyeong.umji.api.account.model.CreateIndividualGroupRequest
 import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileRequest
+import com.buyeong.umji.api.account.model.CreateIndividualGroupRequest
 import com.buyeong.umji.api.account.model.CustomerProfileResponse
 import com.buyeong.umji.api.account.model.DecideBuyerGroupJoinRequest
 import com.buyeong.umji.api.account.model.InviteBuyerGroupMemberRequest
@@ -15,13 +12,18 @@ import com.buyeong.umji.api.account.model.SharedAddressRequest
 import com.buyeong.umji.api.account.model.SharedAddressResponse
 import com.buyeong.umji.api.account.model.toCommand
 import com.buyeong.umji.api.account.model.toResponse
+import com.buyeong.umji.api.account.model.toResponse as membershipResponse
 import com.buyeong.umji.api.account.model.toResponse as taxInvoiceProfileResponse
+import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
+import com.buyeong.umji.api.account.service.BuyerGroupTaxInvoiceProfileService
+import com.buyeong.umji.api.account.service.CustomerAccountService
 import com.buyeong.umji.api.auth.service.CurrentAccountService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -34,8 +36,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
-import com.buyeong.umji.api.account.model.toResponse as membershipResponse
 
 @RestController
 @RequestMapping("/api/account")

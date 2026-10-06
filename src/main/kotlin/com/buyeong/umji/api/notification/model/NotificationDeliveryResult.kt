@@ -1,5 +1,4 @@
 package com.buyeong.umji.api.notification.model
-
 sealed interface NotificationDeliveryResult {
     data object Sent : NotificationDeliveryResult
     data class RetryableFailure(val code: String) : NotificationDeliveryResult

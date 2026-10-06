@@ -12,7 +12,7 @@ import com.buyeong.umji.api.operation.catalog.model.ProductCommand
 import com.buyeong.umji.api.operation.catalog.model.ProductStatusCommand
 import com.buyeong.umji.api.operation.catalog.model.SkuCommand
 import com.buyeong.umji.api.operation.catalog.model.SalesOfferCommand
-import com.buyeong.umji.api.persistence.jpa.catalog.OperationCatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.service.OperationCatalogJpaEntityService
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

@@ -44,7 +44,12 @@ HTTP 요청·응답 DTO는 외부 계약으로 유지하며 JPA Entity를 응답
   service/              # 도메인 Service
   model/                # 도메인 내부 모델 및 API 모델
   integration/          # 외부 연동 구체 구현과 설정
-  persistence/jpa/      # 공통 persistence 패키지 아래 JpaEntityService, Repository, Entity
+  persistence/jpa/      # 도메인별 DB 구현
+    <domain>/
+      entity/           # JPA Entity
+      repository/       # Spring Data Repository
+      service/          # JpaEntityService
+    entity/backbone/    # 여러 도메인이 공유하는 mapped superclass
 ```
 
 인증 계정 식별과 활성 상태 확인은 Controller가 구체 인증 Service를 직접 호출해 수행함.<br>

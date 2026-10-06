@@ -1,11 +1,12 @@
 package com.buyeong.umji.api.shipment.service
 
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
+
 import com.buyeong.umji.api.shipment.integration.tracking.KyoungdongTrackingClient
 import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
 import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate
 import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.notification.service.NotificationEventService
-import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentJpaEntityService
 import com.buyeong.umji.api.inventory.service.InventoryService
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.assertj.core.api.Assertions.assertThat

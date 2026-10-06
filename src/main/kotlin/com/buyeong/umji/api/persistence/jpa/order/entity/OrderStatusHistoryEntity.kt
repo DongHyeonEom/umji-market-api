@@ -1,4 +1,4 @@
-package com.buyeong.umji.api.persistence.jpa.order
+package com.buyeong.umji.api.persistence.jpa.order.entity
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

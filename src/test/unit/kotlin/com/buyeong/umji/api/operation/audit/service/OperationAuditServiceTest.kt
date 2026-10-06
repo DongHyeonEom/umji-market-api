@@ -2,7 +2,7 @@ package com.buyeong.umji.api.operation.audit.service
 
 import com.buyeong.umji.api.operation.audit.model.OperationAuditPage
 import com.buyeong.umji.api.operation.audit.model.OperationAuditQuery
-import com.buyeong.umji.api.persistence.jpa.operation.audit.OperationAuditJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.operation.audit.service.OperationAuditJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe

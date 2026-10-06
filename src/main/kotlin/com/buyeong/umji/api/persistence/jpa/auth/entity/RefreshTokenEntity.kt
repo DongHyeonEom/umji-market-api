@@ -1,6 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.auth
+package com.buyeong.umji.api.persistence.jpa.auth.entity
 
-import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType

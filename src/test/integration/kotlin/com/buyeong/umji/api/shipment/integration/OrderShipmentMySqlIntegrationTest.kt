@@ -2,14 +2,18 @@ package com.buyeong.umji.api.shipment.integration
 
 import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
 import com.buyeong.umji.api.account.service.BuyerGroupMembershipService
-import com.buyeong.umji.api.payment.service.PaymentService
-import com.buyeong.umji.api.shipment.service.ShipmentService
-import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.CustomerOrderListingService
+import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.order.service.ShippingHolidayService
-import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
+import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
+import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
+import com.buyeong.umji.api.shipment.service.ShipmentService
+import java.nio.ByteBuffer
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,10 +23,6 @@ import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
-import java.nio.ByteBuffer
-import java.sql.Timestamp
-import java.time.Instant
-import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")

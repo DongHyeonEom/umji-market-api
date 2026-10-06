@@ -1,5 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.inventory
+package com.buyeong.umji.api.persistence.jpa.inventory.repository
 
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryStockEntity
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

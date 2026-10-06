@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.operation.account.controller
 
-import com.buyeong.umji.api.auth.service.WebAuthenticationService
 import com.buyeong.umji.api.auth.service.CurrentAccountService
+import com.buyeong.umji.api.auth.service.WebAuthenticationService
 import com.buyeong.umji.api.operation.account.model.AccountData
 import com.buyeong.umji.api.operation.account.model.BusinessProfileData
 import com.buyeong.umji.api.operation.account.model.ConsentCommand
@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -38,7 +39,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 @RequestMapping("/api/operation/accounts")

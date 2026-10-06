@@ -4,8 +4,8 @@ import com.buyeong.umji.api.notification.integration.NotificationOutboxDispatchJ
 import com.buyeong.umji.api.notification.integration.apns.ApnsHttpPushProvider
 import com.buyeong.umji.api.notification.integration.fcm.FirebaseMessagingPushProvider
 import com.buyeong.umji.api.notification.service.NotificationOutboxWorker
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationDeviceTokenJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationOutboxWorkerJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationOutboxWorkerJpaEntityService
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

@@ -1,5 +1,4 @@
 package com.buyeong.umji.api.account.model
-
 data class BuyerGroupRegistrationCommand(
     val type: String,
     val business: BusinessGroupRegistration?,

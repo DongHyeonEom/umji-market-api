@@ -1,9 +1,8 @@
-package com.buyeong.umji.api.persistence.jpa.order
+package com.buyeong.umji.api.persistence.jpa.order.entity
 
-import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.BuyerGroupEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
-import com.buyeong.umji.api.persistence.jpa.order.OrderShipmentEntity
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity

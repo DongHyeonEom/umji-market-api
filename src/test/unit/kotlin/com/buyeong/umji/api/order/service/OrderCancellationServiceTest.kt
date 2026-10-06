@@ -4,7 +4,7 @@ import com.buyeong.umji.api.inventory.service.InventoryService
 import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.order.model.CancellationOrder
-import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderCancellationJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe

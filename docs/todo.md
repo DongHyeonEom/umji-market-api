@@ -305,6 +305,7 @@
 - [x] Controller에서 인증 조회 전용 Port를 거치지 않고 구체 인증 Service 직접 호출
 - [x] 트랜잭션 경계를 도메인 Service에 통합하고 모든 wrapper 제거
 - [x] `AGENTS.md`·README·architecture·서비스 문서 및 구현 현황을 새 패키지 경계에 맞춰 갱신
+- [x] `persistence.jpa.<domain>` 아래 JPA Entity·Spring Data Repository·JpaEntityService를 각각 `entity`·`repository`·`service` 패키지로 정리
 
 ### 서비스 자동화 테스트 개발 및 테스트
 

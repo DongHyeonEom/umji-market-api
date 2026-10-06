@@ -6,7 +6,7 @@ import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.order.model.CancellationChange
 import com.buyeong.umji.api.order.model.CancellationQueuePage
-import com.buyeong.umji.api.persistence.jpa.order.OrderCancellationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderCancellationJpaEntityService
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

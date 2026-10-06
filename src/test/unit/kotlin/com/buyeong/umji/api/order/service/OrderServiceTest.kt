@@ -1,21 +1,21 @@
 package com.buyeong.umji.api.order.service
 
-import com.buyeong.umji.api.cart.service.CartService
 import com.buyeong.umji.api.cart.model.CartItemView
 import com.buyeong.umji.api.cart.model.CartView
+import com.buyeong.umji.api.cart.service.CartService
 import com.buyeong.umji.api.inventory.service.InventoryService
-import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.notification.model.NotificationEventType
+import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.order.model.OrderItemView
 import com.buyeong.umji.api.order.model.OrderView
 import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.order.OrderCheckoutJpaEntityService
-import io.kotest.core.spec.style.DescribeSpec
+import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every

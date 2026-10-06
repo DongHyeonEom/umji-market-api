@@ -8,14 +8,15 @@ import com.buyeong.umji.api.cart.model.CartView
 import com.buyeong.umji.api.cart.model.SellableSku
 import com.buyeong.umji.api.cart.model.UpdateCartItemCommand
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.cart.CartEntity
-import com.buyeong.umji.api.persistence.jpa.cart.CartItemEntity
-import com.buyeong.umji.api.persistence.jpa.cart.CartJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.catalog.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.cart.entity.CartEntity
+import com.buyeong.umji.api.persistence.jpa.cart.entity.CartItemEntity
+import com.buyeong.umji.api.persistence.jpa.cart.service.CartJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
+import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class CartService(

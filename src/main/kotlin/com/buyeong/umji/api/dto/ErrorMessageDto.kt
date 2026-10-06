@@ -1,5 +1,4 @@
 package com.buyeong.umji.api.dto
-
 /**
  * 에러 메시지 정보를 담는 DTO.
  * 서비스 레이어에서 에러 메시지 전달에 사용.

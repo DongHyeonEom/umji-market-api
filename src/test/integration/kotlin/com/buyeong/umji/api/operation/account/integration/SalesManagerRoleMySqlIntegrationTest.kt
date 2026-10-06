@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.operation.account.integration
 
-import com.buyeong.umji.api.persistence.jpa.account.OperationAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

@@ -10,7 +10,6 @@ import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.ECDSASigner
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import org.springframework.http.HttpHeaders
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -26,6 +25,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Base64
 import java.util.Date
+import org.springframework.http.HttpHeaders
 
 class ApnsHttpPushProvider(
     teamId: String,

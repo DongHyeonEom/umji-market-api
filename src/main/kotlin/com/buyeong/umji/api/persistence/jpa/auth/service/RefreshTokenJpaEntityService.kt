@@ -1,5 +1,7 @@
-package com.buyeong.umji.api.persistence.jpa.auth
+package com.buyeong.umji.api.persistence.jpa.auth.service
 
+import com.buyeong.umji.api.persistence.jpa.auth.entity.RefreshTokenEntity
+import com.buyeong.umji.api.persistence.jpa.auth.repository.RefreshTokenRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 

@@ -3,7 +3,7 @@ package com.buyeong.umji.api.operation.audit.service
 import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
 import com.buyeong.umji.api.operation.audit.model.OperationAuditPage
 import com.buyeong.umji.api.operation.audit.model.OperationAuditQuery
-import com.buyeong.umji.api.persistence.jpa.operation.audit.OperationAuditJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.operation.audit.service.OperationAuditJpaEntityService
 import java.time.Instant
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

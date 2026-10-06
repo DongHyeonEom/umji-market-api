@@ -3,8 +3,8 @@ package com.buyeong.umji.api.model
 import com.buyeong.umji.api.enums.ErrorCode
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
-import org.springframework.validation.BindingResult
 import java.util.stream.Collectors
+import org.springframework.validation.BindingResult
 
 /**
  * Global Exception Handler에서 발생한 에러에 대한 응답 처리를 관리

@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.operation.audit.integration
 
 import com.buyeong.umji.api.operation.audit.service.OperationAuditService
-import org.springframework.scheduling.annotation.Scheduled
-import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
 
 @Component
 class OperationAuditRetentionJob(private val audit: OperationAuditService) {

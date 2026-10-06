@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.auth.service
 
-import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.springframework.security.core.context.SecurityContextHolder

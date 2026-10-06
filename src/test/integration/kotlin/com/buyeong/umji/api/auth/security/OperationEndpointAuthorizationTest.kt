@@ -31,7 +31,7 @@ import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.ShippingHolidayService
 import com.buyeong.umji.api.payment.model.PaymentQueuePage
 import com.buyeong.umji.api.payment.service.PaymentService
-import com.buyeong.umji.api.persistence.jpa.auth.AuthenticationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.shipment.model.ShipmentChange
 import com.buyeong.umji.api.shipment.service.ShipmentService
 import org.junit.jupiter.api.Test

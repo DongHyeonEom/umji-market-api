@@ -1,5 +1,4 @@
 package com.buyeong.umji.api.annotation
-
 /**
  * 메서드 실행 시간이 임계값을 초과하면 경고 로그를 출력하는 어노테이션.
  *

@@ -10,7 +10,7 @@ import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.model.NotificationMessage
 import com.buyeong.umji.api.notification.model.NotificationProviderResult
 import com.buyeong.umji.api.notification.model.toMessage
-import com.buyeong.umji.api.persistence.jpa.notification.NotificationDeviceTokenJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every

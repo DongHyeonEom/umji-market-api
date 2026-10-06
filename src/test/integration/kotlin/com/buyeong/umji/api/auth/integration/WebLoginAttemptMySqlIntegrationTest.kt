@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.auth.integration
 
-import com.buyeong.umji.api.persistence.jpa.auth.WebLoginAttemptJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.auth.service.WebLoginAttemptJpaEntityService
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

@@ -14,9 +14,9 @@ import com.buyeong.umji.api.order.model.OrderView
 import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotDraft
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.order.OrderCheckoutJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant

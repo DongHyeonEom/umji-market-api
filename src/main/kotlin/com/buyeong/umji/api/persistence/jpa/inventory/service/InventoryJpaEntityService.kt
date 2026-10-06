@@ -1,11 +1,17 @@
-package com.buyeong.umji.api.persistence.jpa.inventory
+package com.buyeong.umji.api.persistence.jpa.inventory.service
 
-import com.buyeong.umji.api.persistence.jpa.catalog.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryMovementEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryStockEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.repository.InventoryMovementRepository
+import com.buyeong.umji.api.persistence.jpa.inventory.repository.InventoryStockRepository
+import com.buyeong.umji.api.persistence.jpa.inventory.repository.StockReservationRepository
+import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)

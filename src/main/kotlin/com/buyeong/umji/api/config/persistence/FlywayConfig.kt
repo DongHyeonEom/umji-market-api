@@ -1,12 +1,12 @@
 package com.buyeong.umji.api.config.persistence
 
+import javax.sql.DataSource
 import org.flywaydb.core.Flyway
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import javax.sql.DataSource
 
 /**
  * 엄지마켓 write 데이터소스용 Flyway 설정.

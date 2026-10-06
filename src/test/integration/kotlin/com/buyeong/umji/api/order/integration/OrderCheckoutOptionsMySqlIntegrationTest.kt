@@ -17,7 +17,7 @@ import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.payment.service.PaymentService
-import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.BuyerGroupJpaEntityService
 import com.buyeong.umji.api.shipment.service.ShipmentService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

@@ -1,6 +1,8 @@
-package com.buyeong.umji.api.persistence.jpa.cart
+package com.buyeong.umji.api.persistence.jpa.cart.service
 
-import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.cart.entity.CartEntity
+import com.buyeong.umji.api.persistence.jpa.cart.repository.CartRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 

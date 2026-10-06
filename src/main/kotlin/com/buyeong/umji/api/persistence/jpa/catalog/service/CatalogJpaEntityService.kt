@@ -1,15 +1,29 @@
-package com.buyeong.umji.api.persistence.jpa.catalog
+package com.buyeong.umji.api.persistence.jpa.catalog.service
 
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.BrandEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.CategoryEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductImageEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductOptionEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductOptionValueEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.BrandRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.CategoryRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductImageRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductOptionRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductOptionValueRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductSkuRepository
+import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
+import java.util.UUID
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
-import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
-import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
-import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 
 @Service
 @Transactional(readOnly = true)

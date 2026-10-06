@@ -1,5 +1,6 @@
-package com.buyeong.umji.api.persistence.jpa.auth
+package com.buyeong.umji.api.persistence.jpa.auth.repository
 
+import com.buyeong.umji.api.persistence.jpa.auth.entity.RefreshTokenEntity
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

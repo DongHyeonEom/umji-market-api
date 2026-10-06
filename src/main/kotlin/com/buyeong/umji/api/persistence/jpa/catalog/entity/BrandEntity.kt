@@ -1,4 +1,4 @@
-package com.buyeong.umji.api.persistence.jpa.catalog
+package com.buyeong.umji.api.persistence.jpa.catalog.entity
 
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainSoftDeletableEntity
 import jakarta.persistence.Column
