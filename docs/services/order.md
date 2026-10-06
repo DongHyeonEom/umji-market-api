@@ -72,7 +72,7 @@ flowchart TD
 
     subgraph TRACKING_SYNC[배송 목록 응답 전 상태 확인]
         LIST --> TRACKSYNC[고객 그룹의 미완료 송장 목록 조회]
-        TRACKSYNC --> TRACKER[택배사별 배송 조회 adapter]
+        TRACKSYNC --> TRACKER[택배사별 배송 조회 integration]
         TRACKER --> CARRIER{택배사}
         CARRIER -- 대신택배 --> DAESIN[대신 공식 조회 페이지]
         CARRIER -- 천일택배 --> CHUNIL[천일 공식 조회 페이지]

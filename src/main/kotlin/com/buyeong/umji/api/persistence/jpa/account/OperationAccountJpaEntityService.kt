@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.persistence.jpa.account
 
-import com.buyeong.umji.api.operation.account.application.model.AccountData
-import com.buyeong.umji.api.operation.account.application.model.BusinessProfileData
-import com.buyeong.umji.api.operation.account.application.model.ConsentCommand
-import com.buyeong.umji.api.operation.account.application.model.ConsentData
-import com.buyeong.umji.api.operation.account.application.model.ManagedRole
-import com.buyeong.umji.api.operation.account.application.model.NewAccount
+import com.buyeong.umji.api.operation.account.model.AccountData
+import com.buyeong.umji.api.operation.account.model.BusinessProfileData
+import com.buyeong.umji.api.operation.account.model.ConsentCommand
+import com.buyeong.umji.api.operation.account.model.ConsentData
+import com.buyeong.umji.api.operation.account.model.ManagedRole
+import com.buyeong.umji.api.operation.account.model.NewAccount
 
 import com.buyeong.umji.api.persistence.jpa.account.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.AccountJpaEntityService

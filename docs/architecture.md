@@ -36,18 +36,22 @@ HTTP 요청·응답 DTO는 외부 계약으로 유지하며 JPA Entity를 응답
 
 ## 패키지 구조
 
-도메인별 기능 구분을 유지하고, 계층 이름은 패키지 경계보다 호출 책임을 기준으로 적용함.<br>
+도메인별 기능 구분을 유지하고 패키지 경계도 계층 책임과 일치시킴.<br>
 
 ```text
 {domain}/
-  adapter/in/web/       # Controller 및 HTTP DTO
+  controller/           # Controller 및 HTTP DTO
   service/              # 도메인 Service
-  persistence/jpa/      # JpaEntityService, Repository, Entity
+  model/                # 도메인 내부 모델 및 API 모델
   integration/          # 외부 연동 구체 구현과 설정
+  persistence/jpa/      # 공통 persistence 패키지 아래 JpaEntityService, Repository, Entity
 ```
 
-현재 `application/port`, `adapter/out` 등 이전 구조의 파일은 이 기준에 따라 도메인별로 이전함.<br>
-이전 완료 후 더 이상 사용되지 않는 Port·UseCase interface와 위임 wrapper를 제거함.<br>
+인증 계정 식별과 활성 상태 확인은 Controller가 구체 인증 Service를 직접 호출해 수행함.<br>
+외부 연동은 도메인 Service에서 구체 integration class를 직접 호출함.<br>
+외부 SDK가 요구하는 callback/provider interface는 integration 내부 구현 세부로만 유지 가능함.<br>
+`application`, `adapter/in`, `adapter/out`, `port`는 계층 패키지로 사용하지 않음.<br>
+단순 조회·저장 위임 adapter는 제거하고 DB 작업은 `JpaEntityService`에서 수행함.<br>
 
 ## 서비스 경계
 

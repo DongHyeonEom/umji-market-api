@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.account
 
-import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfile
-import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfile
+import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileCommand
 import com.buyeong.umji.api.exception.ForbiddenOperationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

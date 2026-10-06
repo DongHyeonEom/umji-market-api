@@ -1,0 +1,101 @@
+package com.buyeong.umji.api.order.service
+
+import com.buyeong.umji.api.cart.service.CartService
+import com.buyeong.umji.api.cart.model.CartItemView
+import com.buyeong.umji.api.cart.model.CartView
+import com.buyeong.umji.api.inventory.service.InventoryService
+import com.buyeong.umji.api.notification.service.NotificationEventService
+import com.buyeong.umji.api.notification.model.NotificationEventType
+import com.buyeong.umji.api.order.model.OrderItemView
+import com.buyeong.umji.api.order.model.OrderView
+import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
+import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
+import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
+import com.buyeong.umji.api.persistence.jpa.account.BuyerGroupTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.order.OrderCheckoutJpaEntityService
+import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.shouldBe
+import io.mockk.clearMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import java.util.UUID
+
+class OrderServiceTest : DescribeSpec({
+    val carts = mockk<CartService>()
+    val inventory = mockk<InventoryService>(relaxed = true)
+    val orders = mockk<OrderCheckoutJpaEntityService>()
+    val shippingAddresses = mockk<CustomerAccountJpaEntityService>()
+    val notifications = mockk<NotificationEventService>(relaxed = true)
+    val taxInvoiceSuppliers = mockk<TaxInvoiceSupplierService>(relaxed = true)
+    val taxInvoiceBuyers = mockk<BuyerGroupTaxInvoiceJpaEntityService>(relaxed = true)
+    val bankAccounts = mockk<BankAccountInstructionsService>(relaxed = true)
+    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers)
+    val accountId = UUID.randomUUID()
+    val addressId = UUID.randomUUID()
+    val skuId = UUID.randomUUID()
+    val offerId = UUID.randomUUID()
+
+    beforeTest {
+        clearMocks(carts, inventory, orders, shippingAddresses, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, bankAccounts)
+    }
+
+    describe("주문 생성") {
+        it("박스 수량과 입수량을 snapshot하고 기준 SKU 재고를 예약한다") {
+            every { shippingAddresses.findForAccount(accountId, addressId) } returns
+                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
+            every { carts.cart(accountId) } returns
+                CartView(listOf(CartItemView(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", 3, 12000, "ON_SALE", offerId, "WHOLESALE", 12)))
+            every { orders.save(any()) } answers {
+                val draft = firstArg<com.buyeong.umji.api.order.model.OrderDraft>()
+                draft.channelCode shouldBe "WHOLESALE"
+                draft.items.single().salesOfferId shouldBe offerId
+                draft.items.single().unitsPerSale shouldBe 12
+                OrderView(
+                    UUID.randomUUID(),
+                    "UMJ-20260923-000001",
+                    draft.status,
+                    draft.subtotalAmount,
+                    draft.totalAmount,
+                    draft.orderedAt,
+                    draft.items.map {
+                        OrderItemView(
+                            UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
+                            it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale,
+                        )
+                    },
+                )
+            }
+            every { carts.clearForCheckout(accountId) } returns Unit
+
+            val result = service.create(accountId, addressId)
+
+            result.status shouldBe "PENDING_PAYMENT"
+            result.subtotalAmount shouldBe 36000L
+            result.items.single().unitPrice shouldBe 12000L
+            result.items.single().quantity shouldBe 3
+            result.items.single().unitsPerSale shouldBe 12
+            verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, result.id, null) }
+            verify(exactly = 1) { inventory.reserve(skuId, 36, any(), null) }
+            verify(exactly = 1) { carts.clearForCheckout(accountId) }
+        }
+
+        it("입수량을 곱한 재고 수량이 정수 범위를 넘으면 주문을 저장하지 않는다") {
+            every { shippingAddresses.findForAccount(accountId, addressId) } returns
+                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
+            every { carts.cart(accountId) } returns
+                CartView(
+                    listOf(
+                        CartItemView(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", Int.MAX_VALUE, 1, "ON_SALE", offerId, "WHOLESALE", 2),
+                    ),
+                )
+
+            shouldThrow<ArithmeticException> { service.create(accountId, addressId) }
+
+            verify(exactly = 0) { orders.save(any()) }
+            verify(exactly = 0) { inventory.reserve(any(), any(), any(), any()) }
+        }
+    }
+})

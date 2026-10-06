@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.shipment.model
 
-import com.buyeong.umji.api.shipment.application.model.ShipmentChange
+import com.buyeong.umji.api.shipment.model.ShipmentChange
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 

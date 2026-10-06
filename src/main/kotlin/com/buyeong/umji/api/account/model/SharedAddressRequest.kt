@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.account.model
 
-import com.buyeong.umji.api.account.application.model.SharedAddressCommand
+import com.buyeong.umji.api.account.model.SharedAddressCommand
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size

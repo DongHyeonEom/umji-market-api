@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.account.model
 
-import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfile
-import com.buyeong.umji.api.account.application.model.BuyerGroupTaxInvoiceProfileCommand
+import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfile
+import com.buyeong.umji.api.account.model.BuyerGroupTaxInvoiceProfileCommand
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank

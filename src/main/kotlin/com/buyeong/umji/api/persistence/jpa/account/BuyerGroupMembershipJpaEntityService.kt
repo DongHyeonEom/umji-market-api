@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.persistence.jpa.account
 
-import com.buyeong.umji.api.account.application.model.BuyerGroupInvitation
-import com.buyeong.umji.api.account.application.model.BuyerGroupJoinRequest
-import com.buyeong.umji.api.account.application.model.BuyerGroupSearchResult
-import com.buyeong.umji.api.account.application.model.BuyerGroupSummary
-import com.buyeong.umji.api.account.application.model.BuyerGroupRegistrationCommand
+import com.buyeong.umji.api.account.model.BuyerGroupInvitation
+import com.buyeong.umji.api.account.model.BuyerGroupJoinRequest
+import com.buyeong.umji.api.account.model.BuyerGroupSearchResult
+import com.buyeong.umji.api.account.model.BuyerGroupSummary
+import com.buyeong.umji.api.account.model.BuyerGroupRegistrationCommand
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

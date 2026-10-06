@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.auth
 
-import com.buyeong.umji.api.auth.application.model.AccountRecord
-import com.buyeong.umji.api.auth.application.model.RefreshSessionRecord
+import com.buyeong.umji.api.auth.model.AccountRecord
+import com.buyeong.umji.api.auth.model.RefreshSessionRecord
 
 
 import com.buyeong.umji.api.exception.ItemNotFoundException

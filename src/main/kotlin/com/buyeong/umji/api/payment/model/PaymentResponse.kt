@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.payment.model
 
-import com.buyeong.umji.api.payment.application.model.PaymentQueueItem
-import com.buyeong.umji.api.payment.application.model.PaymentQueuePage
-import com.buyeong.umji.api.payment.application.model.PaymentStatusChange
+import com.buyeong.umji.api.payment.model.PaymentQueueItem
+import com.buyeong.umji.api.payment.model.PaymentQueuePage
+import com.buyeong.umji.api.payment.model.PaymentStatusChange
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant

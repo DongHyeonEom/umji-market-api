@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.persistence.jpa.account
 
-import com.buyeong.umji.api.account.application.model.CustomerProfile
-import com.buyeong.umji.api.account.application.model.SharedAddress
-import com.buyeong.umji.api.account.application.model.SharedAddressCommand
+import com.buyeong.umji.api.account.model.CustomerProfile
+import com.buyeong.umji.api.account.model.SharedAddress
+import com.buyeong.umji.api.account.model.SharedAddressCommand
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.order.application.model.ShippingAddressSnapshot
+import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
