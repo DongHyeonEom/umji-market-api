@@ -166,7 +166,7 @@ class OrderCheckoutJpaEntityService(
         carrierCode = shipment.carrierCode,
         trackingNumber = shipment.trackingNumber,
         cancellationRequestStatus = cancellationHistory.findLatestStatus(requireNotNull(publicId), PageRequest.of(0, 1)).firstOrNull(),
-        orderedByName = account.name,
+        orderedByName = account.name.firstOrNull()?.let { first -> first + "*".repeat((account.name.length - 1).coerceAtLeast(1)) },
         orderedByPhoneSuffix = account.phone?.filter(Char::isDigit)?.takeLast(4)?.takeIf(String::isNotEmpty),
         shippingRecipientName = shippingRecipientName,
         shippingRecipientPhone = shippingRecipientPhone,
