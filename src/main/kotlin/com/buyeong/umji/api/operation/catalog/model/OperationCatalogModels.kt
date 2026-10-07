@@ -26,7 +26,7 @@ data class ProductCommand(
 data class ProductStatusCommand(val displayStatus: String, val salesStatus: String)
 data class CatalogResource(val id: UUID)
 data class CategoryView(val id: UUID, val parentId: UUID?, val name: String, val path: String, val depth: Int, val displayOrder: Int, val displayStatus: String)
-data class SalesOfferView(val id: UUID, val channelCode: String, val skuId: UUID, val salePrice: Long, val listPrice: Long?, val salesStatus: String, val unitsPerSale: Int = 1)
+data class SalesOfferView(val id: UUID, val channelCode: String, val skuId: UUID, val salePrice: Long, val listPrice: Long?, val salesStatus: String, val unitsPerSale: Int = 1, val organizationId: UUID? = null)
 data class BrandView(val id: UUID, val name: String, val displayStatus: String)
 data class SkuView(val id: UUID, val skuCode: String, val name: String, val salePrice: Long, val listPrice: Long?, val salesStatus: String, val optionValueIds: Set<UUID>)
 data class ImageView(val id: UUID, val storageKey: String, val altText: String?, val displayOrder: Int)

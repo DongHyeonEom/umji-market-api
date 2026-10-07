@@ -61,6 +61,7 @@ class CatalogService(private val catalog: CatalogJpaEntityService) {
                     offer.listPrice,
                     requireNotNull(offer.publicId),
                     offer.unitsPerSale,
+                    offer.organization?.publicId,
                 )
             },
             channelCode = channel,

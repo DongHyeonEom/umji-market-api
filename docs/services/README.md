@@ -72,7 +72,8 @@ flowchart TD
 | --- | --- | --- |
 | 계정·role·그룹 운영 | [operation.md](operation.md) | 계정·동의·승인, role 관리, 그룹 연결 및 대표자 변경 |
 | 카탈로그 운영 | [operation.md](operation.md) | 카테고리·브랜드·상품·SKU·이미지 metadata 관리 |
-| 재고 운영 | [inventory.md](inventory.md) | 재고 조정·변동 조회, 주문 예약·해제·확정 |
+| 판매 Organization 카탈로그 | [catalog.md](catalog.md) | 공용 SKU를 선택한 판매 Organization별 채널 오퍼 관리 |
+| 재고 운영 | [inventory.md](inventory.md) | 운영자·판매 Organization별 재고 조정·변동 조회, 주문 예약·해제·확정 |
 | 주문·배송 운영 | [order.md](order.md), [operation.md](operation.md) | 입금·취소·환불 상태, 출고 준비·송장·배송완료 처리 |
 | 운영 감사 | [operation.md](operation.md) | 변경 감사 이력 조회·보존 관리 |
 

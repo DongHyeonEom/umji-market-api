@@ -14,7 +14,7 @@ class OrganizationTaxInvoiceProfileService(
 ) {
     @Transactional(readOnly = true)
     fun forAccount(accountPublicId: UUID): OrganizationTaxInvoiceProfile =
-        profiles.forAccount(accountPublicId) ?: throw ItemNotFoundException("활성 Organization을 찾을 수 없습니다.")
+        profiles.forCurrentAccount(accountPublicId) ?: throw ItemNotFoundException("활성 Organization을 찾을 수 없습니다.")
 
     @Transactional
     fun updateForAccount(

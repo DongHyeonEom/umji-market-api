@@ -10,6 +10,7 @@ import com.buyeong.umji.api.order.model.OrderItemView
 import com.buyeong.umji.api.order.model.OrderPage
 import com.buyeong.umji.api.order.model.OrderPageResponse
 import com.buyeong.umji.api.order.model.OrderResponse
+import com.buyeong.umji.api.order.model.OrderCheckoutResponse
 import com.buyeong.umji.api.order.model.OrderView
 import com.buyeong.umji.api.order.model.TaxInvoiceItemResponse
 import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotResponse
@@ -48,13 +49,13 @@ class OrderController(
     @Operation(summary = "주문 생성", description = "주문 생성 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun create(@RequestBody request: CreateOrderRequest): OrderResponse =
-        orders.create(
+    fun create(@RequestBody request: CreateOrderRequest): OrderCheckoutResponse =
+        OrderCheckoutResponse(orders.create(
             currentAccounts.activeAccountPublicId(),
             request.shippingAddressId,
             request.taxInvoiceRequested,
             request.updateDefaultTaxInvoicePreference,
-        ).toResponse()
+        ).map { it.toResponse() })
 
     @Operation(summary = "주문 목록 조회", description = "주문 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping
@@ -126,6 +127,7 @@ class OrderController(
             )
         },
         channelCode,
+        sellerOrganizationId,
     )
 
     private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(

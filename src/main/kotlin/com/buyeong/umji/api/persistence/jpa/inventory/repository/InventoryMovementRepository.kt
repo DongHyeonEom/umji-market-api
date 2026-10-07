@@ -7,4 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface InventoryMovementRepository : JpaRepository<InventoryMovementEntity, Long> {
     fun findAllBySkuId(skuId: Long, pageable: Pageable): Page<InventoryMovementEntity>
+    fun findAllBySkuIdAndOrganization_Id(skuId: Long, organizationId: Long, pageable: Pageable): Page<InventoryMovementEntity>
 }

@@ -10,7 +10,8 @@ interface SalesOfferRepository : JpaRepository<SalesOfferEntity, Long> {
     fun findByPublicId(publicId: UUID): SalesOfferEntity?
 
     @EntityGraph(attributePaths = ["productSku", "productSku.product", "salesChannel"])
-    fun findBySalesChannel_CodeAndProductSku_PublicId(channelCode: String, skuPublicId: UUID): SalesOfferEntity?
+    fun findFirstBySalesChannel_CodeAndProductSku_PublicIdAndSalesStatusOrderBySalePriceAsc(channelCode: String, skuPublicId: UUID, salesStatus: String): SalesOfferEntity?
+    fun findBySalesChannel_CodeAndProductSku_PublicIdAndOrganization_PublicId(channelCode: String, skuPublicId: UUID, organizationPublicId: UUID): SalesOfferEntity?
 
     fun findAllBySalesChannel_CodeAndSalesStatusAndProductSku_Product_IdOrderBySalePriceAsc(
         channelCode: String,
@@ -18,6 +19,7 @@ interface SalesOfferRepository : JpaRepository<SalesOfferEntity, Long> {
         productId: Long,
     ): List<SalesOfferEntity>
 
-    fun findBySalesChannel_IdAndProductSku_Id(channelId: Long, skuId: Long): SalesOfferEntity?
+    fun findFirstBySalesChannel_IdAndProductSku_IdAndOrganizationIsNull(channelId: Long, skuId: Long): SalesOfferEntity?
+    fun findBySalesChannel_IdAndProductSku_IdAndOrganization_Id(channelId: Long, skuId: Long, organizationId: Long): SalesOfferEntity?
     fun findAllBySalesChannel_IdAndProductSku_Product_Id(channelId: Long, productId: Long): List<SalesOfferEntity>
 }

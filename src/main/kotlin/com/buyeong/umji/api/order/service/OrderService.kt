@@ -50,7 +50,11 @@ class OrderService(
                 complete = it.complete,
             )
         }
-        val available = taxInvoiceSuppliers.supplier() != null && buyer?.complete == true
+        val sellers = checkoutCart.cart(accountPublicId).items.map { item ->
+            if (item.sellerOrganizationId == null) taxInvoiceSuppliers.supplier()
+            else taxInvoiceBuyers.supplierForOrganization(item.sellerOrganizationId)
+        }
+        val available = sellers.isNotEmpty() && sellers.all { it != null } && buyer?.complete == true
         return OrderCheckoutOptions(
             defaultTaxInvoiceRequested = orders.defaultTaxInvoiceRequested(accountPublicId),
             taxInvoiceAvailable = available,
@@ -65,7 +69,7 @@ class OrderService(
         shippingAddressPublicId: UUID,
         taxInvoiceRequested: Boolean?,
         updateDefaultTaxInvoicePreference: Boolean,
-    ): OrderView {
+    ): List<OrderView> {
         val shippingAddress = shippingAddresses.findForAccount(accountPublicId, shippingAddressPublicId)
             ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
         val currentDefaultPreference = if (taxInvoiceRequested == null || updateDefaultTaxInvoicePreference) {
@@ -73,7 +77,6 @@ class OrderService(
         } else {
             taxInvoiceRequested
         }
-        val invoiceSupplier = taxInvoiceSuppliers.supplier()
         val invoiceBuyer = taxInvoiceBuyers.forAccount(accountPublicId)?.let {
             com.buyeong.umji.api.order.model.TaxInvoiceBuyer(
                 organizationId = it.organizationId,
@@ -89,64 +92,77 @@ class OrderService(
                 complete = it.complete,
             )
         }
-        val canRequestInvoice = invoiceSupplier != null && invoiceBuyer?.complete == true
+        val cart = checkoutCart.cart(accountPublicId)
+        val lines = cart.items.map {
+            com.buyeong.umji.api.order.model.CheckoutLine(
+                it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus,
+                it.salesOfferId, it.channelCode, it.unitsPerSale, it.sellerOrganizationId,
+            )
+        }
+        require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
+        require(lines.all { it.salesStatus == ON_SALE }) { "판매 중지된 SKU가 포함되어 있습니다." }
+        require(lines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
+        val supplierByOrganization = lines.map { it.sellerOrganizationId }.distinct().associateWith { organizationId ->
+            if (organizationId == null) taxInvoiceSuppliers.supplier() else taxInvoiceBuyers.supplierForOrganization(organizationId)
+        }
+        val canRequestInvoice = supplierByOrganization.values.all { it != null } && invoiceBuyer?.complete == true
         val selectedPreference = taxInvoiceRequested ?: (currentDefaultPreference && canRequestInvoice)
         if (selectedPreference && !canRequestInvoice) {
             throw ClientBadRequestException("공급자와 사업자 그룹의 세금계산서 필수 정보를 먼저 입력해야 합니다.")
         }
         val defaultPreference = currentDefaultPreference
         val bankAccount = if (selectedPreference) bankAccounts.taxInvoice() else bankAccounts.standard()
-        val lines = checkoutCart.cart(accountPublicId).items.map {
-            com.buyeong.umji.api.order.model.CheckoutLine(
-                it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus, it.salesOfferId, it.channelCode, it.unitsPerSale,
-            )
-        }
-        require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
-        require(lines.all { it.salesStatus == ON_SALE }) { "판매 중지된 SKU가 포함되어 있습니다." }
-        require(lines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
-
         val orderedAt = Instant.now()
-        val items = lines.map { line ->
-            val amount = Math.multiplyExact(line.unitPrice, line.quantity.toLong())
-            OrderItemDraft(
-                skuId = line.skuId,
-                productName = line.productName,
-                skuName = line.skuName,
-                skuCode = line.skuCode,
-                unitPrice = line.unitPrice,
-                quantity = line.quantity,
-                lineAmount = amount,
-                reservationKey = UUID.randomUUID(),
-                status = RESERVED,
-                salesOfferId = line.salesOfferId,
-                unitsPerSale = line.unitsPerSale,
+        val savedOrders = lines.groupBy { it.sellerOrganizationId }.map { (organizationId, sellerLines) ->
+            val items = sellerLines.map { line ->
+                val amount = Math.multiplyExact(line.unitPrice, line.quantity.toLong())
+                OrderItemDraft(
+                    skuId = line.skuId,
+                    productName = line.productName,
+                    skuName = line.skuName,
+                    skuCode = line.skuCode,
+                    unitPrice = line.unitPrice,
+                    quantity = line.quantity,
+                    lineAmount = amount,
+                    reservationKey = UUID.randomUUID(),
+                    status = RESERVED,
+                    salesOfferId = line.salesOfferId,
+                    unitsPerSale = line.unitsPerSale,
+                )
+            }
+            items.forEach { Math.multiplyExact(it.quantity, it.unitsPerSale) }
+            val subtotal = items.sumOf { it.lineAmount }
+            val snapshot = if (selectedPreference) TaxInvoiceSnapshotDraft(
+                requireNotNull(supplierByOrganization[organizationId]), requireNotNull(invoiceBuyer),
+            ) else null
+            orders.save(
+                OrderDraft(
+                    accountPublicId, PENDING_PAYMENT, orderedAt, subtotal, subtotal,
+                    selectedPreference,
+                    bankAccount.bankName,
+                    bankAccount.accountNumber,
+                    bankAccount.accountHolder,
+                    shippingAddress,
+                    items,
+                    snapshot,
+                    sellerLines.first().channelCode,
+                ),
             )
         }
-        items.forEach { Math.multiplyExact(it.quantity, it.unitsPerSale) }
-        val subtotal = items.sumOf { it.lineAmount }
-        val saved = orders.save(
-            OrderDraft(
-                accountPublicId, PENDING_PAYMENT, orderedAt, subtotal, subtotal,
-                selectedPreference,
-                bankAccount.bankName,
-                bankAccount.accountNumber,
-                bankAccount.accountHolder,
-                shippingAddress,
-                items,
-                if (selectedPreference) TaxInvoiceSnapshotDraft(requireNotNull(invoiceSupplier), requireNotNull(invoiceBuyer)) else null,
-                lines.first().channelCode,
-            ),
-        )
         if (updateDefaultTaxInvoicePreference && selectedPreference != defaultPreference) {
             orders.updateDefaultTaxInvoiceRequested(accountPublicId, selectedPreference)
         }
-        saved.items.forEach { item -> inventory.reserve(item.skuId, Math.multiplyExact(item.quantity, item.unitsPerSale), item.reservationKey, null) }
+        savedOrders.forEach { saved ->
+            saved.items.forEach { item ->
+                inventory.reserve(item.skuId, Math.multiplyExact(item.quantity, item.unitsPerSale), item.reservationKey, null, item.sellerOrganizationId)
+            }
+        }
         checkoutCart.clearForCheckout(accountPublicId)
-        notifications.record(NotificationEventType.ORDER_CREATED, saved.id)
-        return saved
+        savedOrders.forEach { notifications.record(NotificationEventType.ORDER_CREATED, it.id) }
+        return savedOrders
     }
 
-    fun create(accountPublicId: UUID, shippingAddressPublicId: UUID): OrderView =
+    fun create(accountPublicId: UUID, shippingAddressPublicId: UUID): List<OrderView> =
         create(accountPublicId, shippingAddressPublicId, false, false)
 
     fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage = orders.findAll(accountPublicId, page, size)

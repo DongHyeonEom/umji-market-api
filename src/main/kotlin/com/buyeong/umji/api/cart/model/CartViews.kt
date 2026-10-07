@@ -12,6 +12,7 @@ data class SellableSku(
     val price: Long,
     val salesStatus: String,
     val unitsPerSale: Int = 1,
+    val sellerOrganizationId: UUID? = null,
 )
 data class CartItemState(val id: UUID?, val sku: SellableSku, val quantity: Int)
 data class CartState(val accountId: UUID, val items: List<CartItemState>)
@@ -27,6 +28,7 @@ data class CartItemView(
     val salesOfferId: UUID,
     val channelCode: String,
     val unitsPerSale: Int = 1,
+    val sellerOrganizationId: UUID? = null,
 )
 data class CartView(val items: List<CartItemView>)
 data class AddCartItemCommand(val skuId: UUID?, val salesOfferId: UUID?, val channelCode: String = "WHOLESALE", val quantity: Int)

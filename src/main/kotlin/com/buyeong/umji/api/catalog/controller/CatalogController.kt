@@ -63,7 +63,7 @@ class CatalogController(
         description,
         categoryName,
         brandName,
-        skus.map { ProductSkuResponse(it.id, it.code, it.name, it.salePrice, it.listPrice, it.salesOfferId, it.unitsPerSale) },
+        skus.map { ProductSkuResponse(it.id, it.code, it.name, it.salePrice, it.listPrice, it.salesOfferId, it.unitsPerSale, it.sellerOrganizationId) },
         channelCode,
     )
 }

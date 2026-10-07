@@ -38,6 +38,7 @@ data class ProductSkuResponse(
         required = true,
         implementation = Int::class,
     ) val unitsPerSale: Int = 1,
+    @field:Schema(description = "판매 Organization 공개 식별자", format = "uuid", type = "string") val sellerOrganizationId: UUID? = null,
 )
 
 @Schema(description = "ProductDetailResponse API 데이터 모델")
