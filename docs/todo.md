@@ -371,7 +371,7 @@
 
 ### 서비스 자동화 테스트 개발 및 테스트
 
-- [ ] Flyway V43의 기존 nullable 브랜드·상품 보존, 조직별 브랜드명·상품별 SKU 코드 유일성 MySQL 검증
+- [x] Flyway V43의 기존 nullable 브랜드·상품 보존, 조직별 브랜드명·상품별 SKU 코드 유일성 MySQL 검증
 - [x] 판매자 카탈로그 Service의 Organization 범위 조회, 타 Organization 상품 수정·브랜드 연결 거부 및 타 Organization SKU 재고 접근 차단 unit test 개발 및 실행
 - [x] 판매자 브랜드·상품 API 응답의 Organization 간 격리 통합 테스트 개발 및 실행
 - [x] 브랜드-상품 소유 Organization 일치 API 통합 테스트 개발 및 실행
