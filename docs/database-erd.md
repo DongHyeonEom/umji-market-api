@@ -273,9 +273,9 @@ erDiagram
     SALES_OFFER["SALES_OFFER · 판매 Organization별 채널 SKU 가격·판매 조건"] {
         BIGINT id PK "판매 오퍼 ID"
         BINARY public_id UK "API 공개 UUID"
-        BIGINT sales_channel_id FK "판매 채널 ID"
-        BIGINT organization_id FK "판매 Organization ID, 레거시 오퍼는 nullable"
-        BIGINT product_sku_id FK "공용 SKU ID"
+        BIGINT sales_channel_id FK,UK "판매 채널 ID, Organization·채널·SKU 복합 UK"
+        BIGINT organization_id FK,UK "판매 Organization ID, 레거시 오퍼는 nullable"
+        BIGINT product_sku_id FK,UK "공용 SKU ID, Organization·채널·SKU 복합 UK"
         BIGINT sale_price "채널 판매가"
         INT units_per_sale "판매 단위당 기준 SKU 수량"
         BIGINT list_price "채널 정가, nullable"
@@ -319,7 +319,7 @@ erDiagram
     INVENTORY_STOCK["INVENTORY_STOCK · Organization·SKU 현재고·예약·안전재고"] {
         BIGINT id PK "재고 레코드 ID"
         BIGINT organization_id FK,UK "재고 소유 Organization, 레거시 원장은 nullable"
-        BIGINT sku_id FK,UK "대상 SKU ID, Organization별 하나"
+        BIGINT sku_id FK,UK "대상 SKU ID, Organization·SKU 복합 UK이며 SKU FK 지원 인덱스 별도 유지"
         INT on_hand_quantity "실재고 수량"
         INT reserved_quantity "예약 수량"
         INT safety_stock_quantity "안전 재고 수량"
@@ -361,9 +361,9 @@ erDiagram
     CART_ITEM["CART_ITEM · 장바구니 판매 항목·수량"] {
         BIGINT id PK "장바구니 항목 내부 ID"
         BINARY public_id UK "API 공개 UUID"
-        BIGINT cart_id FK "소속 장바구니 ID"
+        BIGINT cart_id FK,UK "소속 장바구니 ID, 장바구니·오퍼 복합 UK"
         BIGINT sku_id FK "선택 SKU ID"
-        BIGINT sales_offer_id FK "선택 채널 판매 오퍼 ID"
+        BIGINT sales_offer_id FK,UK "선택 채널 판매 오퍼 ID, 장바구니·오퍼 복합 UK"
         INT quantity "수량"
         BIGINT version "낙관적 잠금 버전"
         DATETIME created_at "생성 시각"

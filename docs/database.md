@@ -65,7 +65,7 @@
 | V39 | `organization_profile`을 `organization_business_profile`로 명칭 변경 |
 | V40 | 세금계산서 기본 발행 설정을 `account`에서 `organization`으로 이동. 대표자 설정을 우선 이관하고 대표자가 없는 경우 활성 구성원 중 가장 작은 계정 ID의 설정을 사용 |
 | V41 | 주문별 세금계산서 발행 상태와 양측 snapshot을 선택형 `purchase_order_tax_invoice`로 분리. 기존 요청 주문 데이터 이관 후 `purchase_order`의 세금계산서 전용 컬럼 제거 |
-| V42 | 판매 오퍼·재고 원장에 Organization 범위 추가 및 장바구니 항목의 오퍼별 선택 지원. 기존 오퍼·재고는 소유자를 추정할 수 없어 nullable 레거시 행으로 보존 |
+| V42 | 판매 오퍼·재고 원장에 Organization 범위 추가 및 장바구니 항목의 오퍼별 선택 지원. 외래 키 유지용 인덱스를 보존하고 판매 오퍼·재고의 Organization 복합 유일성 적용. 기존 오퍼·재고는 소유자를 추정할 수 없어 nullable 레거시 행으로 보존 |
 | V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성으로 전환. 기존 브랜드·상품은 소유자를 추정하지 않고 nullable 레거시로 보존 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
@@ -76,7 +76,7 @@
   V43 이전 브랜드·상품은 판매자 소유자를 추정하지 않고 `organization_id IS NULL`인 레거시 범위로 보존. 레거시 상품은 관리자 카탈로그 API에서 관리.<br>
   SKU 코드는 상품별로 유일하며 서로 다른 Organization 상품에서 같은 코드를 사용할 수 있음.<br>
   신규 `sales_offer`는 상품 소유 Organization·채널·SKU와 같은 Organization 범위에서 가격·판매 상태를 소유함. V42 이전에 생성된 Organization 오퍼는 소유자 미지정 레거시 상품을 계속 참조할 수 있음.<br>
-  재고는 `inventory_stock`에서 Organization·SKU별로 분리하고, 한 Organization의 채널별 오퍼는 같은 재고를 공유.<br>
+  재고는 `inventory_stock`에서 Organization·SKU별로 분리하고 `(organization_id, sku_id)` 조합으로 유일성을 보장. `sales_offer`는 `(organization_id, sales_channel_id, product_sku_id)` 조합으로 유일성을 보장하며, 채널·SKU 외래 키에는 별도 인덱스를 유지. 한 Organization의 채널별 오퍼는 같은 재고를 공유.<br>
   V42 이전 오퍼·재고의 판매자 소유권은 migration에서 임의로 추정하지 않으며 `organization_id IS NULL`인 레거시 범위로 보존.<br>
   기존 상품·SKU 및 기존 주문은 WHOLESALE로 backfill.<br>
 - SKU가 참조하는 옵션값은 같은 상품의 옵션에 속해야 함.<br>
