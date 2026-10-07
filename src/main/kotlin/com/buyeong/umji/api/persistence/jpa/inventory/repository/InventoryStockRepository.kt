@@ -10,7 +10,14 @@ import org.springframework.data.repository.query.Param
 interface InventoryStockRepository : JpaRepository<InventoryStockEntity, Long> {
     fun findBySkuId(skuId: Long): InventoryStockEntity?
 
+    @Query("select stock from InventoryStockEntity stock left join stock.organization organization where stock.sku.id = :skuId and ((:organizationId is null and organization is null) or organization.id = :organizationId)")
+    fun findBySkuIdAndOrganizationId(@Param("skuId") skuId: Long, @Param("organizationId") organizationId: Long?): InventoryStockEntity?
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select stock from InventoryStockEntity stock where stock.sku.id = :skuId")
     fun findLockedBySkuId(@Param("skuId") skuId: Long): InventoryStockEntity?
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select stock from InventoryStockEntity stock left join stock.organization organization where stock.sku.id = :skuId and ((:organizationId is null and organization is null) or organization.id = :organizationId)")
+    fun findLockedBySkuIdAndOrganizationId(@Param("skuId") skuId: Long, @Param("organizationId") organizationId: Long?): InventoryStockEntity?
 }

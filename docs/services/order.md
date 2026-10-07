@@ -35,19 +35,20 @@ flowchart TD
         C09 -- 유지 --> C11[주문과 함께 배송지·선택값 전달]
         C10 --> C12[서버에서 그룹 범위·프로필 완성 여부 재검사]
         C11 --> C12
-        C12 --> C13{주문 입력 유효}
+        C12 --> C13{주문·판매자 권한·세금계산서 정보 유효}
         C13 -- 아니오 --> C14[주문 거부·장바구니 유지]
         C13 -- 예 --> UNITCHECK{판매 수량 × 입수 수량이 정수 범위 안인가}
         UNITCHECK -- 아니오 --> C14[요청 거부·장바구니 유지]
-        UNITCHECK -- 예 --> C15[그룹·주문자·배송지·오퍼 가격·판매 수량·입수 수량·결제 계좌 snapshot 저장]
+        UNITCHECK -- 예 --> SPLIT[장바구니 항목을 판매 Organization별로 분리]
+        SPLIT --> C15[판매자별 주문에 구매자·주문자·배송지·가격·수량·결제 snapshot 저장]
         C15 --> C16{세금계산서 발행 요청}
-        C16 -- 예 --> C17[purchase_order_tax_invoice에 발행 상태·공급자·공급받는자 snapshot 저장]
+        C16 -- 예 --> C17[purchase_order_tax_invoice에 판매자 공급자·구매자 snapshot 저장]
         C16 -- 아니오 --> C18[세금계산서 하위 행 생성 생략]
         C17 --> C19[결제 대기·배송 대기·송장 등록 대기 저장]
         C18 --> C19
         C19 --> C20[판매 수량 × snapshot 입수 수량으로 기준 SKU 재고 환산]
-        C20 --> C21[기준 SKU 재고 예약]
-        C21 --> C22[장바구니 비우기 및 주문 이벤트 outbox 기록]
+        C20 --> C21[해당 판매 Organization의 SKU 재고 예약]
+        C21 --> C22[모든 주문 저장 후 장바구니 비우기 및 주문별 이벤트 outbox 기록]
     end
 
     subgraph SHIPPING[배송 운영]
@@ -150,7 +151,7 @@ flowchart TD
 
 ## Endpoint
 
-- `POST /api/orders`
+- `POST /api/orders` (응답의 `orders` 배열에 판매 Organization별 주문 포함)
 - `GET /api/orders?page=&size=`
 - `GET /api/orders/{orderId}`
 - `PUT /api/operation/orders/{orderId}/shipment/tracking`
@@ -184,14 +185,17 @@ flowchart TD
 그룹 주문을 공유하는 구성원은 해당 주문의 배송지 snapshot을 조회할 수 있음.<br>
 `POST /api/orders` request의 `shippingAddressId`는 필수 UUID 필드.<br>
 주문 항목에는 상품명, SKU명·코드, 판매가, 판매 수량, 판매 단위 입수 수량을 snapshot으로 저장함. WHOLESALE 수량은 박스 수이며 재고 예약 수량은 박스 수와 snapshot 입수 수량의 곱.<br>
-같은 유스케이스 흐름에서 재고를 예약하고 장바구니 항목을 초기화.<br>
+장바구니 상품을 판매 Organization별로 묶어 주문을 분리 생성. 한 주문은 하나의 판매 Organization 상품만 포함.<br>
+각 주문 생성 시 해당 판매자의 SKU 재고를 예약하고 모든 주문 저장이 성공한 뒤 장바구니 항목을 초기화.<br>
+`POST /api/orders`는 판매자별 주문 응답을 `orders` 배열에 담아 반환하며, 각 주문 응답의 `sellerOrganizationId`로 판매자를 식별.<br>
 초기 상태는 `PENDING_PAYMENT`임.<br>
 초기 결제수단은 `BANK_TRANSFER`, 결제 상태는 `WAITING_FOR_DEPOSIT`이며 사용자 주문 목록·상세에 결제 상태가 포함됨.<br>
 배송 상태는 `READY_TO_SHIP`으로 초기화.<br>
-구매 Organization별 세금계산서 발행 기본값은 초기 미발행이며, `GET /api/orders/checkout-options`에서 기본값과 발행·미발행 계좌 정보를 조회.<br>
+구매 Organization별 세금계산서 발행 기본값은 초기 미발행이며, `GET /api/orders/checkout-options`에서 기본값과 발행·미발행 계좌 정보를 조회. `taxInvoiceAvailable`은 장바구니의 모든 판매자 공급자 정보와 구매자 정보를 기준으로 계산.<br>
 주문 생성 요청은 `taxInvoiceRequested` 값을 주문에 저장하며, 대표자가 `updateDefaultTaxInvoicePreference=true`를 전달하면 선택값을 Organization 기본값에 반영. Organization 구성원은 같은 기본값을 공유.<br>
-공급자 필수 정보(사업자등록번호·상호·성명·사업장주소·업태·종목·이메일)는 `application.yml`의 환경변수 매핑을 통해 배포 환경에서 주입. 공급받는자 필수 정보(사업자등록번호·상호·성명·사업자주소·업태·종목)는 활성 `BUSINESS` 그룹 정보로 관리하며 이메일은 선택.<br>
-발행 요청은 공급자 설정과 인증 계정의 활성 `BUSINESS` 그룹 공급받는자 필수 정보가 모두 완성된 경우에만 허용.<br>
+판매자 오퍼가 연결된 주문의 공급자 정보(사업자등록번호·상호·성명·사업장주소·업태·종목·이메일)는 해당 SELLER Organization의 확인된 `organization_business_profile`에서 사용. 개인 판매 Organization이나 필수 정보가 미완성인 판매자는 세금계산서 발행 대상이 될 수 없음.<br>
+V42 이전 판매자 미지정 레거시 오퍼 주문은 기존 환경 설정의 공급자 정보를 사용. 공급받는자 필수 정보(사업자등록번호·상호·성명·사업자주소·업태·종목)는 활성 `BUSINESS` 구매 Organization에서 관리하며 이메일은 선택.<br>
+발행 요청은 각 판매자 공급자 정보와 인증 계정의 활성 `BUSINESS` 구매 Organization 공급받는자 필수 정보가 모두 완성된 경우에만 허용.<br>
 발행 요청 주문에는 공급자·공급받는자·주문 항목 및 항목별 `lineAmount`를 snapshot. 송장 등록으로 배송이 시작되면 작성일자와 제공일자를 모두 `ordered_at`의 KST 날짜로 기록하고 발행 대기 정보를 노출.<br>
 세금계산서 발행을 요청한 주문만 `purchase_order_tax_invoice`에 행을 생성해 상태와 공급자·공급받는자 정보를 주문 시점 snapshot으로 보관. 일반 주문은 해당 행을 생성하지 않으며 API의 `taxInvoiceRequested`는 하위 행 존재 여부로 반환.<br>
 세금계산서 snapshot은 사용자 그룹 주문 상세와 권한 있는 운영 조회에서 확인하며, 실제 전자세금계산서 전송은 외부 발행 연동 도입 범위.<br>

@@ -34,6 +34,7 @@ import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.ChannelProductListingRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesChannelRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
 import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -47,6 +48,7 @@ class OperationCatalogJpaEntityService(
     private val channels: SalesChannelRepository,
     private val listings: ChannelProductListingRepository,
     private val offers: SalesOfferRepository,
+    private val organizations: OrganizationRepository,
 ) {
     @Transactional(readOnly = true)
     fun categories(channelCode: String) = catalog.categories(channelCode).map {
@@ -122,11 +124,31 @@ class OperationCatalogJpaEntityService(
         require(command.unitsPerSale == null || command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
         val channel = channel(command.channelCode)
         val sku = catalog.sku(command.skuId) ?: return null
-        val offer = offers.findBySalesChannel_IdAndProductSku_Id(requireNotNull(channel.id), requireNotNull(sku.id))
-            ?: SalesOfferEntity().apply {
-                salesChannel = channel
-                productSku = sku
-            }
+        val offer = offers.findFirstBySalesChannel_IdAndProductSku_IdAndOrganizationIsNull(requireNotNull(channel.id), requireNotNull(sku.id))
+            ?: return null
+        offer.salePrice = command.salePrice
+        offer.listPrice = command.listPrice
+        offer.salesStatus = command.salesStatus
+        offer.unitsPerSale = command.unitsPerSale ?: offer.unitsPerSale
+        require(command.channelCode != RETAIL || offer.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
+        return offers.save(offer).toView()
+    }
+
+    fun updateSellerSalesOffer(organizationPublicId: UUID, command: SalesOfferCommand): SalesOfferView? {
+        require(command.unitsPerSale == null || command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
+        val organization = organizations.findByPublicId(organizationPublicId) ?: return null
+        val channel = channel(command.channelCode)
+        val sku = catalog.sku(command.skuId) ?: return null
+        require(sku.salesStatus == ON_SALE && sku.product.salesStatus == ON_SALE && sku.product.displayStatus == DISPLAYED) {
+            "판매 가능한 공용 SKU만 오퍼로 등록할 수 있습니다."
+        }
+        val offer = offers.findBySalesChannel_IdAndProductSku_IdAndOrganization_Id(
+            requireNotNull(channel.id), requireNotNull(sku.id), requireNotNull(organization.id),
+        ) ?: SalesOfferEntity().apply {
+            salesChannel = channel
+            productSku = sku
+            this.organization = organization
+        }
         offer.salePrice = command.salePrice
         offer.listPrice = command.listPrice
         offer.salesStatus = command.salesStatus
@@ -159,8 +181,7 @@ class OperationCatalogJpaEntityService(
         command.images.forEach { catalog.save(image(saved, it)) }
         command.options.forEach { saveOption(saved, it) }
         command.skus.forEach {
-            val savedSku = catalog.save(sku(saved, it))
-            wholesaleOffer(savedSku, savedSku.salePrice, savedSku.listPrice, savedSku.salesStatus)
+            catalog.save(sku(saved, it))
         }
         return CatalogResource(requireNotNull(saved.publicId))
     }
@@ -185,7 +206,6 @@ class OperationCatalogJpaEntityService(
         val p =
             catalog.product(id) ?: return null
         val savedSku = catalog.save(sku(p, command))
-        wholesaleOffer(savedSku, savedSku.salePrice, savedSku.listPrice, savedSku.salesStatus)
         return CatalogResource(requireNotNull(savedSku.publicId))
     }
     fun updateStatus(id: UUID, command: ProductStatusCommand): CatalogResource? {
@@ -284,20 +304,6 @@ class OperationCatalogJpaEntityService(
         listings.save(listing)
     }
 
-    private fun wholesaleOffer(sku: ProductSkuEntity, salePrice: Long, listPrice: Long?, salesStatus: String) {
-        val salesChannel = channel(WHOLESALE)
-        val offer = offers.findBySalesChannel_IdAndProductSku_Id(requireNotNull(salesChannel.id), requireNotNull(sku.id))
-            ?: SalesOfferEntity().apply {
-                this.salesChannel = salesChannel
-                productSku = sku
-            }
-        offer.salePrice = salePrice
-        offer.listPrice = listPrice
-        offer.salesStatus = salesStatus
-        offer.unitsPerSale = 1
-        offers.save(offer)
-    }
-
     private fun SalesOfferEntity.toView() = SalesOfferView(
         requireNotNull(publicId),
         salesChannel.code,
@@ -306,6 +312,7 @@ class OperationCatalogJpaEntityService(
         listPrice,
         salesStatus,
         unitsPerSale,
+        organization?.publicId,
     )
 
     private fun ProductEntity.toView(details: Boolean = false): ProductView {
@@ -348,6 +355,8 @@ class OperationCatalogJpaEntityService(
     }
 
     private companion object {
+        const val ON_SALE = "ON_SALE"
+        const val DISPLAYED = "DISPLAYED"
         const val WHOLESALE = "WHOLESALE"
         const val RETAIL = "RETAIL"
     }

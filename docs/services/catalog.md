@@ -2,9 +2,9 @@
 
 ## 판매 채널 기준
 
-상품·실물 SKU는 판매 채널과 독립된 공용 원본. 판매 채널은 `WHOLESALE`·`RETAIL`로 분리.<br>
+상품·실물 SKU는 판매 채널 및 판매 Organization과 독립된 공용 원본. 판매 채널은 `WHOLESALE`·`RETAIL`로 분리.<br>
 판매 채널별 카테고리는 별도 계층으로 관리하고, `channel_product_listing`이 상품의 채널 카테고리·노출·순서를 보유.<br>
-채널별 상품 판매는 `sales_offer`가 실물 SKU·채널·판매가·정가·판매 상태·판매 단위당 입수 수량을 보유. 같은 실물 SKU에 채널별 오퍼를 둘 수 있고 가격·노출 상태는 서로 독립.<br>
+채널별 상품 판매는 `sales_offer`가 판매 Organization·실물 SKU·채널·판매가·정가·판매 상태·판매 단위당 입수 수량을 보유. 같은 실물 SKU를 여러 판매 Organization이 각각 판매할 수 있고 가격·판매 상태는 서로 독립.<br>
 클라이언트가 채널을 명시. 기존 API 호출은 호환성을 위해 `WHOLESALE` 기본값 사용. 구매자 그룹 유형으로 판매 채널을 추정하지 않음.<br>
 오퍼는 실물 SKU 하나와 해당 채널의 판매 단위를 연결. `WHOLESALE` 오퍼는 박스 입수 수량을 보유하고 `RETAIL` 오퍼는 낱개 단위(입수 수량 1)를 사용.<br>
 
@@ -37,7 +37,7 @@ flowchart TD
 - `GET /api/products/{productId}?channel=WHOLESALE|RETAIL`
 
 공개 조회는 요청 채널의 노출 listing과 판매 가능한 오퍼가 있는 공용 상품·SKU만 반환함.<br>
-조회 응답의 판매가·정가·상태는 해당 채널의 오퍼 기준. 재고 예약은 오퍼가 참조하는 공용 실물 SKU 기준.<br>
+조회 응답의 판매가·정가·상태는 해당 채널과 판매 Organization의 오퍼 기준. 판매 Organization별 재고 원장은 `organization_id + sku_id`로 구분하고, 같은 Organization의 채널별 오퍼는 해당 재고를 공유.<br>
 
 ## 관리자 관리
 
@@ -58,9 +58,21 @@ flowchart TD
 - `PUT /api/operation/channels/{channel}/products/{productId}/listing`
 - `PUT /api/operation/channels/{channel}/skus/{skuId}/offer`
 
-운영자 등록 상품·SKU는 공용 원본. 기존 상품 생성 API는 기존 운영 흐름 호환을 위해 `WHOLESALE` listing 및 SKU별 오퍼도 함께 생성.<br>
-채널별 listing과 오퍼 API는 카테고리·노출·순서·가격·판매 상태를 분리 변경. 오퍼 상태 변경은 공용 SKU 상태를 변경하지 않음.<br>
-별도 SKU 추가 시 옵션값은 해당 상품에 속한 값이어야 함. 상품의 실제 재고는 SKU별 단일 원장을 공유.<br>
+## 판매자 판매 관리
+
+- `GET /api/seller/skus?page=&size=`
+- `PUT /api/seller/channels/{channelCode}/skus/{skuId}/offer`
+- `GET /api/seller/inventory/skus/{skuId}`
+- `PATCH /api/seller/inventory/skus/{skuId}`
+- `GET /api/seller/inventory/skus/{skuId}/movements?page=&size=`
+
+판매자 endpoint는 인증 계정의 활성 Organization에 `SELLER` capability가 있는지 확인하고 해당 Organization의 오퍼·재고만 조회·변경.<br>
+상품·SKU 생성과 상품 전시는 운영자가 관리하는 공용 원본이며, 판매자는 공개 상태의 공용 SKU 목록에서 선택해 자기 Organization의 오퍼와 재고를 관리.<br>
+
+운영자 등록 상품·SKU는 공용 원본. 상품 생성은 채널 listing을 만들고 판매 Organization이 별도 오퍼를 등록.<br>
+운영자 오퍼 API는 V42 이전 소유자가 없는 레거시 오퍼 유지용. 신규 판매 오퍼는 판매자 API에서 Organization을 연결해 등록.<br>
+채널별 listing API는 카테고리·노출·순서를 관리하며, 오퍼 상태 변경은 공용 SKU 상태를 변경하지 않음.<br>
+별도 SKU 추가 시 옵션값은 해당 상품에 속한 값이어야 함. 재고는 Organization과 SKU별 원장으로 관리하고, 한 Organization의 여러 채널 오퍼가 같은 SKU 원장을 공유.<br>
 HTTP 응답은 response DTO로 변환하며 JPA Entity를 외부 계약에 직접 노출하지 않음.<br>
 
 ## 박스 단위 오퍼와 구매 흐름
@@ -73,16 +85,16 @@ WHOLESALE·RETAIL 채널별 카테고리·listing·offer 분리 및 도매 박�
 
 ```mermaid
 flowchart TD
-    ADMIN[운영자 offer 등록·수정] --> VALIDATE{채널 및 입수 수량 유효}
+    SELLER[판매 Organization 오퍼 등록·수정] --> VALIDATE{SELLER capability·채널 및 입수 수량 유효}
     VALIDATE -- 실패 --> REJECT[요청 거부]
-    VALIDATE -- WHOLESALE 및 양수 --> SAVEBOX[판매가·입수 수량 저장]
-    VALIDATE -- RETAIL 및 1 --> SAVEUNIT[낱개 판매가·입수 수량 1 저장]
+    VALIDATE -- WHOLESALE 및 양수 --> SAVEBOX[Organization·SKU별 판매가·입수 수량 저장]
+    VALIDATE -- RETAIL 및 1 --> SAVEUNIT[Organization·SKU별 낱개 판매가·입수 수량 1 저장]
     SAVEBOX --> CATALOG[공개 카탈로그에 가격·입수 수량 표시]
     SAVEUNIT --> CATALOG
     CATALOG --> BUYER[구매자가 박스 또는 낱개 수량 입력]
     BUYER --> CART[장바구니에 오퍼·판매 수량 저장]
     CART --> CHECKOUT[주문 시 가격·판매 수량·입수 수량 snapshot]
-    CHECKOUT --> RESERVE[판매 수량 × snapshot 입수 수량을 공용 SKU 재고로 예약]
+    CHECKOUT --> RESERVE[판매 수량 × snapshot 입수 수량을 오퍼 판매 Organization의 SKU 재고로 예약]
     RESERVE --> ORDER[주문 응답은 가격·판매 수량·입수 수량 표시]
 ```
 

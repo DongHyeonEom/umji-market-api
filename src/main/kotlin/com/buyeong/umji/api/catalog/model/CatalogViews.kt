@@ -11,7 +11,7 @@ data class ProductSummaryView(
     val startingPrice: Long? = null,
     val startingUnitsPerSale: Int = 1,
 )
-data class ProductSkuView(val id: UUID, val code: String, val name: String, val salePrice: Long, val listPrice: Long?, val salesOfferId: UUID? = null, val unitsPerSale: Int = 1)
+data class ProductSkuView(val id: UUID, val code: String, val name: String, val salePrice: Long, val listPrice: Long?, val salesOfferId: UUID? = null, val unitsPerSale: Int = 1, val sellerOrganizationId: UUID? = null)
 data class ProductDetailView(
     val id: UUID,
     val name: String,

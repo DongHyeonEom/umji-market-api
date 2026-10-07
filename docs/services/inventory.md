@@ -6,6 +6,14 @@
 - `PATCH /api/operation/inventory/skus/{skuId}`
 - `GET /api/operation/inventory/skus/{skuId}/movements?page=&size=`
 
+## 판매자 endpoint
+
+- `GET /api/seller/inventory/skus/{skuId}`
+- `PATCH /api/seller/inventory/skus/{skuId}`
+- `GET /api/seller/inventory/skus/{skuId}/movements?page=&size=`
+
+판매자 endpoint는 인증 계정의 활성 Organization과 `SELLER` capability를 확인하고 Organization별 SKU 원장만 조정·조회.<br>
+
 ## 동작
 
 ### 알고리즘 흐름
@@ -14,24 +22,24 @@
 flowchart TD
     A[재고 요청] --> B{작업 종류}
     B -- 재고 조회 --> C[SKU 존재 확인]
-    C --> D[재고 행 조회 또는 기본 수량 반환]
+    C --> D[요청자 Organization과 SKU의 재고 행 조회 또는 기본 수량 반환]
     D --> D2[WHOLESALE 오퍼 입수량으로 완박스·낱개 잔량 산출]
     D2 --> D3[기준 수량과 박스·낱개 표시값 응답]
     B -- 변동 조회 --> C1[SKU 존재 확인]
     C1 --> D1[페이지 단위 이동 이력 조회]
     B -- 운영 조정 --> E[조정 수량·안전 재고 검증]
-    E --> F[재고 행 잠금]
+    E --> F[Organization·SKU 재고 행 잠금]
     F --> G{실재고가 예약 재고 이상}
     G -- 아니오 --> H[조정 거부]
     G -- 예 --> I[재고 갱신 및 조정 이동 이력 저장]
     B -- 예약 --> J[수량 양수 및 예약 키 중복 검증]
-    J --> K[재고 행 잠금]
+    J --> K[오퍼 Organization·SKU 재고 행 잠금]
     K --> L{가용 재고 충분}
     L -- 아니오 --> M[예약 거부]
     L -- 예 --> N[예약 수량 갱신·예약 저장·이동 이력 저장]
     B -- 예약 해제 --> O[예약 조회 및 RESERVED 상태 확인]
     B -- 예약 확정 --> O
-    O --> P[재고 행 잠금]
+    O --> P[예약에 저장된 Organization·SKU 재고 행 잠금]
     P --> Q{예약 상태와 요청 종류}
     Q -- CONFIRMED 확정 요청 --> R[현재 재고 상태 반환]
     Q -- RESERVED --> S{요청 종류}
@@ -59,7 +67,7 @@ flowchart TD
 
 ## 도매 박스 및 재고 표시 규칙
 
-재고 원장은 상품별 기준 단위 수량 하나를 기준으로 관리하고, 박스 수와 낱개 잔량 표시는 해당 수량에서 계산.<br>
+재고 원장은 판매 Organization·SKU별 기준 단위 수량으로 관리하고, 박스 수와 낱개 잔량 표시는 해당 수량에서 계산.<br>
 박스 입수 수량은 WHOLESALE sales offer에서 설정. 도매 주문의 박스 수는 주문 시점 입수 수량 snapshot을 기준으로 기준 단위로 환산해 예약·확정·해제.<br>
 관리 화면은 완박스 수와 낱개 잔량을 함께 표시하되 두 값을 독립 재고로 저장하지 않음.<br>
 완박스 수는 기준 수량을 입수 수량으로 나눈 몫, 낱개 잔량은 나머지. 실재고·예약·가용 각각에 적용.<br>
@@ -67,7 +75,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     OFFER[WHOLESALE offer 입수 수량] --> DISPLAY[기준 재고의 완박스·낱개 잔량 계산]
-    STOCK[SKU 기준 재고 수량] --> DISPLAY
+    STOCK[Organization·SKU 기준 재고 수량] --> DISPLAY
     B2B[도매 주문 박스 수] --> SNAPSHOT[주문 시 offer 입수 수량 snapshot]
     SNAPSHOT --> CONVERT[박스 수 × snapshot 입수 수량으로 기준 단위 환산]
     CONVERT --> RESERVE[기준 단위 재고 예약]
@@ -75,7 +83,7 @@ flowchart TD
     RESERVE --> RELEASE[취소 시 예약 해제]
     CONFIRM --> STOCK
     RELEASE --> STOCK
-    DISPLAY --> ADMIN[운영 재고 화면에 박스·낱개 병기]
+    DISPLAY --> ADMIN[운영·판매자 화면에 박스·낱개 병기]
     DISPLAY --> RETAIL[향후 소매 오퍼의 낱개 가용량 계산]
 ```
 

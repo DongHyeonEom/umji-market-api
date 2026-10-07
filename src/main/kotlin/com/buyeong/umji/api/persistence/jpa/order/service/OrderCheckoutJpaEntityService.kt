@@ -163,6 +163,7 @@ class OrderCheckoutJpaEntityService(
                 unitPrice = item.unitPrice, quantity = item.quantity, lineAmount = item.lineAmount, status = item.status,
                 salesOfferId = requireNotNull(item.salesOffer.publicId),
                 unitsPerSale = item.unitsPerSale,
+                sellerOrganizationId = item.salesOffer.organization?.publicId,
             )
         },
         paymentMethod = payment.paymentMethod,
@@ -183,6 +184,7 @@ class OrderCheckoutJpaEntityService(
         shippingAddress1 = shippingAddress1,
         shippingAddress2 = shippingAddress2,
         taxInvoiceSnapshot = toTaxInvoiceSnapshot(),
+        sellerOrganizationId = items.mapNotNull { it.salesOffer.organization?.publicId }.distinct().singleOrNull(),
     )
 
     private fun PurchaseOrderEntity.toTaxInvoiceSnapshot(): TaxInvoiceSnapshot? {

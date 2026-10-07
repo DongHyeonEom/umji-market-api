@@ -31,4 +31,5 @@ data class CartItemResponse(
         required = true,
         implementation = Int::class,
     ) val unitsPerSale: Int = 1,
+    @field:Schema(description = "판매 Organization 공개 식별자") val sellerOrganizationId: UUID? = null,
 )

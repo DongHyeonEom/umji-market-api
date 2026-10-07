@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V41이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V42가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -268,10 +268,11 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    SALES_OFFER["SALES_OFFER · 채널별 SKU 가격·판매 조건"] {
+    SALES_OFFER["SALES_OFFER · 판매 Organization별 채널 SKU 가격·판매 조건"] {
         BIGINT id PK "판매 오퍼 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT sales_channel_id FK "판매 채널 ID"
+        BIGINT organization_id FK "판매 Organization ID, 레거시 오퍼는 nullable"
         BIGINT product_sku_id FK "공용 SKU ID"
         BIGINT sale_price "채널 판매가"
         INT units_per_sale "판매 단위당 기준 SKU 수량"
@@ -313,9 +314,10 @@ erDiagram
         BIGINT product_sku_id PK,FK "SKU ID"
         BIGINT product_option_value_id PK,FK "SKU 조합에 포함된 옵션값 ID"
     }
-    INVENTORY_STOCK["INVENTORY_STOCK · SKU 현재고·예약·안전재고"] {
+    INVENTORY_STOCK["INVENTORY_STOCK · Organization·SKU 현재고·예약·안전재고"] {
         BIGINT id PK "재고 레코드 ID"
-        BIGINT sku_id FK,UK "대상 SKU ID, SKU당 하나"
+        BIGINT organization_id FK,UK "재고 소유 Organization, 레거시 원장은 nullable"
+        BIGINT sku_id FK,UK "대상 SKU ID, Organization별 하나"
         INT on_hand_quantity "실재고 수량"
         INT reserved_quantity "예약 수량"
         INT safety_stock_quantity "안전 재고 수량"
@@ -325,6 +327,7 @@ erDiagram
     }
     INVENTORY_MOVEMENT["INVENTORY_MOVEMENT · 재고 증감 원장"] {
         BIGINT id PK "재고 이동 이력 ID"
+        BIGINT organization_id FK "재고 소유 Organization, 레거시 원장은 nullable"
         BIGINT sku_id FK "대상 SKU ID"
         VARCHAR movement_type "이동 유형"
         INT quantity_delta "재고 증감량"
@@ -336,6 +339,7 @@ erDiagram
     }
     STOCK_RESERVATION["STOCK_RESERVATION · 주문 재고 예약·확정 상태"] {
         BIGINT id PK "예약 레코드 ID"
+        BIGINT organization_id FK "재고 소유 Organization, 레거시 원장은 nullable"
         BINARY reservation_key UK "예약 UUID"
         BIGINT sku_id FK "대상 SKU ID"
         INT quantity "예약 수량"
@@ -537,6 +541,10 @@ erDiagram
     ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : requests
     ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : decides
     ORGANIZATION ||--o| ORGANIZATION_BUSINESS_PROFILE : describes
+    ORGANIZATION ||--o{ SALES_OFFER : sells
+    ORGANIZATION ||--o{ INVENTORY_STOCK : owns
+    ORGANIZATION ||--o{ INVENTORY_MOVEMENT : records
+    ORGANIZATION ||--o{ STOCK_RESERVATION : reserves
     ACCOUNT ||--o{ CONSENT_HISTORY : records
     CATEGORY ||--o{ CATEGORY : parent
     SALES_CHANNEL ||--o{ CATEGORY : owns
@@ -553,7 +561,7 @@ erDiagram
     PRODUCT ||--o{ PRODUCT_SKU : sells
     PRODUCT_SKU ||--o{ PRODUCT_SKU_OPTION_VALUE : selects
     PRODUCT_OPTION_VALUE ||--o{ PRODUCT_SKU_OPTION_VALUE : belongs
-    PRODUCT_SKU ||--o| INVENTORY_STOCK : tracks
+    PRODUCT_SKU ||--o{ INVENTORY_STOCK : tracks
     PRODUCT_SKU ||--o{ INVENTORY_MOVEMENT : records
     PRODUCT_SKU ||--o{ STOCK_RESERVATION : reserves
     ACCOUNT ||--o| CART : owns
@@ -597,7 +605,7 @@ erDiagram
 - 카테고리는 자기 참조 트리임.<br>
   상품은 카테고리를 반드시 가지며 브랜드는 선택임.<br>
   상품의 이미지·옵션·SKU는 상품에 속함.<br>
-- 장바구니는 계정당 하나이며 한 장바구니 안에서 같은 SKU 항목은 하나임.<br>
+- 장바구니는 계정당 하나이며 한 장바구니 안에서 같은 판매 오퍼 항목은 하나임. 같은 SKU라도 판매 Organization별 오퍼를 각각 담을 수 있음.<br>
   주문 항목은 주문 당시 상품명·SKU명·코드·단가를 보존함.<br>
 - `order_item.reservation_key`와 `stock_reservation.reservation_key`는 같은 예약 UUID로 주문 항목과 재고 예약을 대응.<br>
   둘 사이에는 DB FK가 없음.<br>
@@ -647,6 +655,7 @@ erDiagram
 | V39 | `organization_profile`을 `organization_business_profile`로 명칭 변경 |
 | V40 | 세금계산서 기본 발행 설정을 `account`에서 `organization`으로 이동 |
 | V41 | 주문별 세금계산서 상태와 양측 snapshot을 선택형 하위 테이블로 분리 |
+| V42 | 판매 오퍼·재고 원장을 Organization별로 분리하고 장바구니 항목을 판매 오퍼별로 구분 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

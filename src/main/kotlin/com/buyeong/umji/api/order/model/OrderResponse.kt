@@ -37,6 +37,13 @@ data class OrderResponse(
     @field:Schema(description = "배송지 상세 주소", example = "예시 값", type = "string", required = true) val shippingAddress2: String?,
     @field:Schema(description = "세금계산서 발행 정보 snapshot. 미발행 주문은 null", type = "object", required = true) val taxInvoiceSnapshot: TaxInvoiceSnapshotResponse?,
     @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", required = true) val channelCode: String = "WHOLESALE",
+    @field:Schema(description = "판매 Organization 공개 식별자", format = "uuid", type = "string") val sellerOrganizationId: UUID? = null,
+)
+
+@Schema(description = "판매 Organization별로 분리 생성된 주문 목록")
+data class OrderCheckoutResponse(
+    @field:ArraySchema(schema = Schema(implementation = OrderResponse::class))
+    val orders: List<OrderResponse>,
 )
 
 @Schema(description = "주문 입금에 사용할 은행 계좌 안내 정보")

@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.inventory.entity
 
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -23,6 +24,10 @@ class InventoryMovementEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sku_id", nullable = false)
     lateinit var sku: ProductSkuEntity
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id")
+    var organization: OrganizationEntity? = null
 
     @Column(name = "movement_type", nullable = false)
     lateinit var movementType: String

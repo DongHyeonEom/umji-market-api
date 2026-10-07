@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.persistence.jpa.catalog.entity
 
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -14,6 +15,10 @@ class SalesOfferEntity : DomainPublicEntity() {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sales_channel_id", nullable = false)
     lateinit var salesChannel: SalesChannelEntity
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id")
+    var organization: OrganizationEntity? = null
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "product_sku_id", nullable = false)

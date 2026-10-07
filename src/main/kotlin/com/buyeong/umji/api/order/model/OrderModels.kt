@@ -14,6 +14,7 @@ data class CheckoutLine(
     val salesOfferId: UUID = UUID(0, 0),
     val channelCode: String = "WHOLESALE",
     val unitsPerSale: Int = 1,
+    val sellerOrganizationId: UUID? = null,
 )
 
 data class OrderDraft(
@@ -94,6 +95,7 @@ data class OrderView(
     val shippingAddress2: String? = null,
     val taxInvoiceSnapshot: TaxInvoiceSnapshot? = null,
     val channelCode: String = "WHOLESALE",
+    val sellerOrganizationId: UUID? = null,
 )
 
 data class OrderItemView(
@@ -109,6 +111,7 @@ data class OrderItemView(
     val status: String,
     val salesOfferId: UUID = UUID(0, 0),
     val unitsPerSale: Int = 1,
+    val sellerOrganizationId: UUID? = null,
 )
 
 data class OrderPage(

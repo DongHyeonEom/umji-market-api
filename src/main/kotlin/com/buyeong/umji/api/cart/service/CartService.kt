@@ -40,7 +40,7 @@ class CartService(
         require(current.items.isEmpty() || current.items.all { it.sku.channelCode == sku.channelCode }) {
             "장바구니에는 한 판매 채널의 상품만 담을 수 있습니다. 현재 상품을 주문하거나 비워 주세요."
         }
-        val matching = current.items.firstOrNull { it.sku.id == sku.id }
+        val matching = current.items.firstOrNull { it.sku.salesOfferId == sku.salesOfferId }
         val updated = if (matching == null) {
             current.copy(items = current.items + CartItemState(null, sku, command.quantity))
         } else {
@@ -86,6 +86,7 @@ class CartService(
                 it.sku.salesOfferId,
                 it.sku.channelCode,
                 it.sku.unitsPerSale,
+                it.sku.sellerOrganizationId,
             )
         },
     )
@@ -100,8 +101,8 @@ class CartService(
         val account = accounts.findByPublicId(state.accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val cart = carts.findLocked(requireNotNull(account.id)) ?: carts.create(account)
         val retainedIds = state.items.mapNotNull { it.id }.toSet()
-        val newSkuIds = state.items.filter { it.id == null }.map { it.sku.id }.toSet()
-        cart.items.filter { it.publicId !in retainedIds && it.sku.publicId !in newSkuIds }
+        val newOfferIds = state.items.filter { it.id == null }.map { it.sku.salesOfferId }.toSet()
+        cart.items.filter { it.publicId !in retainedIds && it.salesOffer.publicId !in newOfferIds }
             .toList().forEach(cart::remove)
         state.items.forEach { item ->
             val existing = item.id?.let { id -> cart.items.firstOrNull { it.publicId == id } }
@@ -133,6 +134,7 @@ class CartService(
         salePrice,
         salesStatus,
         unitsPerSale,
+        organization?.publicId,
     )
 
     private companion object {

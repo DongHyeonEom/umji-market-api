@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.inventory.entity
 
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainBaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -15,6 +16,10 @@ class InventoryStockEntity : DomainBaseEntity() {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sku_id", nullable = false)
     lateinit var sku: ProductSkuEntity
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id")
+    var organization: OrganizationEntity? = null
 
     @Column(name = "on_hand_quantity", nullable = false)
     var onHandQuantity: Int = 0

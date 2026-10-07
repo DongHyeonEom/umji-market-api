@@ -73,7 +73,13 @@ class CatalogJpaEntityService(
         offers.findAllBySalesChannel_CodeAndSalesStatusAndProductSku_Product_IdOrderBySalePriceAsc(channelCode, salesStatus, productId)
     fun salesOffer(id: UUID): SalesOfferEntity? = offers.findByPublicId(id)
     fun salesOffer(channelCode: String, skuId: UUID): SalesOfferEntity? =
-        offers.findBySalesChannel_CodeAndProductSku_PublicId(channelCode, skuId)
+        offers.findFirstBySalesChannel_CodeAndProductSku_PublicIdAndSalesStatusOrderBySalePriceAsc(channelCode, skuId, "ON_SALE")
+    fun salesOffer(channelCode: String, skuId: UUID, organizationPublicId: UUID): SalesOfferEntity? =
+        offers.findBySalesChannel_CodeAndProductSku_PublicIdAndOrganization_PublicId(channelCode, skuId, organizationPublicId)
+    fun sellableSkus(pageable: org.springframework.data.domain.Pageable) =
+        skus.findAllByProduct_DeletedAtIsNullAndProduct_DisplayStatusAndProduct_SalesStatusAndSalesStatus(
+            "DISPLAYED", "ON_SALE", "ON_SALE", pageable,
+        )
 
     @Transactional fun save(category: CategoryEntity): CategoryEntity = categories.save(category)
 
