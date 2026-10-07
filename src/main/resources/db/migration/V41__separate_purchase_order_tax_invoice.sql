@@ -20,7 +20,7 @@ CREATE TABLE purchase_order_tax_invoice (
     buyer_item VARCHAR(100) NULL,
     buyer_email VARCHAR(255) NULL,
     CONSTRAINT FK_purchase_order_tax_invoice_order FOREIGN KEY (order_id) REFERENCES purchase_order(id),
-    CONSTRAINT CK_purchase_order_tax_invoice_status CHECK (status IN ('LEGACY', 'WAITING_FOR_SHIPMENT', 'READY_FOR_ISSUANCE'))
+    CONSTRAINT CK_purchase_order_tax_invoice_snapshot_status CHECK (status IN ('LEGACY', 'WAITING_FOR_SHIPMENT', 'READY_FOR_ISSUANCE'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO purchase_order_tax_invoice (
