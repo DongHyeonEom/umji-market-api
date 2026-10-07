@@ -375,7 +375,7 @@
 - [x] 판매자 카탈로그 Service의 Organization 범위 조회, 타 Organization 상품 수정·브랜드 연결 거부 및 타 Organization SKU 재고 접근 차단 unit test 개발 및 실행
 - [ ] 판매자 브랜드·상품 API 응답의 Organization 간 격리와 브랜드-상품 소유 일치 통합 테스트 개발 및 실행
 - [x] 사업자 프로필 미등록·미확인·폐업 상태 판매·주문 차단과 ACTIVE 프로필 판매·주문 허용 unit test 개발 및 실행
-- [ ] 다른 Organization SKU의 오퍼·재고 조회·조정 차단 검증
+- [x] 다른 Organization SKU의 오퍼·재고 조회·조정 차단 검증
 - [ ] 기존 오퍼·재고의 데이터 이관과 조직별 유일성 MySQL 통합 검증
 - [ ] 동일 SKU 코드의 Organization별 상품 격리 및 오퍼·재고 소유권 자동화 검증
 - [ ] 판매자 조직 권한 격리 및 장바구니·주문 재고 원장 귀속 자동화 검증
