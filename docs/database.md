@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V40으로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V41로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -64,6 +64,7 @@
 | V38 | 구매자 그룹·구성원·초대·주소·사업자 프로필·주문 FK를 Organization 명칭으로 전환. `organization_capability` 추가 및 기존 조직의 `BUYER` capability backfill. account 사업자 정보 중 기존 공통 프로필에서 비어 있는 값 이관 |
 | V39 | `organization_profile`을 `organization_business_profile`로 명칭 변경 |
 | V40 | 세금계산서 기본 발행 설정을 `account`에서 `organization`으로 이동. 대표자 설정을 우선 이관하고 대표자가 없는 경우 활성 구성원 중 가장 작은 계정 ID의 설정을 사용 |
+| V41 | 주문별 세금계산서 발행 상태와 양측 snapshot을 선택형 `purchase_order_tax_invoice`로 분리. 기존 요청 주문 데이터 이관 후 `purchase_order`의 세금계산서 전용 컬럼 제거 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -107,6 +108,8 @@
   생성 계정은 이력 식별용이며 주소 접근 범위는 구매자 그룹 기준.<br>
 - `purchase_order`의 배송지 snapshot은 주문 당시 수령인·연락처·주소를 보존함.<br>
   주소 원본과 외래 키를 두지 않아 그룹 주소 변경·삭제가 기존 주문에 영향을 주지 않음.<br>
+- `purchase_order_tax_invoice`는 세금계산서를 요청한 주문에만 생성하며 발행 상태·일자와 공급자·공급받는자 정보를 주문 시점 snapshot으로 보관함.<br>
+  행의 존재가 발행 요청 여부이며, 일반 주문에는 세금계산서 전용 행이 없음.<br>
 - `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. RETAIL은 1, WHOLESALE은 박스 입수 수량으로 사용.<br>
 - `order_item.quantity`와 `unit_price`는 판매 단위 기준이며 `units_per_sale`은 주문 시점 snapshot. 재고 예약 수량은 두 수량의 곱.<br>
 - `business_profile`은 V38 이관 후 레거시 보존 테이블이며 애플리케이션에서 읽거나 쓰지 않음. 운영자·판매자·구매자의 현재 사업자 정보 원본은 `organization_business_profile`임.<br>

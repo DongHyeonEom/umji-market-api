@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V40이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V41이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -373,26 +373,6 @@ erDiagram
         VARCHAR status "주문 상태"
         BIGINT subtotal_amount "상품 소계"
         BIGINT total_amount "주문 총액"
-        BOOLEAN tax_invoice_requested "주문 당시 세금계산서 발행 선택"
-        VARCHAR tax_invoice_status "발행 준비 상태, nullable"
-        DATE tax_invoice_written_date "세금계산서 작성일자, nullable"
-        DATE tax_invoice_supply_date "세금계산서 제공일자, nullable"
-        VARCHAR tax_invoice_supplier_registration_number "공급자 사업자등록번호 snapshot, nullable"
-        VARCHAR tax_invoice_supplier_business_name "공급자 상호 snapshot, nullable"
-        VARCHAR tax_invoice_supplier_name "공급자 성명 snapshot, nullable"
-        VARCHAR tax_invoice_supplier_address "공급자 사업장주소 snapshot, nullable"
-        VARCHAR tax_invoice_supplier_industry "공급자 업태 snapshot, nullable"
-        VARCHAR tax_invoice_supplier_item "공급자 종목 snapshot, nullable"
-        VARCHAR tax_invoice_supplier_email "공급자 이메일 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_registration_number "공급받는자 사업자등록번호 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_business_name "공급받는자 상호 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_name "공급받는자 성명 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_postal_code "공급받는자 우편번호 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_address1 "공급받는자 사업자주소 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_address2 "공급받는자 상세주소 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_industry "공급받는자 업태 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_item "공급받는자 종목 snapshot, nullable"
-        VARCHAR tax_invoice_buyer_email "공급받는자 선택 이메일 snapshot, nullable"
         VARCHAR deposit_bank_name "입금 은행 스냅샷, nullable"
         VARCHAR deposit_account_number "입금 계좌번호 스냅샷, nullable"
         VARCHAR deposit_account_holder "입금 예금주 스냅샷, nullable"
@@ -405,6 +385,28 @@ erDiagram
         BIGINT version "낙관적 잠금 버전"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
+    }
+    PURCHASE_ORDER_TAX_INVOICE["PURCHASE_ORDER_TAX_INVOICE · 발행 요청 주문의 세금계산서 상태·snapshot"] {
+        BIGINT order_id PK,FK "주문 ID"
+        VARCHAR status "LEGACY·WAITING_FOR_SHIPMENT·READY_FOR_ISSUANCE"
+        DATE written_date "세금계산서 작성일자, nullable"
+        DATE supply_date "세금계산서 제공일자, nullable"
+        VARCHAR supplier_registration_number "공급자 사업자등록번호 snapshot, nullable"
+        VARCHAR supplier_business_name "공급자 상호 snapshot, nullable"
+        VARCHAR supplier_name "공급자 성명 snapshot, nullable"
+        VARCHAR supplier_address "공급자 사업장주소 snapshot, nullable"
+        VARCHAR supplier_industry "공급자 업태 snapshot, nullable"
+        VARCHAR supplier_item "공급자 종목 snapshot, nullable"
+        VARCHAR supplier_email "공급자 이메일 snapshot, nullable"
+        VARCHAR buyer_registration_number "공급받는자 사업자등록번호 snapshot, nullable"
+        VARCHAR buyer_business_name "공급받는자 상호 snapshot, nullable"
+        VARCHAR buyer_name "공급받는자 성명 snapshot, nullable"
+        VARCHAR buyer_postal_code "공급받는자 우편번호 snapshot, nullable"
+        VARCHAR buyer_address1 "공급받는자 사업자주소 snapshot, nullable"
+        VARCHAR buyer_address2 "공급받는자 상세주소 snapshot, nullable"
+        VARCHAR buyer_industry "공급받는자 업태 snapshot, nullable"
+        VARCHAR buyer_item "공급받는자 종목 snapshot, nullable"
+        VARCHAR buyer_email "공급받는자 이메일 snapshot, nullable"
     }
     ORDER_NUMBER_SEQUENCE["ORDER_NUMBER_SEQUENCE · 주문번호 발급 순번"] {
         DATE order_date PK "주문번호 발급 기준 날짜"
@@ -564,6 +566,7 @@ erDiagram
     PRODUCT_SKU ||--o{ ORDER_ITEM : snapshots
     SALES_OFFER ||--o{ ORDER_ITEM : snapshots
     PURCHASE_ORDER ||--o{ ORDER_STATUS_HISTORY : tracks
+    PURCHASE_ORDER ||--o| PURCHASE_ORDER_TAX_INVOICE : requested_tax_invoice
     PURCHASE_ORDER ||--o| ORDER_PAYMENT : payment
     ORDER_PAYMENT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : tracks
     ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
@@ -643,6 +646,7 @@ erDiagram
 | V38 | Organization 구조 전환, capability 추가 및 기존 데이터 이관 |
 | V39 | `organization_profile`을 `organization_business_profile`로 명칭 변경 |
 | V40 | 세금계산서 기본 발행 설정을 `account`에서 `organization`으로 이동 |
+| V41 | 주문별 세금계산서 상태와 양측 snapshot을 선택형 하위 테이블로 분리 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

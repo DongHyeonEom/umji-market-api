@@ -19,6 +19,7 @@ import com.buyeong.umji.api.persistence.jpa.order.entity.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderNumberSequenceEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderStatusHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderTaxInvoiceEntity
 import com.buyeong.umji.api.persistence.jpa.order.repository.OrderCancellationHistoryRepository
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -51,6 +52,9 @@ class OrderCheckoutJpaEntityService(
 
     @Transactional
     fun save(draft: OrderDraft): OrderView {
+        require(draft.taxInvoiceRequested == (draft.taxInvoiceSnapshot != null)) {
+            "세금계산서 발행 요청과 세금계산서 snapshot이 일치하지 않습니다."
+        }
         val account = account(draft.accountId)
         val organization = organizationMembers.findFirstByAccount_IdAndStatus(requireNotNull(account.id), "ACTIVE")?.organization
             ?.takeIf { it.status == "ACTIVE" }
@@ -64,26 +68,6 @@ class OrderCheckoutJpaEntityService(
             orderedAt = draft.orderedAt
             subtotalAmount = draft.subtotalAmount
             totalAmount = draft.totalAmount
-            taxInvoiceRequested = draft.taxInvoiceRequested
-            draft.taxInvoiceSnapshot?.let { snapshot ->
-                taxInvoiceStatus = WAITING_FOR_SHIPMENT
-                taxInvoiceSupplierRegistrationNumber = snapshot.supplier.businessRegistrationNumber
-                taxInvoiceSupplierBusinessName = snapshot.supplier.businessName
-                taxInvoiceSupplierName = snapshot.supplier.representativeName
-                taxInvoiceSupplierAddress = snapshot.supplier.businessAddress
-                taxInvoiceSupplierIndustry = snapshot.supplier.businessIndustry
-                taxInvoiceSupplierItem = snapshot.supplier.businessItem
-                taxInvoiceSupplierEmail = snapshot.supplier.email
-                taxInvoiceBuyerRegistrationNumber = snapshot.buyer.businessRegistrationNumber
-                taxInvoiceBuyerBusinessName = snapshot.buyer.businessName
-                taxInvoiceBuyerName = snapshot.buyer.representativeName
-                taxInvoiceBuyerPostalCode = snapshot.buyer.postalCode
-                taxInvoiceBuyerAddress1 = snapshot.buyer.address1
-                taxInvoiceBuyerAddress2 = snapshot.buyer.address2
-                taxInvoiceBuyerIndustry = snapshot.buyer.businessIndustry
-                taxInvoiceBuyerItem = snapshot.buyer.businessItem
-                taxInvoiceBuyerEmail = snapshot.buyer.email
-            }
             depositBankName = draft.depositBankName
             depositAccountNumber = draft.depositAccountNumber
             depositAccountHolder = draft.depositAccountHolder
@@ -92,6 +76,28 @@ class OrderCheckoutJpaEntityService(
             shippingPostalCode = draft.shippingAddress.postalCode
             shippingAddress1 = draft.shippingAddress.address1
             shippingAddress2 = draft.shippingAddress.address2
+        }
+        draft.taxInvoiceSnapshot?.let { snapshot ->
+            order.taxInvoice = PurchaseOrderTaxInvoiceEntity().apply {
+                this.order = order
+                status = WAITING_FOR_SHIPMENT
+                supplierRegistrationNumber = snapshot.supplier.businessRegistrationNumber
+                supplierBusinessName = snapshot.supplier.businessName
+                supplierName = snapshot.supplier.representativeName
+                supplierAddress = snapshot.supplier.businessAddress
+                supplierIndustry = snapshot.supplier.businessIndustry
+                supplierItem = snapshot.supplier.businessItem
+                supplierEmail = snapshot.supplier.email
+                buyerRegistrationNumber = snapshot.buyer.businessRegistrationNumber
+                buyerBusinessName = snapshot.buyer.businessName
+                buyerName = snapshot.buyer.representativeName
+                buyerPostalCode = snapshot.buyer.postalCode
+                buyerAddress1 = snapshot.buyer.address1
+                buyerAddress2 = snapshot.buyer.address2
+                buyerIndustry = snapshot.buyer.businessIndustry
+                buyerItem = snapshot.buyer.businessItem
+                buyerEmail = snapshot.buyer.email
+            }
         }
         draft.items.forEach { item -> order.add(item.toEntity()) }
         val saved = orders.saveAndFlush(order)
@@ -161,7 +167,7 @@ class OrderCheckoutJpaEntityService(
         },
         paymentMethod = payment.paymentMethod,
         paymentStatus = payment.status,
-        taxInvoiceRequested = taxInvoiceRequested,
+        taxInvoiceRequested = taxInvoice != null,
         depositBankName = depositBankName,
         depositAccountNumber = depositAccountNumber,
         depositAccountHolder = depositAccountHolder,
@@ -180,33 +186,34 @@ class OrderCheckoutJpaEntityService(
     )
 
     private fun PurchaseOrderEntity.toTaxInvoiceSnapshot(): TaxInvoiceSnapshot? {
-        if (taxInvoiceStatus !in setOf(WAITING_FOR_SHIPMENT, READY_FOR_ISSUANCE)) return null
+        val invoice = taxInvoice ?: return null
+        if (invoice.status !in setOf(WAITING_FOR_SHIPMENT, READY_FOR_ISSUANCE)) return null
         return TaxInvoiceSnapshot(
-            status = requireNotNull(taxInvoiceStatus),
+            status = invoice.status,
             supplier = TaxInvoiceSupplier(
-                requireNotNull(taxInvoiceSupplierRegistrationNumber),
-                requireNotNull(taxInvoiceSupplierBusinessName),
-                requireNotNull(taxInvoiceSupplierName),
-                requireNotNull(taxInvoiceSupplierAddress),
-                requireNotNull(taxInvoiceSupplierIndustry),
-                requireNotNull(taxInvoiceSupplierItem),
-                requireNotNull(taxInvoiceSupplierEmail),
+                requireNotNull(invoice.supplierRegistrationNumber),
+                requireNotNull(invoice.supplierBusinessName),
+                requireNotNull(invoice.supplierName),
+                requireNotNull(invoice.supplierAddress),
+                requireNotNull(invoice.supplierIndustry),
+                requireNotNull(invoice.supplierItem),
+                requireNotNull(invoice.supplierEmail),
             ),
             buyer = TaxInvoiceBuyer(
                 organizationId = requireNotNull(organization.publicId),
-                businessRegistrationNumber = taxInvoiceBuyerRegistrationNumber,
-                businessName = taxInvoiceBuyerBusinessName,
-                representativeName = taxInvoiceBuyerName,
-                postalCode = taxInvoiceBuyerPostalCode,
-                address1 = taxInvoiceBuyerAddress1,
-                address2 = taxInvoiceBuyerAddress2,
-                businessIndustry = taxInvoiceBuyerIndustry,
-                businessItem = taxInvoiceBuyerItem,
-                email = taxInvoiceBuyerEmail,
+                businessRegistrationNumber = invoice.buyerRegistrationNumber,
+                businessName = invoice.buyerBusinessName,
+                representativeName = invoice.buyerName,
+                postalCode = invoice.buyerPostalCode,
+                address1 = invoice.buyerAddress1,
+                address2 = invoice.buyerAddress2,
+                businessIndustry = invoice.buyerIndustry,
+                businessItem = invoice.buyerItem,
+                email = invoice.buyerEmail,
                 complete = true,
             ),
-            writtenDate = taxInvoiceWrittenDate,
-            supplyDate = taxInvoiceSupplyDate,
+            writtenDate = invoice.writtenDate,
+            supplyDate = invoice.supplyDate,
             supplyAmount = items.sumOf { it.lineAmount },
         )
     }
