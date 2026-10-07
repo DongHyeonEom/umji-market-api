@@ -377,8 +377,8 @@
 - [x] 브랜드-상품 소유 Organization 일치 API 통합 테스트 개발 및 실행
 - [x] 사업자 프로필 미등록·미확인·폐업 상태 판매·주문 차단과 ACTIVE 프로필 판매·주문 허용 unit test 개발 및 실행
 - [x] 다른 Organization SKU의 오퍼·재고 조회·조정 차단 검증
-- [ ] 기존 오퍼·재고의 데이터 이관과 조직별 유일성 MySQL 통합 검증
-- [ ] 동일 SKU 코드의 Organization별 상품 격리와 오퍼·재고 유일성 MySQL 자동화 검증
+- [x] 기존 오퍼·재고의 데이터 이관과 조직별 유일성 MySQL 통합 검증
+- [x] 동일 SKU 코드의 Organization별 상품 격리와 오퍼·재고 유일성 MySQL 자동화 검증
 - [x] 판매자 Organization 권한 격리 및 다중 판매자 주문 재고 원장 귀속 unit test 개발 및 실행
 - [x] CartService 장바구니 항목의 판매 Organization 소유 정보 보존 unit test 개발 및 실행
 - [x] 다중 판매자 주문 분리 응답·공급자 snapshot unit test 개발 및 실행
