@@ -366,8 +366,8 @@
 - [x] 판매 오퍼 등록 시 SELLER capability와 완성·확인된 ACTIVE 사업자 프로필 필수 검증
 - [x] 판매 오퍼·재고·장바구니·주문에서 상품 소유 Organization 일치 검증
 - [x] 공개 카탈로그에서 판매자 소유 상품과 해당 판매자 오퍼·재고 연결
-- [ ] 다중 판매자 장바구니의 판매자별 주문 분리와 공급자 프로필 snapshot 유지
-- [ ] catalog·inventory 서비스 흐름도, database.md·database-erd.md 및 API 문서 동기화
+- [x] 다중 판매자 장바구니의 판매자별 주문 분리와 공급자 프로필 snapshot 유지
+- [x] catalog·inventory 서비스 흐름도, database.md·database-erd.md 및 API 문서 동기화
 
 ### 서비스 자동화 테스트 개발 및 테스트
 

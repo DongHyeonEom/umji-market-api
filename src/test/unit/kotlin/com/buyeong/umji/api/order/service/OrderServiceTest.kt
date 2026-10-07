@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.order.service
 
+import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfile
 import com.buyeong.umji.api.cart.model.CartItemView
 import com.buyeong.umji.api.cart.model.CartView
 import com.buyeong.umji.api.cart.service.CartService
@@ -9,6 +10,7 @@ import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.order.model.OrderItemView
 import com.buyeong.umji.api.order.model.OrderView
 import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
+import com.buyeong.umji.api.order.model.TaxInvoiceSupplier
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
@@ -71,13 +73,14 @@ class OrderServiceTest : DescribeSpec({
             every { carts.clearForCheckout(accountId) } returns Unit
 
             val result = service.create(accountId, addressId)
+            val order = result.single()
 
-            result.status shouldBe "PENDING_PAYMENT"
-            result.subtotalAmount shouldBe 36000L
-            result.items.single().unitPrice shouldBe 12000L
-            result.items.single().quantity shouldBe 3
-            result.items.single().unitsPerSale shouldBe 12
-            verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, result.id, null) }
+            order.status shouldBe "PENDING_PAYMENT"
+            order.subtotalAmount shouldBe 36000L
+            order.items.single().unitPrice shouldBe 12000L
+            order.items.single().quantity shouldBe 3
+            order.items.single().unitsPerSale shouldBe 12
+            verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, order.id, null) }
             verify(exactly = 1) { inventory.reserve(skuId, 36, any(), null) }
             verify(exactly = 1) { carts.clearForCheckout(accountId) }
         }
@@ -96,6 +99,61 @@ class OrderServiceTest : DescribeSpec({
 
             verify(exactly = 0) { orders.save(any()) }
             verify(exactly = 0) { inventory.reserve(any(), any(), any(), any()) }
+        }
+
+        it("판매 Organization별 주문을 만들고 세금계산서 공급자 snapshot과 재고 귀속을 분리한다") {
+            val sellerA = UUID.randomUUID()
+            val sellerB = UUID.randomUUID()
+            val sellerASku = UUID.randomUUID()
+            val sellerBSku = UUID.randomUUID()
+            val buyer = OrganizationTaxInvoiceProfile(
+                UUID.randomUUID(), "BUSINESS", "1234567890", "구매자", "대표", "12345", "주소", null,
+                "도소매", "공구", null, true, "ACTIVE", null, null,
+            )
+            val supplierA = TaxInvoiceSupplier("1111111111", "판매자 A", "대표 A", "주소 A", "도소매", "공구", "a@example.com")
+            val supplierB = TaxInvoiceSupplier("2222222222", "판매자 B", "대표 B", "주소 B", "도소매", "공구", "b@example.com")
+            every { shippingAddresses.findForAccount(accountId, addressId) } returns
+                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
+            every { carts.cart(accountId) } returns CartView(
+                listOf(
+                    CartItemView(UUID.randomUUID(), sellerASku, "A-001", "상품 A", "규격 A", 2, 1000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 4, sellerA),
+                    CartItemView(UUID.randomUUID(), sellerBSku, "B-001", "상품 B", "규격 B", 3, 2000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 6, sellerB),
+                ),
+            )
+            every { taxInvoiceBuyers.forAccount(accountId) } returns buyer
+            every { taxInvoiceBuyers.isSellerBusinessProfileReady(sellerA) } returns true
+            every { taxInvoiceBuyers.isSellerBusinessProfileReady(sellerB) } returns true
+            every { taxInvoiceBuyers.supplierForOrganization(sellerA) } returns supplierA
+            every { taxInvoiceBuyers.supplierForOrganization(sellerB) } returns supplierB
+            every { bankAccounts.taxInvoice() } returns com.buyeong.umji.api.order.model.BankAccountInstructions("은행", "123", "예금주")
+            every { orders.save(any()) } answers {
+                val draft = firstArg<com.buyeong.umji.api.order.model.OrderDraft>()
+                val savedSeller = if (draft.items.single().skuId == sellerASku) sellerA else sellerB
+                draft.items.size shouldBe 1
+                draft.taxInvoiceSnapshot?.supplier shouldBe if (savedSeller == sellerA) supplierA else supplierB
+                OrderView(
+                    UUID.randomUUID(), "UMJ-20260923-000001", draft.status, draft.subtotalAmount, draft.totalAmount,
+                    draft.orderedAt,
+                    draft.items.map {
+                        OrderItemView(
+                            UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
+                            it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale, savedSeller,
+                        )
+                    },
+                    taxInvoiceRequested = draft.taxInvoiceRequested,
+                    sellerOrganizationId = savedSeller,
+                )
+            }
+            every { carts.clearForCheckout(accountId) } returns Unit
+
+            val result = service.create(accountId, addressId, true, false)
+
+            result.map { it.sellerOrganizationId } shouldBe listOf(sellerA, sellerB)
+            result.map { it.totalAmount } shouldBe listOf(2000L, 6000L)
+            verify(exactly = 1) { inventory.reserve(sellerASku, 8, any(), null, sellerA) }
+            verify(exactly = 1) { inventory.reserve(sellerBSku, 18, any(), null, sellerB) }
+            verify(exactly = 2) { notifications.record(NotificationEventType.ORDER_CREATED, any(), null) }
+            verify(exactly = 1) { carts.clearForCheckout(accountId) }
         }
     }
 })
