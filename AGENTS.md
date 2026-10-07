@@ -41,6 +41,9 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 - 기능 브랜치 push 시 해당 브랜치를 `origin`에도 push하고 upstream을 설정함. push 전 `docs/todo.md`를 갱신해 완료된 수용 기준만 `[x]`로 체크하며, 미완료·부분 완료·검증되지 않은 항목은 `[ ]`로 유지함.
 - PR 생성과 병합은 사용자가 진행함.
   PR 병합 후 다음 feature를 시작할 때 `origin/dev`를 fetch하고 로컬 `dev`를 최신 상태로 fast-forward한 뒤, 해당 기준점에서 새 `codex/feature/<기능명>` 브랜치를 생성함.
+- 같은 Task의 자동화 테스트는 수용 기준별로 각각 구현·검증하고, 각 테스트 진행분을 동일한 feature 브랜치에 개별 커밋·push함.
+  해당 Task의 테스트 범위를 모두 마친 뒤 feature 단위 PR 하나로 제출하며 테스트 항목별 PR은 만들지 않음.
+  이미 완료·병합된 테스트는 반복하지 않으며, 해당 Task의 미완료 테스트 범위를 마친 뒤 다음 feature로 이동함.
 - 이미 진행 중이거나 병합된 기능의 일반 수정은 `dev`에서 바로 작업하고 커밋함.
   커밋 메시지는 `fix: <수정 내용>` 형식으로 작성함.
 - 기존 기능에 대한 수정 범위가 방대하면 `codex/feature/<기존 기능명>-fix` 브랜치에서 작업하고 PR을 생성함.
