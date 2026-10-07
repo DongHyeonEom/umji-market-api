@@ -115,7 +115,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         )
         jdbc.update("UPDATE inventory_stock SET on_hand_quantity = 100 WHERE sku_id = ?", skuInternalId)
 
-        val order = orders.create(accountId, addressId, false, false)
+        val order = orders.create(accountId, addressId, false, false).single()
         assertThat(order.items.single().quantity).isEqualTo(2)
         assertThat(order.items.single().unitsPerSale).isEqualTo(12)
         assertThat(
@@ -135,7 +135,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         createBusinessGroup(cancelledAccountId)
         val cancelledAddressId = createAddress(cancelledAccountId)
         createCartWithItem(cancelledAccountId, skuId)
-        val pendingOrder = orders.create(cancelledAccountId, cancelledAddressId, false, false)
+        val pendingOrder = orders.create(cancelledAccountId, cancelledAddressId, false, false).single()
         assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isEqualTo(12)
         cancellations.request(cancelledAccountId, pendingOrder.id)
         assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isEqualTo(76)
@@ -200,7 +200,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             ),
         ).isFalse()
 
-        val invoiceOrder = orders.create(accountId, addressId, true, true)
+        val invoiceOrder = orders.create(accountId, addressId, true, true).single()
         assertOutboxEvent(invoiceOrder.id, "ORDER_CREATED", null)
         assertThat(invoiceOrder.taxInvoiceRequested).isTrue()
         assertThat(invoiceOrder.depositBankName).isEqualTo("Tax Bank")
@@ -226,7 +226,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             organizations.activeForAccountPublicId(standardAccountId)?.id,
         )
         createCartWithItem(standardAccountId, skuId)
-        val standardOrder = orders.create(standardAccountId, standardAddressId, false, false)
+        val standardOrder = orders.create(standardAccountId, standardAddressId, false, false).single()
         assertOutboxEvent(standardOrder.id, "ORDER_CREATED", null)
         assertThat(standardOrder.taxInvoiceRequested).isFalse()
         assertThat(standardOrder.depositBankName).isEqualTo("Standard Bank")
@@ -245,7 +245,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val skuId = createSku(productId)
         createStock(skuId)
         createCartWithItem(accountId, skuId)
-        val order = orders.create(accountId, addressId, false, false)
+        val order = orders.create(accountId, addressId, false, false).single()
         val operatorId = createAccount()
 
         payments.updateStatus(order.id, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId)
@@ -266,7 +266,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val cancelledAccountId = createAccount()
         val cancelledAddressId = createAddress(cancelledAccountId)
         createCartWithItem(cancelledAccountId, skuId)
-        val cancelledOrder = orders.create(cancelledAccountId, cancelledAddressId, false, false)
+        val cancelledOrder = orders.create(cancelledAccountId, cancelledAddressId, false, false).single()
         cancellations.request(cancelledAccountId, cancelledOrder.id)
         assertOutboxEvent(cancelledOrder.id, "ORDER_CREATED", null)
         assertOutboxEvent(cancelledOrder.id, "ORDER_CANCELLED", null)
@@ -362,9 +362,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         createStock(skuId)
 
         createCartWithItem(ownerId, skuId)
-        val ownerOrder = orders.create(ownerId, addressId, false, false)
+        val ownerOrder = orders.create(ownerId, addressId, false, false).single()
         createCartWithItem(memberId, skuId)
-        val memberOrder = orders.create(memberId, addressId, false, false)
+        val memberOrder = orders.create(memberId, addressId, false, false).single()
 
         assertThat(orders.list(ownerId, 0, 20).items.map { it.id }).containsExactlyInAnyOrder(ownerOrder.id, memberOrder.id)
         assertThat(orders.list(memberId, 0, 20).items.map { it.id }).containsExactlyInAnyOrder(ownerOrder.id, memberOrder.id)
@@ -543,7 +543,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val skuId = createSku(productId)
         createStock(skuId)
         createCartWithItem(ownerId, skuId)
-        val order = orders.create(ownerId, addressId, true, false)
+        val order = orders.create(ownerId, addressId, true, false).single()
         assertThat(order.taxInvoiceSnapshot?.status).isEqualTo("WAITING_FOR_SHIPMENT")
         assertThat(order.taxInvoiceSnapshot?.writtenDate).isNull()
         assertThat(order.taxInvoiceSnapshot?.supplyAmount).isEqualTo(order.items.sumOf { it.lineAmount })
