@@ -7,25 +7,71 @@ RENAME TABLE
     buyer_group_join_request TO organization_join_request;
 
 ALTER TABLE organization
-    CHANGE COLUMN group_type organization_type VARCHAR(30) NOT NULL;
+    DROP CHECK CK_buyer_group_type,
+    CHANGE COLUMN group_type organization_type VARCHAR(30) NOT NULL,
+    ADD CONSTRAINT CK_organization_type CHECK (organization_type IN ('BUSINESS', 'INDIVIDUAL'));
+
+-- Rename the foreign-key columns after removing the old constraints. Recreate them
+-- with Organization terminology once the columns have their new names.
+ALTER TABLE organization_member
+    DROP FOREIGN KEY FK_buyer_group_member_group;
 
 ALTER TABLE organization_member
     CHANGE COLUMN buyer_group_id organization_id BIGINT NOT NULL;
 
+ALTER TABLE organization_member
+    ADD CONSTRAINT FK_organization_member_organization
+        FOREIGN KEY (organization_id) REFERENCES organization(id);
+
+ALTER TABLE organization_profile
+    DROP FOREIGN KEY FK_buyer_group_business_profile_group;
+
 ALTER TABLE organization_profile
     CHANGE COLUMN buyer_group_id organization_id BIGINT NOT NULL;
+
+ALTER TABLE organization_profile
+    ADD CONSTRAINT FK_organization_profile_organization
+        FOREIGN KEY (organization_id) REFERENCES organization(id);
+
+ALTER TABLE organization_address
+    DROP FOREIGN KEY FK_buyer_group_address_group;
 
 ALTER TABLE organization_address
     CHANGE COLUMN buyer_group_id organization_id BIGINT NOT NULL;
 
+ALTER TABLE organization_address
+    ADD CONSTRAINT FK_organization_address_organization
+        FOREIGN KEY (organization_id) REFERENCES organization(id);
+
+ALTER TABLE organization_invitation
+    DROP FOREIGN KEY FK_buyer_group_invitation_group;
+
 ALTER TABLE organization_invitation
     CHANGE COLUMN buyer_group_id organization_id BIGINT NOT NULL;
+
+ALTER TABLE organization_invitation
+    ADD CONSTRAINT FK_organization_invitation_organization
+        FOREIGN KEY (organization_id) REFERENCES organization(id);
+
+ALTER TABLE organization_join_request
+    DROP FOREIGN KEY FK_buyer_group_join_request_group;
 
 ALTER TABLE organization_join_request
     CHANGE COLUMN buyer_group_id organization_id BIGINT NOT NULL;
 
+ALTER TABLE organization_join_request
+    ADD CONSTRAINT FK_organization_join_request_organization
+        FOREIGN KEY (organization_id) REFERENCES organization(id);
+
+ALTER TABLE purchase_order
+    DROP FOREIGN KEY FK_purchase_order_buyer_group;
+
 ALTER TABLE purchase_order
     CHANGE COLUMN buyer_group_id organization_id BIGINT NOT NULL;
+
+ALTER TABLE purchase_order
+    ADD CONSTRAINT FK_purchase_order_organization
+        FOREIGN KEY (organization_id) REFERENCES organization(id);
 
 INSERT INTO organization_profile (
     organization_id,
