@@ -187,6 +187,7 @@ flowchart TD
 주문 항목에는 상품명, SKU명·코드, 판매가, 판매 수량, 판매 단위 입수 수량을 snapshot으로 저장함. WHOLESALE 수량은 박스 수이며 재고 예약 수량은 박스 수와 snapshot 입수 수량의 곱.<br>
 장바구니 상품을 판매 Organization별로 묶어 주문을 분리 생성. 한 주문은 하나의 판매 Organization 상품만 포함.<br>
 각 주문 생성 시 해당 판매자의 SKU 재고를 예약하고 모든 주문 저장이 성공한 뒤 장바구니 항목을 초기화.<br>
+판매자별 주문 저장·재고 예약·장바구니 초기화·주문 생성 outbox 기록은 하나의 주문 생성 트랜잭션에 포함. 어느 판매자의 재고 예약이나 outbox 기록이 실패하면 전체 주문 생성이 롤백되어 장바구니와 기존 재고 상태가 유지.<br>
 `POST /api/orders`는 판매자별 주문 응답을 `orders` 배열에 담아 반환하며, 각 주문 응답의 `sellerOrganizationId`로 판매자를 식별.<br>
 초기 상태는 `PENDING_PAYMENT`임.<br>
 초기 결제수단은 `BANK_TRANSFER`, 결제 상태는 `WAITING_FOR_DEPOSIT`이며 사용자 주문 목록·상세에 결제 상태가 포함됨.<br>
