@@ -83,6 +83,14 @@ class OrganizationTaxInvoiceJpaEntityService(
         )
     }
 
+    fun isSellerBusinessProfileReady(organizationPublicId: UUID): Boolean {
+        val organization = groups.findByPublicId(organizationPublicId)
+            ?.takeIf { it.status == ACTIVE && it.organizationType == BUSINESS && organizations.hasCapability(organizationPublicId, SELLER) }
+            ?: return false
+        val profile = profiles.findByOrganization_Id(requireNotNull(organization.id)) ?: return false
+        return profile.isComplete() && profile.businessRegistrationVerificationStatus == "ACTIVE" && profile.businessRegistrationConfirmedAt != null
+    }
+
     @Transactional
     fun updateForGroup(
         groupPublicId: UUID,

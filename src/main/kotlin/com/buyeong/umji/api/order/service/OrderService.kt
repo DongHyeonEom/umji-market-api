@@ -102,6 +102,9 @@ class OrderService(
         require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
         require(lines.all { it.salesStatus == ON_SALE }) { "판매 중지된 SKU가 포함되어 있습니다." }
         require(lines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
+        require(lines.mapNotNull { it.sellerOrganizationId }.distinct().all(taxInvoiceBuyers::isSellerBusinessProfileReady)) {
+            "판매자의 확인된 사업자 Organization 프로필이 없어 주문할 수 없습니다."
+        }
         val supplierByOrganization = lines.map { it.sellerOrganizationId }.distinct().associateWith { organizationId ->
             if (organizationId == null) taxInvoiceSuppliers.supplier() else taxInvoiceBuyers.supplierForOrganization(organizationId)
         }

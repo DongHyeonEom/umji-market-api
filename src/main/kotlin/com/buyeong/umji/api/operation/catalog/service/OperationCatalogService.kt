@@ -68,6 +68,27 @@ class OperationCatalogService(private val catalog: OperationCatalogJpaEntityServ
         validateDisplay(command.displayStatus)
         return catalog.createBrand(command.copy(name = command.name.trim()))
     }
+    fun updateSellerChannelListing(organizationId: UUID, command: ChannelListingCommand): CatalogResource {
+        channel(command.channelCode)
+        validateDisplay(command.displayStatus)
+        return catalog.updateSellerChannelListing(organizationId, command.copy(channelCode = channel(command.channelCode))) ?: missing()
+    }
+    fun sellerBrands(organizationId: UUID, page: Int, size: Int) = catalog.sellerBrands(organizationId, page, size)
+    fun createSellerBrand(organizationId: UUID, command: BrandCommand): CatalogResource {
+        validateDisplay(command.displayStatus)
+        require(command.name.isNotBlank() && command.name.length <= 100) { "브랜드명은 1자 이상 100자 이하여야 합니다." }
+        return catalog.createSellerBrand(organizationId, command.copy(name = command.name.trim()))
+    }
+    fun sellerProducts(organizationId: UUID, page: Int, size: Int) = catalog.sellerProducts(organizationId, page, size)
+    fun sellerProduct(organizationId: UUID, id: UUID) = catalog.sellerProduct(organizationId, id) ?: missing()
+    fun createSellerProduct(organizationId: UUID, command: ProductCommand): CatalogResource {
+        validateProduct(command)
+        return catalog.createSellerProduct(organizationId, command.normalized())
+    }
+    fun updateSellerProduct(organizationId: UUID, id: UUID, command: ProductCommand): CatalogResource {
+        validateProduct(command)
+        return catalog.updateSellerProduct(organizationId, id, command.normalized()) ?: missing()
+    }
     fun createProduct(command: ProductCommand): CatalogResource {
         validateProduct(command)
         return catalog.createProduct(command.normalized())

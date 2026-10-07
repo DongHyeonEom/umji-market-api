@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V42로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V43으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -66,18 +66,21 @@
 | V40 | 세금계산서 기본 발행 설정을 `account`에서 `organization`으로 이동. 대표자 설정을 우선 이관하고 대표자가 없는 경우 활성 구성원 중 가장 작은 계정 ID의 설정을 사용 |
 | V41 | 주문별 세금계산서 발행 상태와 양측 snapshot을 선택형 `purchase_order_tax_invoice`로 분리. 기존 요청 주문 데이터 이관 후 `purchase_order`의 세금계산서 전용 컬럼 제거 |
 | V42 | 판매 오퍼·재고 원장에 Organization 범위 추가 및 장바구니 항목의 오퍼별 선택 지원. 기존 오퍼·재고는 소유자를 추정할 수 없어 nullable 레거시 행으로 보존 |
+| V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성으로 전환. 기존 브랜드·상품은 소유자를 추정하지 않고 nullable 레거시로 보존 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
 ## 도메인 데이터 규칙
 
-- `product`와 `product_sku`는 판매 채널 및 판매 Organization 공용 상품·실물 SKU 원본.<br>
-  `sales_offer`는 판매 Organization·채널·SKU별 가격·판매 상태를 소유하며 같은 SKU를 여러 판매자가 독립 오퍼로 판매 가능.<br>
+- `brand`와 `product`는 소유 Organization을 가질 수 있으며, 신규 판매자 상품은 둘 다 같은 Organization에 속함. `product_sku`·이미지·옵션은 소속 상품을 통해 소유권을 상속.<br>
+  V43 이전 브랜드·상품은 판매자 소유자를 추정하지 않고 `organization_id IS NULL`인 레거시 범위로 보존. 레거시 상품은 관리자 카탈로그 API에서 관리.<br>
+  SKU 코드는 상품별로 유일하며 서로 다른 Organization 상품에서 같은 코드를 사용할 수 있음.<br>
+  신규 `sales_offer`는 상품 소유 Organization·채널·SKU와 같은 Organization 범위에서 가격·판매 상태를 소유함. V42 이전에 생성된 Organization 오퍼는 소유자 미지정 레거시 상품을 계속 참조할 수 있음.<br>
   재고는 `inventory_stock`에서 Organization·SKU별로 분리하고, 한 Organization의 채널별 오퍼는 같은 재고를 공유.<br>
   V42 이전 오퍼·재고의 판매자 소유권은 migration에서 임의로 추정하지 않으며 `organization_id IS NULL`인 레거시 범위로 보존.<br>
   기존 상품·SKU 및 기존 주문은 WHOLESALE로 backfill.<br>
 - SKU가 참조하는 옵션값은 같은 상품의 옵션에 속해야 함.<br>
-- 장바구니 항목은 공용 SKU와 선택 판매 Organization·채널의 `sales_offer`를 함께 참조하며 offer 가격을 표시. 장바구니 안에서 오퍼별 항목을 별도 보유.<br>
+- 장바구니 항목은 상품 소유 Organization·채널의 `sales_offer`를 참조하며 offer 가격을 표시. 장바구니 안에서 오퍼별 항목을 별도 보유.<br>
   주문은 단일 판매 채널로 생성하고 주문 항목의 상품명·SKU명·코드·가격 snapshot 및 offer 참조를 보관.<br>
 - 주문 생성 시 재고를 예약하고, 평일 15:00 배송 준비 전환에서 확정함.<br>
   READY_TO_SHIP 취소는 예약을 해제하고, PREPARING 취소 승인 시 확정 재고를 복구함.<br>
@@ -115,6 +118,7 @@
   판매자 오퍼가 연결된 주문의 공급자는 SELLER Organization 프로필이며 주문은 판매자별로 분리. 소유자 미지정 레거시 오퍼만 기존 환경 설정 공급자를 사용.<br>
   행의 존재가 발행 요청 여부이며, 일반 주문에는 세금계산서 전용 행이 없음.<br>
 - `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. RETAIL은 1, WHOLESALE은 박스 입수 수량으로 사용.<br>
+- 판매자는 `SELLER` capability의 BUSINESS Organization과 완성·확인된 ACTIVE `organization_business_profile`이 있어야 판매 오퍼를 ON_SALE로 등록하고 주문을 받을 수 있음. 사업자 프로필은 법적 정보이고 카탈로그 소유 FK는 Organization을 직접 참조.<br>
 - `inventory_movement`와 `stock_reservation`은 재고 원장과 같은 `organization_id + sku_id` 범위를 저장. 주문 예약·해제·확정·복구는 주문 항목의 판매 오퍼 Organization에 귀속.<br>
 - `order_item.quantity`와 `unit_price`는 판매 단위 기준이며 `units_per_sale`은 주문 시점 snapshot. 재고 예약 수량은 두 수량의 곱.<br>
 - `business_profile`은 V38 이관 후 레거시 보존 테이블이며 애플리케이션에서 읽거나 쓰지 않음. 운영자·판매자·구매자의 현재 사업자 정보 원본은 `organization_business_profile`임.<br>

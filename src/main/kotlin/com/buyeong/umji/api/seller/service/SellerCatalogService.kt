@@ -2,9 +2,14 @@ package com.buyeong.umji.api.seller.service
 
 import com.buyeong.umji.api.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.operation.catalog.model.SalesOfferCommand
 import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.inventory.service.InventoryService
+import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
+import com.buyeong.umji.api.operation.catalog.model.BrandCommand
+import com.buyeong.umji.api.operation.catalog.model.ProductCommand
+import com.buyeong.umji.api.operation.catalog.model.ChannelListingCommand
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -18,10 +23,11 @@ class SellerCatalogService(
     private val catalog: OperationCatalogService,
     private val inventory: InventoryService,
     private val commonCatalog: CatalogJpaEntityService,
+    private val businessProfiles: OrganizationTaxInvoiceProfileService,
 ) {
     @Transactional(readOnly = true)
     fun skus(accountId: UUID, page: Int, size: Int) = sellerOrganization(accountId).let {
-        commonCatalog.sellableSkus(
+        commonCatalog.sellerSkus(it,
             PageRequest.of(page, size, Sort.by("product.name").ascending().and(Sort.by("skuCode").ascending())),
         ).map { sku ->
             SellerSkuResponseView(
@@ -31,23 +37,58 @@ class SellerCatalogService(
         }
     }
 
+    @Transactional(readOnly = true)
+    fun brands(accountId: UUID, page: Int, size: Int) = catalog.sellerBrands(sellerOrganization(accountId), page, size)
+
     @Transactional
-    fun updateOffer(accountId: UUID, channelCode: String, skuId: UUID, salePrice: Long, listPrice: Long?, salesStatus: String, unitsPerSale: Int?) =
-        catalog.updateSellerSalesOffer(
-            sellerOrganization(accountId),
-            SalesOfferCommand(channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale),
-        )
+    fun createBrand(accountId: UUID, name: String, displayStatus: String) =
+        catalog.createSellerBrand(sellerOrganization(accountId), BrandCommand(name, displayStatus))
 
     @Transactional(readOnly = true)
-    fun stock(accountId: UUID, skuId: UUID) = inventory.stock(skuId, sellerOrganization(accountId))
+    fun products(accountId: UUID, page: Int, size: Int) = catalog.sellerProducts(sellerOrganization(accountId), page, size)
+
+    @Transactional(readOnly = true)
+    fun product(accountId: UUID, productId: UUID) = catalog.sellerProduct(sellerOrganization(accountId), productId)
+
+    @Transactional
+    fun createProduct(accountId: UUID, command: ProductCommand) = catalog.createSellerProduct(sellerOrganization(accountId), command)
+
+    @Transactional
+    fun updateProduct(accountId: UUID, productId: UUID, command: ProductCommand) =
+        catalog.updateSellerProduct(sellerOrganization(accountId), productId, command)
+
+    @Transactional
+    fun updateListing(accountId: UUID, channelCode: String, productId: UUID, categoryId: UUID, displayStatus: String, displayOrder: Int) =
+        catalog.updateSellerChannelListing(sellerOrganization(accountId), ChannelListingCommand(channelCode, productId, categoryId, displayStatus, displayOrder))
+
+    @Transactional
+    fun updateOffer(accountId: UUID, channelCode: String, skuId: UUID, salePrice: Long, listPrice: Long?, salesStatus: String, unitsPerSale: Int?) =
+        sellerOrganization(accountId).let { organizationId ->
+            if (salesStatus == "ON_SALE" && !businessProfiles.isSellerBusinessProfileReady(organizationId)) {
+                throw ClientBadRequestException("판매하려면 확인이 완료된 사업자 Organization 프로필이 필요합니다.")
+            }
+            verifyOwnedSku(organizationId, skuId)
+            catalog.updateSellerSalesOffer(
+                organizationId,
+                SalesOfferCommand(channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale),
+            )
+        }
+
+    @Transactional(readOnly = true)
+    fun stock(accountId: UUID, skuId: UUID) = sellerOrganization(accountId).also { verifyOwnedSku(it, skuId) }.let { inventory.stock(skuId, it) }
 
     @Transactional
     fun adjustStock(accountId: UUID, skuId: UUID, quantityDelta: Int, reason: String, memo: String?, safetyStock: Int?) =
-        inventory.adjust(skuId, quantityDelta, reason, memo, safetyStock, sellerOrganization(accountId))
+        sellerOrganization(accountId).also { verifyOwnedSku(it, skuId) }.let { inventory.adjust(skuId, quantityDelta, reason, memo, safetyStock, it) }
 
     @Transactional(readOnly = true)
     fun movements(accountId: UUID, skuId: UUID, page: Int, size: Int) =
-        inventory.movements(skuId, page, size, sellerOrganization(accountId))
+        sellerOrganization(accountId).also { verifyOwnedSku(it, skuId) }.let { inventory.movements(skuId, page, size, it) }
+
+    private fun verifyOwnedSku(organizationId: UUID, skuId: UUID) {
+        val sku = commonCatalog.sku(skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
+        if (sku.product.organization?.publicId != organizationId) throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
+    }
 
     private fun sellerOrganization(accountId: UUID): UUID {
         val organization = organizations.current(accountId) ?: throw ItemNotFoundException("활성 Organization을 찾을 수 없습니다.")

@@ -108,6 +108,7 @@ flowchart TD
 
 Organization은 `BUSINESS` 또는 `INDIVIDUAL` 유형과 `BUYER`, `SELLER`, `OPERATOR` capability를 가짐. capability는 복수 지정 가능하며 주문·공용 배송지는 `BUYER` capability가 있는 조직의 공유 경계를 형성.<br>
 판매자도 `SELLER` capability Organization을 만들고 여러 계정을 구성원으로 연결 가능. 공통 사업자 정보는 `organization_business_profile` 단일 원본으로 관리.<br>
+판매 오퍼를 `ON_SALE`로 등록하고 주문을 받으려면 BUSINESS 유형, `SELLER` capability, 완성·대표자 확인된 ACTIVE 사업자등록 프로필이 필요.<br>
 Organization은 여러 계정을 구성원으로 가질 수 있고, 계정은 한 번에 하나의 활성 Organization에만 소속.<br>
 도매·소매는 그룹 유형이 아니라 판매 채널 정책으로 판정. 사업자번호 없는 업체와 개인 대량구매자도 그룹을 이용 가능.<br>
 운영자는 계정을 사업자 그룹에 명시적으로 연결하며 사업자번호만으로 그룹을 자동 병합하지 않음.<br>

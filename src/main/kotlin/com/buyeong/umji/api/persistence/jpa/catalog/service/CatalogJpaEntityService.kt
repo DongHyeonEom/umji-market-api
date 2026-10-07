@@ -43,7 +43,9 @@ class CatalogJpaEntityService(
     fun category(id: UUID): CategoryEntity? = categories.findByPublicIdAndDeletedAtIsNull(id)
     fun brands(pageable: Pageable): Page<BrandEntity> = brands.findAllByDeletedAtIsNull(pageable)
     fun brand(id: UUID): BrandEntity? = brands.findByPublicIdAndDeletedAtIsNull(id)
-    fun existsBrandName(name: String): Boolean = brands.existsByName(name)
+    fun existsBrandName(name: String): Boolean = brands.existsByOrganizationIsNullAndName(name)
+    fun sellerBrands(organizationId: UUID, pageable: Pageable) = brands.findAllByOrganization_PublicIdAndDeletedAtIsNull(organizationId, pageable)
+    fun sellerBrandExists(organizationId: UUID, name: String) = brands.existsByOrganization_PublicIdAndNameAndDeletedAtIsNull(organizationId, name)
     fun publicProducts(
         displayStatus: String,
         salesStatus: String,
@@ -56,10 +58,12 @@ class CatalogJpaEntityService(
     ): ProductEntity? = products.findByPublicIdAndDisplayStatusAndSalesStatusAndDeletedAtIsNull(id, displayStatus, salesStatus)
     fun products(pageable: Pageable): Page<ProductEntity> = products.findAllByDeletedAtIsNull(pageable)
     fun product(id: UUID): ProductEntity? = products.findByPublicIdAndDeletedAtIsNull(id)
+    fun sellerProducts(organizationId: UUID, pageable: Pageable) = products.findAllByOrganization_PublicIdAndDeletedAtIsNull(organizationId, pageable)
+    fun sellerProduct(id: UUID, organizationId: UUID): ProductEntity? = products.findByPublicIdAndOrganization_PublicIdAndDeletedAtIsNull(id, organizationId)
     fun sku(id: UUID): ProductSkuEntity? = skus.findByPublicId(id)
     fun skus(productId: Long, salesStatus: String): List<ProductSkuEntity> = skus.findAllByProductIdAndSalesStatusOrderBySalePriceAsc(productId, salesStatus)
     fun skus(productId: Long): List<ProductSkuEntity> = skus.findAllByProductIdOrderBySalePriceAsc(productId)
-    fun existsSkuCode(code: String): Boolean = skus.existsBySkuCode(code)
+    fun existsSkuCode(productId: Long, code: String): Boolean = skus.existsByProduct_IdAndSkuCode(productId, code)
     fun images(productId: Long): List<ProductImageEntity> = images.findAllByProductIdOrderByDisplayOrderAscIdAsc(productId)
     fun options(productId: Long): List<ProductOptionEntity> = options.findAllByProductIdOrderByDisplayOrderAscIdAsc(productId)
     fun optionValues(optionId: Long): List<ProductOptionValueEntity> = optionValues.findAllByOptionIdOrderByDisplayOrderAscIdAsc(optionId)
@@ -76,10 +80,7 @@ class CatalogJpaEntityService(
         offers.findFirstBySalesChannel_CodeAndProductSku_PublicIdAndSalesStatusOrderBySalePriceAsc(channelCode, skuId, "ON_SALE")
     fun salesOffer(channelCode: String, skuId: UUID, organizationPublicId: UUID): SalesOfferEntity? =
         offers.findBySalesChannel_CodeAndProductSku_PublicIdAndOrganization_PublicId(channelCode, skuId, organizationPublicId)
-    fun sellableSkus(pageable: org.springframework.data.domain.Pageable) =
-        skus.findAllByProduct_DeletedAtIsNullAndProduct_DisplayStatusAndProduct_SalesStatusAndSalesStatus(
-            "DISPLAYED", "ON_SALE", "ON_SALE", pageable,
-        )
+    fun sellerSkus(organizationId: UUID, pageable: Pageable) = skus.findAllByProduct_Organization_PublicIdAndProduct_DeletedAtIsNull(organizationId, pageable)
 
     @Transactional fun save(category: CategoryEntity): CategoryEntity = categories.save(category)
 

@@ -30,6 +30,9 @@ class OrganizationTaxInvoiceProfileService(
     fun forGroup(groupPublicId: UUID): OrganizationTaxInvoiceProfile =
         profiles.forGroup(groupPublicId) ?: throw ItemNotFoundException("Organization을 찾을 수 없습니다.")
 
+    @Transactional(readOnly = true)
+    fun isSellerBusinessProfileReady(organizationId: UUID): Boolean = profiles.isSellerBusinessProfileReady(organizationId)
+
     @Transactional
     fun updateForGroup(
         groupPublicId: UUID,

@@ -9,6 +9,26 @@ import com.buyeong.umji.api.inventory.model.MovementPageState
 import com.buyeong.umji.api.inventory.model.MovementState
 import com.buyeong.umji.api.inventory.model.StockView
 import com.buyeong.umji.api.operation.model.UpdateSalesOfferRequest
+import com.buyeong.umji.api.operation.model.CreateBrandRequest
+import com.buyeong.umji.api.operation.model.CreateProductRequest
+import com.buyeong.umji.api.operation.model.UpdateProductRequest
+import com.buyeong.umji.api.operation.model.UpdateChannelListingRequest
+import com.buyeong.umji.api.operation.model.OperationBrandResponse
+import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
+import com.buyeong.umji.api.operation.model.OperationProductPageResponse
+import com.buyeong.umji.api.operation.model.OperationProductResponse
+import com.buyeong.umji.api.operation.model.OperationProductImageResponse
+import com.buyeong.umji.api.operation.model.OperationProductOptionResponse
+import com.buyeong.umji.api.operation.model.OperationProductOptionValueResponse
+import com.buyeong.umji.api.operation.model.OperationProductSkuResponse
+import com.buyeong.umji.api.operation.catalog.model.BrandCommand
+import com.buyeong.umji.api.operation.catalog.model.CatalogResource
+import com.buyeong.umji.api.operation.catalog.model.ImageCommand
+import com.buyeong.umji.api.operation.catalog.model.OptionCommand
+import com.buyeong.umji.api.operation.catalog.model.OptionValueCommand
+import com.buyeong.umji.api.operation.catalog.model.ProductCommand
+import com.buyeong.umji.api.operation.catalog.model.ProductView
+import com.buyeong.umji.api.operation.catalog.model.SkuCommand
 import com.buyeong.umji.api.seller.model.SellerSalesOfferResponse
 import com.buyeong.umji.api.seller.model.SellerSkuPageResponse
 import com.buyeong.umji.api.seller.model.SellerSkuResponse
@@ -35,6 +55,51 @@ class SellerCatalogController(
     private val currentAccounts: CurrentAccountService,
     private val sellers: SellerCatalogService,
 ) {
+    @Operation(summary = "판매자 브랜드 목록", description = "활성 판매 Organization 소유 브랜드 조회")
+    @GetMapping("/brands")
+    fun brands(
+        @RequestParam(defaultValue = "0") @Min(0) page: Int,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
+    ): List<OperationBrandResponse> = sellers.brands(currentAccounts.activeAccountPublicId(), page, size)
+        .map { OperationBrandResponse(it.id, it.name, it.displayStatus) }
+
+    @Operation(summary = "판매자 브랜드 등록")
+    @org.springframework.web.bind.annotation.PostMapping("/brands")
+    fun createBrand(@Valid @RequestBody request: CreateBrandRequest): OperationCatalogResourceResponse =
+        sellers.createBrand(currentAccounts.activeAccountPublicId(), request.name, request.displayStatus).toResponse()
+
+    @Operation(summary = "판매자 상품 목록", description = "활성 판매 Organization 소유 상품 조회")
+    @GetMapping("/products")
+    fun products(
+        @RequestParam(defaultValue = "0") @Min(0) page: Int,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
+    ): OperationProductPageResponse = sellers.products(currentAccounts.activeAccountPublicId(), page, size).toResponse()
+
+    @Operation(summary = "판매자 상품 상세", description = "활성 판매 Organization 소유 상품 및 SKU·옵션·이미지 조회")
+    @GetMapping("/products/{productId}")
+    fun product(@PathVariable productId: UUID): OperationProductResponse =
+        sellers.product(currentAccounts.activeAccountPublicId(), productId).toResponse()
+
+    @Operation(summary = "판매자 상품 등록", description = "판매 Organization·브랜드에 귀속된 상품과 SKU 등록")
+    @org.springframework.web.bind.annotation.PostMapping("/products")
+    fun createProduct(@Valid @RequestBody request: CreateProductRequest): OperationCatalogResourceResponse =
+        sellers.createProduct(currentAccounts.activeAccountPublicId(), request.toCommand()).toResponse()
+
+    @Operation(summary = "판매자 상품 수정", description = "본인 Organization 소유 상품 정보 수정")
+    @PatchMapping("/products/{productId}")
+    fun updateProduct(@PathVariable productId: UUID, @Valid @RequestBody request: UpdateProductRequest): OperationCatalogResourceResponse =
+        sellers.updateProduct(currentAccounts.activeAccountPublicId(), productId, request.toCommand()).toResponse()
+
+    @Operation(summary = "판매자 채널 상품 노출 수정", description = "본인 Organization 상품의 채널별 카테고리·노출·순서 관리")
+    @org.springframework.web.bind.annotation.PutMapping("/channels/{channelCode}/products/{productId}/listing")
+    fun updateListing(
+        @PathVariable channelCode: String,
+        @PathVariable productId: UUID,
+        @Valid @RequestBody request: UpdateChannelListingRequest,
+    ): OperationCatalogResourceResponse = sellers.updateListing(
+        currentAccounts.activeAccountPublicId(), channelCode, productId, request.categoryId, request.displayStatus, request.displayOrder,
+    ).toResponse()
+
     @Operation(summary = "판매 오퍼 등록·수정", description = "활성 SELLER Organization의 채널별 판매가·상태·판매 단위를 등록하거나 수정")
     @PutMapping("/channels/{channelCode}/skus/{skuId}/offer")
     fun updateOffer(
@@ -91,4 +156,22 @@ class SellerCatalogController(
     )
     private fun MovementPageState.toResponse() = InventoryMovementPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
     private fun MovementState.toResponse() = InventoryMovementResponse(id, sku.id, sku.code, type, delta, referenceType, referenceId, memo, occurredAt)
+
+    private fun CreateProductRequest.toCommand() = ProductCommand(
+        categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder,
+        images.map { ImageCommand(it.storageKey, it.altText, it.displayOrder) },
+        options.map { OptionCommand(it.name, it.displayOrder, it.values.map { v -> OptionValueCommand(v.value, v.displayOrder) }) },
+        skus.map { SkuCommand(it.skuCode, it.name, it.salePrice, it.listPrice, it.salesStatus, it.optionValueIds) },
+    )
+
+    private fun UpdateProductRequest.toCommand() = ProductCommand(categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder)
+    private fun CatalogResource.toResponse() = OperationCatalogResourceResponse(id)
+    private fun com.buyeong.umji.api.operation.catalog.model.ProductPageView.toResponse() =
+        OperationProductPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
+    private fun ProductView.toResponse() = OperationProductResponse(
+        id, categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder,
+        images.map { OperationProductImageResponse(it.id, it.storageKey, it.altText, it.displayOrder) },
+        options.map { OperationProductOptionResponse(it.id, it.name, it.displayOrder, it.values.map { v -> OperationProductOptionValueResponse(v.id, v.value, v.displayOrder) }) },
+        skus.map { OperationProductSkuResponse(it.id, it.skuCode, it.name, it.salePrice, it.listPrice, it.salesStatus, it.optionValueIds) },
+    )
 }
