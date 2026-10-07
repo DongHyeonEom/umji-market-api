@@ -13,8 +13,8 @@ import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
 import com.buyeong.umji.api.order.model.TaxInvoiceSupplier
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
-import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -154,6 +154,27 @@ class OrderServiceTest : DescribeSpec({
             verify(exactly = 1) { inventory.reserve(sellerBSku, 18, any(), null, sellerB) }
             verify(exactly = 2) { notifications.record(NotificationEventType.ORDER_CREATED, any(), null) }
             verify(exactly = 1) { carts.clearForCheckout(accountId) }
+        }
+
+        it("확인 완료된 사업자 프로필이 없는 판매자의 상품은 주문할 수 없다") {
+            val sellerOrganizationId = UUID.randomUUID()
+            every { shippingAddresses.findForAccount(accountId, addressId) } returns
+                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
+            every { carts.cart(accountId) } returns CartView(
+                listOf(
+                    CartItemView(
+                        UUID.randomUUID(), skuId, "SKU-001", "판매자 상품", "규격 A", 1, 1000,
+                        "ON_SALE", offerId, "WHOLESALE", 1, sellerOrganizationId,
+                    ),
+                ),
+            )
+            every { taxInvoiceBuyers.isSellerBusinessProfileReady(sellerOrganizationId) } returns false
+
+            shouldThrow<IllegalArgumentException> { service.create(accountId, addressId) }
+
+            verify(exactly = 0) { orders.save(any()) }
+            verify(exactly = 0) { inventory.reserve(any(), any(), any(), any()) }
+            verify(exactly = 0) { carts.clearForCheckout(accountId) }
         }
     }
 })
