@@ -360,18 +360,23 @@
 
 ### 서비스 개발
 
-- [x] 공용 상품·SKU와 판매 Organization별 채널 오퍼 분리, 같은 채널·SKU에 복수 판매자 허용
-- [x] 판매 Organization별 SKU 재고 원장 적용. 기존 오퍼·재고는 소유자를 추정하지 않고 nullable 레거시 범위로 보존
-- [x] SELLER capability 및 활성 Organization 소속을 확인하는 판매자 오퍼·재고 API 구현
-- [x] 판매자가 판매 오퍼 생성 대상 공용 SKU를 조회하는 API 제공
-- [x] 공개 카탈로그·장바구니·주문에서 판매자별 오퍼 식별 및 재고 예약·확정·해제·복구 반영
-- [x] 한 장바구니의 서로 다른 판매자 상품을 판매자별 주문으로 분리하고 각 공급자 세금계산서 정보를 해당 판매자 Organization에서 snapshot
-- [x] catalog·inventory 서비스 흐름도, database.md·database-erd.md 및 API 문서 동기화
+- [x] 판매 Organization 소유 브랜드·상품 구조 적용. 상품 SKU·이미지·옵션은 소유 상품에 종속
+- [x] 기존 공용 브랜드·상품을 nullable 레거시 소유 범위로 보존하는 Flyway migration과 DB 문서 반영
+- [x] 판매자 브랜드·상품 생성·조회·수정 API를 Organization 소유권으로 격리
+- [x] 판매 오퍼 등록 시 SELLER capability와 완성·확인된 ACTIVE 사업자 프로필 필수 검증
+- [x] 판매 오퍼·재고·장바구니·주문에서 상품 소유 Organization 일치 검증
+- [x] 공개 카탈로그에서 판매자 소유 상품과 해당 판매자 오퍼·재고 연결
+- [ ] 다중 판매자 장바구니의 판매자별 주문 분리와 공급자 프로필 snapshot 유지
+- [ ] catalog·inventory 서비스 흐름도, database.md·database-erd.md 및 API 문서 동기화
 
 ### 서비스 자동화 테스트 개발 및 테스트
 
+- [ ] Flyway V43의 기존 nullable 브랜드·상품 보존, 조직별 브랜드명·상품별 SKU 코드 유일성 MySQL 검증
+- [ ] 판매자 브랜드·상품 API의 Organization 간 격리 및 브랜드-상품 소유 일치 검증
+- [ ] 사업자 프로필 미등록·미확인·폐업 상태 판매 차단 및 ACTIVE 프로필 주문 허용 검증
+- [ ] 다른 Organization SKU의 오퍼·재고 조회·조정 차단 검증
 - [ ] 기존 오퍼·재고의 데이터 이관과 조직별 유일성 MySQL 통합 검증
-- [ ] 동일 SKU 다중 판매자의 가격·상태·재고 독립성 자동화 검증
+- [ ] 동일 SKU 코드의 Organization별 상품 격리 및 오퍼·재고 소유권 자동화 검증
 - [ ] 판매자 조직 권한 격리 및 장바구니·주문 재고 원장 귀속 자동화 검증
 - [ ] 다중 판매자 장바구니의 분리 주문 응답·공급자 snapshot·rollback 자동화 검증
 

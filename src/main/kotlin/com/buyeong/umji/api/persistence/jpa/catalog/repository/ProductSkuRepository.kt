@@ -10,17 +10,15 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface ProductSkuRepository : JpaRepository<ProductSkuEntity, Long> {
     fun findAllByProductIdAndSalesStatusOrderBySalePriceAsc(productId: Long, salesStatus: String): List<ProductSkuEntity>
 
-    fun existsBySkuCode(skuCode: String): Boolean
+    fun existsByProduct_IdAndSkuCode(productId: Long, skuCode: String): Boolean
 
     fun findByPublicId(publicId: UUID): ProductSkuEntity?
 
     fun findAllByProductIdOrderBySalePriceAsc(productId: Long): List<ProductSkuEntity>
 
     @EntityGraph(attributePaths = ["product", "product.brand"])
-    fun findAllByProduct_DeletedAtIsNullAndProduct_DisplayStatusAndProduct_SalesStatusAndSalesStatus(
-        displayStatus: String,
-        salesStatus: String,
-        skuSalesStatus: String,
+    fun findAllByProduct_Organization_PublicIdAndProduct_DeletedAtIsNull(
+        organizationId: UUID,
         pageable: Pageable,
     ): Page<ProductSkuEntity>
 }

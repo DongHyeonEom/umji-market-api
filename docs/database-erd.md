@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V42가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V43가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -207,10 +207,11 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BRAND["BRAND · 공용 상품 브랜드"] {
+    BRAND["BRAND · Organization 소유 브랜드"] {
         BIGINT id PK "내부 브랜드 ID"
         BINARY public_id UK "API 공개 UUID"
-        VARCHAR name UK "브랜드명"
+        BIGINT organization_id FK "소유 Organization, 레거시는 nullable"
+        VARCHAR name "Organization별 유일 브랜드명"
         VARCHAR display_status "노출 상태"
         DATETIME deleted_at "소프트 삭제 시각, nullable"
         BIGINT deleted_by "삭제 처리자 ID, nullable"
@@ -218,9 +219,10 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    PRODUCT["PRODUCT · 공용 상품 기본 정보"] {
+    PRODUCT["PRODUCT · Organization 소유 상품 기본 정보"] {
         BIGINT id PK "내부 상품 ID"
         BINARY public_id UK "API 공개 UUID"
+        BIGINT organization_id FK "소유 Organization, 레거시는 nullable"
         BIGINT category_id FK "카테고리 ID"
         BIGINT brand_id FK "브랜드 ID, nullable"
         VARCHAR name "상품명"
@@ -238,7 +240,7 @@ erDiagram
         BIGINT id PK "내부 SKU ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT product_id FK "소속 상품 ID"
-        VARCHAR sku_code UK "고유 SKU 코드"
+        VARCHAR sku_code "상품 내 유일 SKU 코드"
         VARCHAR name "SKU 표시명"
         BIGINT sale_price "판매가"
         BIGINT list_price "정가, nullable"
@@ -260,7 +262,7 @@ erDiagram
         BIGINT id PK "채널 상품 전시 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT sales_channel_id FK "판매 채널 ID"
-        BIGINT product_id FK "공용 상품 ID"
+        BIGINT product_id FK "소속 상품 ID, 상품 Organization은 nullable 레거시 가능"
         BIGINT category_id FK "채널 카테고리 ID"
         VARCHAR display_status "채널 전시 상태"
         INT display_order "채널 전시 순서"
@@ -555,6 +557,8 @@ erDiagram
     PRODUCT_SKU ||--o{ SALES_OFFER : offered
     CATEGORY ||--o{ PRODUCT : classifies
     BRAND ||--o{ PRODUCT : labels
+    ORGANIZATION ||--o{ BRAND : owns
+    ORGANIZATION ||--o{ PRODUCT : owns
     PRODUCT ||--o{ PRODUCT_IMAGE : displays
     PRODUCT ||--o{ PRODUCT_OPTION : defines
     PRODUCT_OPTION ||--o{ PRODUCT_OPTION_VALUE : offers
@@ -605,6 +609,10 @@ erDiagram
 - 카테고리는 자기 참조 트리임.<br>
   상품은 카테고리를 반드시 가지며 브랜드는 선택임.<br>
   상품의 이미지·옵션·SKU는 상품에 속함.<br>
+- `brand.organization_id`와 `product.organization_id`는 레거시 데이터 보존을 위해 nullable.<br>
+  신규 판매자 상품은 소유 브랜드와 상품이 같은 Organization이어야 하며 상품의 Organization을 SKU·오퍼·재고 범위의 기준으로 사용.<br>
+  브랜드명은 `(organization_id, name)`, SKU 코드는 `(product_id, sku_code)` 조합으로 유일성을 보장.<br>
+  기존 V42 seller offer는 ownerless legacy product를 참조할 수 있어 상품과 오퍼의 소유 Organization 동일성은 신규 데이터에만 적용.<br>
 - 장바구니는 계정당 하나이며 한 장바구니 안에서 같은 판매 오퍼 항목은 하나임. 같은 SKU라도 판매 Organization별 오퍼를 각각 담을 수 있음.<br>
   주문 항목은 주문 당시 상품명·SKU명·코드·단가를 보존함.<br>
 - `order_item.reservation_key`와 `stock_reservation.reservation_key`는 같은 예약 UUID로 주문 항목과 재고 예약을 대응.<br>
@@ -656,6 +664,7 @@ erDiagram
 | V40 | 세금계산서 기본 발행 설정을 `account`에서 `organization`으로 이동 |
 | V41 | 주문별 세금계산서 상태와 양측 snapshot을 선택형 하위 테이블로 분리 |
 | V42 | 판매 오퍼·재고 원장을 Organization별로 분리하고 장바구니 항목을 판매 오퍼별로 구분 |
+| V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성 적용. 기존 브랜드·상품은 nullable 레거시 소유 범위로 보존 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

@@ -120,6 +120,22 @@ class OperationCatalogJpaEntityService(
         return CatalogResource(requireNotNull(listings.save(listing).publicId))
     }
 
+    fun updateSellerChannelListing(organizationPublicId: UUID, command: ChannelListingCommand): CatalogResource? {
+        val channel = channel(command.channelCode)
+        val product = catalog.sellerProduct(command.productId, organizationPublicId) ?: return null
+        val category = category(command.categoryId)
+        require(category.salesChannel.id == channel.id) { "상품 listing 카테고리는 같은 판매 채널에 속해야 합니다." }
+        val listing = listings.findBySalesChannel_IdAndProduct_Id(requireNotNull(channel.id), requireNotNull(product.id))
+            ?: ChannelProductListingEntity().apply {
+                salesChannel = channel
+                this.product = product
+            }
+        listing.category = category
+        listing.displayStatus = command.displayStatus
+        listing.displayOrder = command.displayOrder
+        return CatalogResource(requireNotNull(listings.save(listing).publicId))
+    }
+
     fun updateSalesOffer(command: SalesOfferCommand): SalesOfferView? {
         require(command.unitsPerSale == null || command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
         val channel = channel(command.channelCode)
@@ -139,8 +155,9 @@ class OperationCatalogJpaEntityService(
         val organization = organizations.findByPublicId(organizationPublicId) ?: return null
         val channel = channel(command.channelCode)
         val sku = catalog.sku(command.skuId) ?: return null
+        require(sku.product.organization?.id == organization.id) { "판매 Organization 소유 상품의 SKU만 오퍼로 등록할 수 있습니다." }
         require(sku.salesStatus == ON_SALE && sku.product.salesStatus == ON_SALE && sku.product.displayStatus == DISPLAYED) {
-            "판매 가능한 공용 SKU만 오퍼로 등록할 수 있습니다."
+            "노출·판매 가능한 상품의 SKU만 오퍼로 등록할 수 있습니다."
         }
         val offer = offers.findBySalesChannel_IdAndProductSku_IdAndOrganization_Id(
             requireNotNull(channel.id), requireNotNull(sku.id), requireNotNull(organization.id),
@@ -172,6 +189,47 @@ class OperationCatalogJpaEntityService(
             ),
         )
     }
+    fun sellerBrands(organizationPublicId: UUID, page: Int, size: Int) =
+        catalog.sellerBrands(organizationPublicId, PageRequest.of(page, size, Sort.by("name"))).content.map {
+            BrandView(requireNotNull(it.publicId), it.name, it.displayStatus)
+        }
+
+    fun createSellerBrand(organizationPublicId: UUID, command: BrandCommand): CatalogResource {
+        val organization = organizations.findByPublicId(organizationPublicId) ?: throw ItemNotFoundException("Organization을 찾을 수 없습니다.")
+        require(!catalog.sellerBrandExists(organizationPublicId, command.name)) { "이미 등록된 브랜드입니다." }
+        val brand = BrandEntity().apply {
+            this.organization = organization
+            name = command.name
+            displayStatus = command.displayStatus
+        }
+        return CatalogResource(requireNotNull(catalog.save(brand).publicId))
+    }
+
+    fun sellerProducts(organizationPublicId: UUID, page: Int, size: Int): ProductPageView {
+        val p = catalog.sellerProducts(organizationPublicId, PageRequest.of(page, size, Sort.by("id").descending()))
+        return ProductPageView(p.content.map { it.toView() }, p.number, p.size, p.totalElements, p.totalPages)
+    }
+
+    fun sellerProduct(organizationPublicId: UUID, id: UUID) = catalog.sellerProduct(id, organizationPublicId)?.toView(true)
+
+    fun createSellerProduct(organizationPublicId: UUID, command: ProductCommand): CatalogResource {
+        val organization = organizations.findByPublicId(organizationPublicId) ?: throw ItemNotFoundException("Organization을 찾을 수 없습니다.")
+        val product = buildProduct(command, organization)
+        val saved = catalog.save(product)
+        wholesaleListing(saved, saved.category, saved.displayStatus, saved.displayOrder)
+        command.images.forEach { catalog.save(image(saved, it)) }
+        command.options.forEach { saveOption(saved, it) }
+        command.skus.forEach { catalog.save(sku(saved, it)) }
+        return CatalogResource(requireNotNull(saved.publicId))
+    }
+
+    fun updateSellerProduct(organizationPublicId: UUID, id: UUID, command: ProductCommand): CatalogResource? {
+        val organization = organizations.findByPublicId(organizationPublicId) ?: return null
+        val product = catalog.sellerProduct(id, organizationPublicId) ?: return null
+        applyProduct(product, command, organization)
+        wholesaleListing(product, product.category, product.displayStatus, product.displayOrder)
+        return CatalogResource(requireNotNull(product.publicId))
+    }
     fun createProduct(
         command: ProductCommand,
     ): CatalogResource {
@@ -188,29 +246,34 @@ class OperationCatalogJpaEntityService(
     fun updateProduct(id: UUID, command: ProductCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
-        applyProduct(p, command)
+        if (p.organization != null) return null
+        applyProduct(p, command, null)
         wholesaleListing(p, p.category, p.displayStatus, p.displayOrder)
         return CatalogResource(requireNotNull(p.publicId))
     }
     fun addImage(id: UUID, command: ImageCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
+        if (p.organization != null) return null
         return CatalogResource(requireNotNull(catalog.save(image(p, command)).publicId))
     }
     fun addOption(id: UUID, command: OptionCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
+        if (p.organization != null) return null
         return CatalogResource(requireNotNull(saveOption(p, command).publicId))
     }
     fun addSku(id: UUID, command: SkuCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
+        if (p.organization != null) return null
         val savedSku = catalog.save(sku(p, command))
         return CatalogResource(requireNotNull(savedSku.publicId))
     }
     fun updateStatus(id: UUID, command: ProductStatusCommand): CatalogResource? {
         val p =
             catalog.product(id) ?: return null
+        if (p.organization != null) return null
         p.displayStatus = command.displayStatus
         p.salesStatus = command.salesStatus
         wholesaleListing(p, p.category, command.displayStatus, p.displayOrder)
@@ -219,13 +282,20 @@ class OperationCatalogJpaEntityService(
         return CatalogResource(requireNotNull(p.publicId))
     }
 
-    private fun buildProduct(c: ProductCommand) = ProductEntity().also { applyProduct(it, c) }
+    private fun buildProduct(c: ProductCommand, organization: com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity? = null) =
+        ProductEntity().also { applyProduct(it, c, organization) }
     private fun applyProduct(
         p: ProductEntity,
         c: ProductCommand,
+        organization: com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity?,
     ) {
-        p.category = category(c.categoryId)
-        p.brand = c.brandId?.let(::brand)
+        p.category = category(c.categoryId).also {
+            require(it.salesChannel.code == WHOLESALE) { "상품 기본 카테고리는 WHOLESALE 채널이어야 합니다." }
+        }
+        p.organization = organization
+        p.brand = c.brandId?.let(::brand)?.also {
+            require(it.organization?.id == organization?.id) { "상품과 같은 Organization 소유의 브랜드를 선택해야 합니다." }
+        }
         p.name = c.name
         p.description = c.description
         p.displayStatus =
@@ -266,7 +336,7 @@ class OperationCatalogJpaEntityService(
         p: ProductEntity,
         c: SkuCommand,
     ): ProductSkuEntity {
-        require(!catalog.existsSkuCode(c.skuCode)) { "이미 존재하는 SKU 코드입니다." }
+        require(!catalog.existsSkuCode(requireNotNull(p.id), c.skuCode)) { "같은 상품에 이미 등록된 SKU 코드입니다." }
         val values = if (c.optionValueIds.isEmpty()) {
             linkedSetOf()
         } else {
