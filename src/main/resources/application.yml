@@ -108,6 +108,10 @@ umji:
         bank-name: ${UMJI_BANK_TAX_INVOICE_NAME:}
         account-number: ${UMJI_BANK_TAX_INVOICE_ACCOUNT_NUMBER:}
         account-holder: ${UMJI_BANK_TAX_INVOICE_ACCOUNT_HOLDER:}
+  file:
+    storage:
+      root: ${UMJI_FILE_STORAGE_ROOT:E:/buyeong_dev/umji-market/data/files}
+      upload-token-ttl-seconds: ${UMJI_FILE_UPLOAD_TOKEN_TTL_SECONDS:900}
 
 logging:
   config: classpath:logback-spring-${spring.profiles.active}.xml

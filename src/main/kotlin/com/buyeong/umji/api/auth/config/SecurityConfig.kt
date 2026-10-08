@@ -53,6 +53,9 @@ class SecurityConfig {
                 .authorizeHttpRequests {
                     it.requestMatchers("/actuator/health", "/actuator/info", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/web/login", "/api/auth/token/refresh", "/api/auth/tokens/revoke").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/files/public/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/files/*/content").permitAll()
+                        .requestMatchers("/api/files/**").authenticated()
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/operation/accounts/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
                         .requestMatchers("/api/operation/organizations/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")

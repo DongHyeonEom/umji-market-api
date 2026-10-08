@@ -36,6 +36,10 @@ FCM 발송 사용 시 `UMJI_NOTIFICATION_FCM_ENABLED=true`, `UMJI_NOTIFICATION_F
 운영 환경 사용 금지.
 기본/운영 인증 모드는 `REQUIRED`임.
 
+파일 원본은 DB가 아닌 파일 저장소에 보관.
+기본 로컬 경로는 `E:/buyeong_dev/umji-market/data/files`이며 `UMJI_FILE_STORAGE_ROOT` 환경 변수로 IDC 마운트 경로를 지정 가능.
+저장소에는 공개 상품 이미지와 비공개 사업자 증빙 파일이 분리 저장됨.
+
 ## 유용한 명령
 
 ```bash

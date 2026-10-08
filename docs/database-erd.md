@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V43가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V44가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -294,6 +294,23 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
+    FILE_ASSET["FILE_ASSET · 원본 파일 저장소 위치·metadata"] {
+        BIGINT id PK "내부 파일 ID"
+        BINARY public_id UK "API 파일 UUID"
+        VARCHAR file_type "PRODUCT_IMAGE 또는 BUSINESS_EVIDENCE"
+        BIGINT owner_account_id FK "증빙 소유 계정, 상품 이미지는 nullable"
+        VARCHAR original_file_name "정규화 원본 파일명"
+        VARCHAR storage_key UK "불투명 로컬 저장 key"
+        VARCHAR content_type "허용 MIME 형식"
+        BIGINT byte_size "원본 크기(byte)"
+        CHAR upload_token_hash "단회 upload token SHA-256 hash"
+        VARCHAR status "UPLOAD_PENDING 또는 UPLOADED"
+        DATETIME upload_expires_at "업로드 만료 시각"
+        DATETIME uploaded_at "업로드 완료 시각, nullable"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
     PRODUCT_OPTION["PRODUCT_OPTION · 상품 옵션 종류"] {
         BIGINT id PK "내부 옵션 ID"
         BINARY public_id UK "API 공개 UUID"
@@ -548,6 +565,7 @@ erDiagram
     ORGANIZATION ||--o{ INVENTORY_MOVEMENT : records
     ORGANIZATION ||--o{ STOCK_RESERVATION : reserves
     ACCOUNT ||--o{ CONSENT_HISTORY : records
+    ACCOUNT o|--o{ FILE_ASSET : owns
     CATEGORY ||--o{ CATEGORY : parent
     SALES_CHANNEL ||--o{ CATEGORY : owns
     SALES_CHANNEL ||--o{ CHANNEL_PRODUCT_LISTING : displays
@@ -665,7 +683,8 @@ erDiagram
 | V41 | 주문별 세금계산서 상태와 양측 snapshot을 선택형 하위 테이블로 분리 |
 | V42 | 판매 오퍼·재고 원장을 Organization별로 분리하고 장바구니 항목을 판매 오퍼별로 구분 |
 | V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성 적용. 기존 브랜드·상품은 nullable 레거시 소유 범위로 보존 |
+| V44 | 공개 이미지·사업자 증빙 파일 metadata인 `file_asset` 추가. 원본 byte는 파일시스템에 저장 |
+| V45 | `file_asset`에 공통 낙관적 잠금 버전과 수정 시각 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
-부분 취소·SMS 본인 확인·파일 metadata 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>
