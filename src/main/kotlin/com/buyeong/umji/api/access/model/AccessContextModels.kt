@@ -1,0 +1,33 @@
+package com.buyeong.umji.api.access.model
+
+import io.swagger.v3.oas.annotations.media.Schema
+import java.util.UUID
+
+enum class AccessAudience {
+    ADMIN,
+    BUYER,
+}
+
+@Schema(description = "현재 계정의 audience별 화면 접근 context")
+data class AccessContextResponse(
+    @field:Schema(description = "context audience", example = "BUYER", required = true)
+    val audience: AccessAudience,
+    @field:Schema(description = "현재 계정의 role 또는 활성 Organization 구성원 역할", example = "REPRESENTATIVE", required = true)
+    val roles: List<String>,
+    @field:Schema(description = "현재 역할에서 사용할 수 있는 permission code 목록", example = "[BUYER_GROUP_ORDER_READ, BUYER_GROUP_ORDER_CREATE]", required = true)
+    val permissions: List<String>,
+    @field:Schema(description = "현재 활성 BUYER Organization 공개 UUID. 미소속이면 null", format = "uuid", required = false)
+    val organizationId: UUID?,
+    @field:Schema(description = "현재 활성 구매자 구성원 역할. BUYER audience에서만 반환", example = "MEMBER", required = false)
+    val membershipRole: String?,
+    @field:Schema(description = "permission mapping을 통과한 화면 code와 React route key 목록", required = true)
+    val screens: List<AccessScreenResponse>,
+)
+
+@Schema(description = "허용된 화면 식별자와 route key")
+data class AccessScreenResponse(
+    @field:Schema(description = "DB에 등록된 안정적인 screen code", example = "BUYER_ORDERS", required = true)
+    val screenCode: String,
+    @field:Schema(description = "React 화면 registry와 연결할 route key", example = "BUYER_ORDERS", required = true)
+    val routeKey: String,
+)

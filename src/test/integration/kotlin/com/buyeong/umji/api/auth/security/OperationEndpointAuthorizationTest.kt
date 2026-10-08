@@ -1,5 +1,10 @@
 package com.buyeong.umji.api.auth.security
 
+import com.buyeong.umji.api.access.controller.AccessContextController
+import com.buyeong.umji.api.access.model.AccessAudience
+import com.buyeong.umji.api.access.model.AccessContextResponse
+import com.buyeong.umji.api.access.model.AccessScreenResponse
+import com.buyeong.umji.api.access.service.AccessContextService
 import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import com.buyeong.umji.api.auth.config.JwtProperties
@@ -28,6 +33,7 @@ import com.buyeong.umji.api.operation.shipment.controller.OperationShipmentContr
 import com.buyeong.umji.api.order.controller.OperationShippingHolidayController
 import com.buyeong.umji.api.order.controller.OrderCancellationController
 import com.buyeong.umji.api.order.service.OrderCancellationService
+import com.buyeong.umji.api.order.model.CancellationQueuePage
 import com.buyeong.umji.api.order.service.ShippingHolidayService
 import com.buyeong.umji.api.payment.model.PaymentQueuePage
 import com.buyeong.umji.api.payment.service.PaymentService
@@ -61,6 +67,7 @@ import java.util.UUID
 @WebMvcTest(
     controllers = [
         AuthenticationController::class,
+        AccessContextController::class,
         OperationAccountController::class, OperationOrganizationController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
@@ -72,6 +79,9 @@ import java.util.UUID
 class OperationEndpointAuthorizationTest(
     @Autowired private val mockMvc: MockMvc,
 ) {
+    @MockitoBean
+    private lateinit var accessContexts: AccessContextService
+
     @MockitoBean
     private lateinit var accounts: OperationAccountService
 
@@ -339,6 +349,15 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
+    fun `role management endpoint rejects unrelated sales permission`() {
+        mockMvc.perform(
+            put("/api/operation/accounts/${UUID.randomUUID()}/roles/SALES_MANAGER")
+                .with(authorities("SALES_GROUP_ASSIGN"))
+                .with(csrf()),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
     fun `audit log endpoint denies ordinary account management permission`() {
         mockMvc.perform(get("/api/operation/audit-logs").with(authorities("ADMIN_ACCOUNT_MANAGE")))
             .andExpect(status().isForbidden)
@@ -421,9 +440,46 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
+    fun `screen access context does not grant direct shipment API permission`() {
+        Mockito.`when`(accessContexts.get(AccessAudience.ADMIN)).thenReturn(
+            AccessContextResponse(
+                audience = AccessAudience.ADMIN,
+                roles = listOf("SHIPPING_MANAGER"),
+                permissions = listOf("SHIPMENT_READ"),
+                organizationId = null,
+                membershipRole = null,
+                screens = listOf(AccessScreenResponse("ADMIN_SHIPMENT_LIST", "ADMIN_SHIPMENT_LIST")),
+            ),
+        )
+
+        mockMvc.perform(get("/api/access-context?audience=ADMIN").with(authorities("SHIPMENT_READ")))
+            .andExpect(status().isOk)
+
+        mockMvc.perform(
+            post("/api/operation/orders/${UUID.randomUUID()}/shipment/delivered")
+                .with(authorities("SHIPMENT_READ")),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
     fun `cancellation queue requires order write permission`() {
         mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("PRODUCT_WRITE")))
             .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `shipping permission cannot access payment or cancellation queues`() {
+        mockMvc.perform(get("/api/operation/payments").with(authorities("SHIPMENT_WRITE")))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("SHIPMENT_WRITE")))
+            .andExpect(status().isForbidden)
+
+        Mockito.`when`(payments.queue(null, 0, 20)).thenReturn(PaymentQueuePage(emptyList(), 0, 20, 0, 0))
+        Mockito.`when`(cancellations.queue(0, 20)).thenReturn(CancellationQueuePage(emptyList(), 0, 20, 0, 0))
+        mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
     }
 
     @Test

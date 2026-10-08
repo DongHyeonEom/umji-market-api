@@ -221,8 +221,8 @@
 - [x] 배송 관리자에게 결제·취소 권한이 섞이지 않도록 배송 전용 permission과 endpoint 인가 적용
 - [x] `SHIPPING_MANAGER` role과 `SHIPMENT_WRITE` permission을 추가하고 운영자 role 부여 API에서 관리
 - [x] 송장 등록·배송완료 보정 endpoint만 `SHIPMENT_WRITE`를 요구하고 결제·취소 API 접근 차단
-- [ ] 화면별 audience·screen code·필수 permission 테이블 및 permission context 응답 설계·구현
-- [ ] 구매자 대표자·일반구성원 역할별 화면 permission을 활성 그룹·대표자 관계에서 계산
+- [x] 화면별 audience·screen code·필수 permission 테이블 및 permission context 응답 설계·구현
+- [x] 구매자 대표자·일반구성원 역할별 화면 permission을 활성 그룹·대표자 관계에서 계산
 - [ ] 그룹별 영업 담당·인센티브율의 유효기간 배정 이력 설계·구현
 - [ ] 주문별 영업 담당·요율·산정 기준·기준액·인센티브액 snapshot 원장 설계·구현
 - [ ] 취소·환불 reversal, 인센티브 확정·지급 흐름 및 조회 권한 구현
@@ -231,10 +231,10 @@
 ### 서비스 자동화 테스트 개발 및 테스트
 
 - [x] `SALES_MANAGER` 운영 role 부여 허용, 전용 permission 경계 및 TOTP 제외 자동화 테스트 개발 및 실행
-- [ ] 운영 role 관리 HTTP endpoint permission 검사 자동화 테스트 개발 및 실행
-- [ ] screen mapping과 API 직접 호출의 별도 권한 검사 자동화 테스트 개발 및 실행
-- [ ] 대표자·일반구성원 그룹별 화면·API 권한, 대표자 변경 후 권한 재계산 테스트 개발 및 실행
-- [ ] 배송 role의 결제·취소 접근 거부 및 전체 관리자 허용 테스트 개발 및 실행
+- [x] 운영 role 관리 HTTP endpoint permission 검사 자동화 테스트 개발 및 실행
+- [x] screen mapping과 API 직접 호출의 별도 권한 검사 자동화 테스트 개발 및 실행
+- [x] 대표자·일반구성원 그룹별 화면·API 권한, 대표자 변경 후 권한 재계산 테스트 개발 및 실행
+- [x] 배송 role의 결제·취소 접근 거부 및 전체 관리자 허용 테스트 개발 및 실행
 - [ ] 그룹 담당 배정 변경 후 과거 주문 담당자·요율 snapshot 보존 검증
 - [ ] 인센티브 산정·멱등성·취소/환불 reversal·지급 상태 전이 자동화 테스트 개발 및 실행
 
