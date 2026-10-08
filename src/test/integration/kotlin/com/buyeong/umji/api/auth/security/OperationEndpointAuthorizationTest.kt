@@ -33,6 +33,7 @@ import com.buyeong.umji.api.operation.shipment.controller.OperationShipmentContr
 import com.buyeong.umji.api.order.controller.OperationShippingHolidayController
 import com.buyeong.umji.api.order.controller.OrderCancellationController
 import com.buyeong.umji.api.order.service.OrderCancellationService
+import com.buyeong.umji.api.order.model.CancellationQueuePage
 import com.buyeong.umji.api.order.service.ShippingHolidayService
 import com.buyeong.umji.api.payment.model.PaymentQueuePage
 import com.buyeong.umji.api.payment.service.PaymentService
@@ -464,6 +465,21 @@ class OperationEndpointAuthorizationTest(
     fun `cancellation queue requires order write permission`() {
         mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("PRODUCT_WRITE")))
             .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `shipping permission cannot access payment or cancellation queues`() {
+        mockMvc.perform(get("/api/operation/payments").with(authorities("SHIPMENT_WRITE")))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("SHIPMENT_WRITE")))
+            .andExpect(status().isForbidden)
+
+        Mockito.`when`(payments.queue(null, 0, 20)).thenReturn(PaymentQueuePage(emptyList(), 0, 20, 0, 0))
+        Mockito.`when`(cancellations.queue(0, 20)).thenReturn(CancellationQueuePage(emptyList(), 0, 20, 0, 0))
+        mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
     }
 
     @Test
