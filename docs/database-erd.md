@@ -64,6 +64,26 @@ erDiagram
         BIGINT role_id PK,FK "역할 ID"
         BIGINT permission_id PK,FK "권한 ID"
     }
+    UI_SCREEN["UI_SCREEN · audience별 화면 접근 metadata"] {
+        BIGINT id PK "화면 내부 ID"
+        VARCHAR screen_code UK "안정적인 화면 code"
+        VARCHAR audience "ADMIN 또는 BUYER"
+        VARCHAR route_key "React route registry key"
+        VARCHAR permission_match_mode "ALL 또는 ANY"
+        BOOLEAN active "화면 사용 여부"
+        INT display_order "화면 정렬 순서"
+        BIGINT version "낙관적 잠금 버전"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    UI_SCREEN_PERMISSION["UI_SCREEN_PERMISSION · 화면 조회 permission mapping"] {
+        BIGINT ui_screen_id PK,FK "화면 ID"
+        BIGINT permission_id PK,FK "필요 permission ID"
+    }
+    ORGANIZATION_ROLE_PERMISSION["ORGANIZATION_ROLE_PERMISSION · 구매자 역할 permission mapping"] {
+        VARCHAR membership_role PK "UNASSIGNED·REPRESENTATIVE·MEMBER"
+        BIGINT permission_id PK,FK "구성원 역할 permission ID"
+    }
     REFRESH_TOKEN["REFRESH_TOKEN · 기기별 refresh token 세션"] {
         BIGINT id PK "내부 토큰 ID"
         BIGINT account_id FK "토큰 소유 계정 ID"
@@ -560,6 +580,9 @@ erDiagram
     ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : requests
     ACCOUNT ||--o{ ORGANIZATION_JOIN_REQUEST : decides
     ORGANIZATION ||--o| ORGANIZATION_BUSINESS_PROFILE : describes
+    UI_SCREEN ||--o{ UI_SCREEN_PERMISSION : requires
+    PERMISSION ||--o{ UI_SCREEN_PERMISSION : maps
+    PERMISSION ||--o{ ORGANIZATION_ROLE_PERMISSION : grants
     ORGANIZATION ||--o{ SALES_OFFER : sells
     ORGANIZATION ||--o{ INVENTORY_STOCK : owns
     ORGANIZATION ||--o{ INVENTORY_MOVEMENT : records
@@ -685,6 +708,7 @@ erDiagram
 | V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성 적용. 기존 브랜드·상품은 nullable 레거시 소유 범위로 보존 |
 | V44 | 공개 이미지·사업자 증빙 파일 metadata인 `file_asset` 추가. 원본 byte는 파일시스템에 저장 |
 | V45 | `file_asset`에 공통 낙관적 잠금 버전과 수정 시각 추가 |
+| V46 | `ui_screen`, 화면 permission mapping, 구매자 구성원 역할 permission mapping 및 access context 권한 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

@@ -102,18 +102,18 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 `SHIPPING_MANAGER`와 `SALES_MANAGER`는 배송·영업 업무 role로 MFA 대상 관리자 role에서 제외. 배송 정보 변경 endpoint는 `SHIPMENT_WRITE`만 요구하고 결제·취소·휴무일 endpoint는 계속 `ORDER_WRITE`를 요구해 배송 담당자에게 결제·취소 권한이 열리지 않도록 구성.<br>
 영업 인센티브 확정·지급 처리는 별도 permission으로 제한하고, 담당 영업자 본인은 자신에게 귀속된 내역만 조회.<br>
 
-화면별 조회 권한을 명시적으로 설정할 수 있도록 화면 리소스와 permission 연결을 DB에 둠. 화면 구성·route 구현은 React에 두고, DB는 안정적인 `screen_code`와 필요한 permission 연결을 관리.<br>
+화면별 조회 권한은 `ui_screen`과 permission 연결로 관리. 화면 구성·route 구현은 React에 두고, DB는 안정적인 `screen_code`와 필요한 permission 연결을 관리.<br>
 운영자 화면은 `account_role → role_permission → screen` 관계로 계산. 운영자 한 계정에 여러 role을 부여할 수 있으며 permission은 role 전체의 합집합으로 계산하므로 운영자별 화면 구분 가능. 사용자 화면은 활성 구매자 그룹의 역할을 `REPRESENTATIVE` 또는 `MEMBER`로 판정한 뒤 `organization_role_permission → screen` 관계로 계산.<br>
 대표자 역할은 `organization.representative_account_id`로 판정하므로 사용자별 role을 `account_role`에 복제하지 않음. 가입·그룹 이동·대표자 변경 이후 화면 권한은 활성 그룹 기준으로 다시 계산.<br>
 화면 조회 권한과 버튼/action permission을 구분해 설정하되, 각 화면 내부의 동작과 모든 API는 같은 permission code로 서버에서 재검사. UI에 노출되지 않는 API 직접 호출도 거부.<br>
 
-설계 테이블(미구현):<br>
+화면 접근 metadata 테이블:<br>
 
 | Table | 핵심 필드·관계 | 목적 |
 | --- | --- | --- |
 | `ui_screen` | `id`, `screen_code`, `audience`(`ADMIN`/`BUYER`), `route_key`, `permission_match_mode`(`ALL`/`ANY`), `active`, `display_order` | 화면 코드·프론트엔드 route 식별 및 permission 결합 방식 |
 | `ui_screen_permission` | `ui_screen_id`, `permission_id` 복합 PK | 화면을 보기 위해 필요한 permission 연결 |
-| `organization_role_permission` | `membership_role`, `permission_id` 복합 PK | 미소속·대표자·일반구성원 역할별 사용자 화면/API permission 설정 |
+| `organization_role_permission` | `membership_role`, `permission_id` 복합 PK | 미소속·대표자·일반구성원 역할별 사용자 permission 설정 |
 
 제안 컬럼·제약:<br>
 
@@ -125,7 +125,7 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 
 `audience`·`membership_role`·`permission_match_mode`에는 DB check constraint를 적용. 화면별 permission 결합은 기본 all-of이며 필요한 경우에만 명시적으로 any-of 사용.<br>
 `UNASSIGNED`는 그룹 미소속 계정의 초대 확인·개인 그룹 생성·휴대폰 검색·가입 요청 onboarding 화면 접근에 사용.<br>
-미구현 access context 계약 제안: `GET /api/access-context?audience=ADMIN|BUYER`가 현재 role·permission·허용 `screen_code`를 반환. `BUYER` 응답은 활성 그룹이 없으면 `UNASSIGNED`, 있으면 `REPRESENTATIVE`/`MEMBER`와 활성 그룹 ID를 반환. 화면 코드는 실제 React page inventory와 대조해 등록.<br>
+`GET /api/access-context?audience=ADMIN|BUYER`는 현재 role·permission·허용 `screen_code`를 반환. `BUYER` 응답은 활성 BUYER capability Organization이 없으면 `UNASSIGNED`, 있으면 `REPRESENTATIVE`/`MEMBER`와 활성 Organization ID를 반환.<br>
 screen 및 screen-permission mapping은 검토된 migration/운영 설정으로만 변경하고 임의 운영자가 자기 화면 권한을 확장하는 API는 제공하지 않음. 운영자 개인별 차이는 기존 `account_role`에 허용 role을 부여해 계산하며, 사용자 개인 권한은 활성 그룹 역할에서 계산.<br>
 
 관리자 측 `role_permission`과 사용자 측 `organization_role_permission`을 같은 `permission` 코드에 연결해 화면 권한 및 API 권한 코드의 의미를 통일. 화면별 `permission_match_mode`에 따라 연결된 권한을 all-of 또는 any-of로 판정.<br>
@@ -146,6 +146,30 @@ flowchart TD
     SHIPPING[배송 관리자 role 부여] --> SHIPPER[SHIPMENT_WRITE 권한 포함]
     SHIPPER --> SHIPENDPOINT[송장·배송 상태 API 허용]
     SHIPPER -. 권한 없음 .-> PAYMENTCANCEL[결제·취소 API 거부]
+```
+
+### 화면 접근 context 조회 흐름
+
+```mermaid
+flowchart TD
+    CLIENT[GET /api/access-context?audience] --> AUTH[Access Token·활성 계정 확인]
+    AUTH --> VALID{인증·계정 유효}
+    VALID -->|아니오| DENY[401 또는 403 응답]
+    VALID -->|예| AUDIENCE{audience}
+    AUDIENCE -->|ADMIN| ADMIN[계정의 운영 role·permission 조회]
+    AUDIENCE -->|BUYER| MEMBERSHIP[활성 BUYER Organization 구성원 조회]
+    MEMBERSHIP --> FOUND{구성원 존재}
+    FOUND -->|아니오| UNASSIGNED[역할 UNASSIGNED·미소속 permission 조회]
+    FOUND -->|예| REP{대표 계정인가}
+    REP -->|예| REPRESENTATIVE[역할 REPRESENTATIVE·Organization permission 조회]
+    REP -->|아니오| MEMBER[역할 MEMBER·Organization permission 조회]
+    ADMIN --> SCREENS[활성 audience screen 및 permission mapping 조회]
+    UNASSIGNED --> SCREENS
+    REPRESENTATIVE --> SCREENS
+    MEMBER --> SCREENS
+    SCREENS --> EVALUATE[ALL/ANY 조건으로 허용 screen code 계산]
+    EVALUATE --> RESPONSE[audience·role·permission·Organization·허용 screen 응답]
+    RESPONSE -. 화면 표시용 metadata이며 업무 API는 별도 권한·소유 범위 검사 .-> API[업무 API 직접 요청]
 ```
 
 ## 영업 담당 그룹 및 인센티브 DB 설계안

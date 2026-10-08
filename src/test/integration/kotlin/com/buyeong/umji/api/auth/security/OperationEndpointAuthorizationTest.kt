@@ -1,5 +1,10 @@
 package com.buyeong.umji.api.auth.security
 
+import com.buyeong.umji.api.access.controller.AccessContextController
+import com.buyeong.umji.api.access.model.AccessAudience
+import com.buyeong.umji.api.access.model.AccessContextResponse
+import com.buyeong.umji.api.access.model.AccessScreenResponse
+import com.buyeong.umji.api.access.service.AccessContextService
 import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import com.buyeong.umji.api.auth.config.JwtProperties
@@ -61,6 +66,7 @@ import java.util.UUID
 @WebMvcTest(
     controllers = [
         AuthenticationController::class,
+        AccessContextController::class,
         OperationAccountController::class, OperationOrganizationController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
@@ -72,6 +78,9 @@ import java.util.UUID
 class OperationEndpointAuthorizationTest(
     @Autowired private val mockMvc: MockMvc,
 ) {
+    @MockitoBean
+    private lateinit var accessContexts: AccessContextService
+
     @MockitoBean
     private lateinit var accounts: OperationAccountService
 
@@ -418,6 +427,28 @@ class OperationEndpointAuthorizationTest(
             post("/api/operation/orders/$orderId/shipment/delivered")
                 .with(authorities("SHIPMENT_WRITE")),
         ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `screen access context does not grant direct shipment API permission`() {
+        Mockito.`when`(accessContexts.get(AccessAudience.ADMIN)).thenReturn(
+            AccessContextResponse(
+                audience = AccessAudience.ADMIN,
+                roles = listOf("SHIPPING_MANAGER"),
+                permissions = listOf("SHIPMENT_READ"),
+                organizationId = null,
+                membershipRole = null,
+                screens = listOf(AccessScreenResponse("ADMIN_SHIPMENT_LIST", "ADMIN_SHIPMENT_LIST")),
+            ),
+        )
+
+        mockMvc.perform(get("/api/access-context?audience=ADMIN").with(authorities("SHIPMENT_READ")))
+            .andExpect(status().isOk)
+
+        mockMvc.perform(
+            post("/api/operation/orders/${UUID.randomUUID()}/shipment/delivered")
+                .with(authorities("SHIPMENT_READ")),
+        ).andExpect(status().isForbidden)
     }
 
     @Test
