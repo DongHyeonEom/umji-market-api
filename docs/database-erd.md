@@ -307,7 +307,9 @@ erDiagram
         VARCHAR status "UPLOAD_PENDING 또는 UPLOADED"
         DATETIME upload_expires_at "업로드 만료 시각"
         DATETIME uploaded_at "업로드 완료 시각, nullable"
+        BIGINT version "낙관적 잠금 버전"
         DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
     }
     PRODUCT_OPTION["PRODUCT_OPTION · 상품 옵션 종류"] {
         BIGINT id PK "내부 옵션 ID"
@@ -682,7 +684,7 @@ erDiagram
 | V42 | 판매 오퍼·재고 원장을 Organization별로 분리하고 장바구니 항목을 판매 오퍼별로 구분 |
 | V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성 적용. 기존 브랜드·상품은 nullable 레거시 소유 범위로 보존 |
 | V44 | 공개 이미지·사업자 증빙 파일 metadata인 `file_asset` 추가. 원본 byte는 파일시스템에 저장 |
+| V45 | `file_asset`에 공통 낙관적 잠금 버전과 수정 시각 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
-부분 취소·SMS 본인 확인·파일 metadata 테이블은 아직 없으므로 이 ERD에 포함하지 않았음.<br>

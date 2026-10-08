@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V44로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V45로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -68,6 +68,7 @@
 | V42 | 판매 오퍼·재고 원장에 Organization 범위 추가 및 장바구니 항목의 오퍼별 선택 지원. 외래 키 유지용 인덱스를 보존하고 판매 오퍼·재고의 Organization 복합 유일성 적용. 기존 오퍼·재고는 소유자를 추정할 수 없어 nullable 레거시 행으로 보존 |
 | V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성으로 전환. 기존 브랜드·상품은 소유자를 추정하지 않고 nullable 레거시로 보존 |
 | V44 | 파일 분류·소유 계정·불투명 저장 key·MIME·크기·업로드 상태 metadata를 보관하는 `file_asset` 추가. 원본 파일은 저장하지 않음 |
+| V45 | `file_asset`에 공통 낙관적 잠금 버전과 수정 시각 추가 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
