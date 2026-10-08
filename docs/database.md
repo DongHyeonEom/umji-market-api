@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V43으로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V44로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -67,6 +67,7 @@
 | V41 | 주문별 세금계산서 발행 상태와 양측 snapshot을 선택형 `purchase_order_tax_invoice`로 분리. 기존 요청 주문 데이터 이관 후 `purchase_order`의 세금계산서 전용 컬럼 제거 |
 | V42 | 판매 오퍼·재고 원장에 Organization 범위 추가 및 장바구니 항목의 오퍼별 선택 지원. 외래 키 유지용 인덱스를 보존하고 판매 오퍼·재고의 Organization 복합 유일성 적용. 기존 오퍼·재고는 소유자를 추정할 수 없어 nullable 레거시 행으로 보존 |
 | V43 | 브랜드·상품 소유 Organization 연결 및 상품별 SKU 코드 유일성으로 전환. 기존 브랜드·상품은 소유자를 추정하지 않고 nullable 레거시로 보존 |
+| V44 | 파일 분류·소유 계정·불투명 저장 key·MIME·크기·업로드 상태 metadata를 보관하는 `file_asset` 추가. 원본 파일은 저장하지 않음 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -92,6 +93,8 @@
 - `web_login_attempt`은 전화번호·원격 주소 SHA-256 hash별 최근 실패 횟수만 저장함.<br>
   15분 내 동일 조합 5회 또는 전화번호 전체 합계 10회 실패 시 로그인 거부, 15분이 지난 행은 매시 정리.<br>
 - 업체 동의 이력은 기존 행을 덮어쓰지 않고 새 이력으로 추가함.<br>
+- `file_asset`은 파일 분류·소유 계정·원본 파일명·불투명 저장 key·MIME·크기·업로드 token hash·상태와 만료 시각을 저장. 원본 byte는 DB에 저장하지 않음.<br>
+  공개 상품 이미지와 사업자 증빙은 분리된 로컬 파일 저장 경로를 사용하며 storage root는 `UMJI_FILE_STORAGE_ROOT`로 지정.<br>
 - 구매 주문은 `organization_id`로 구매 Organization에 귀속하고, 기존 `purchase_order.account_id`는 실제 주문한 계정으로 유지함.<br>
   현재 각 기존 계정에 개인 또는 사업자 구매자 그룹 하나를 생성해 기존 주문·프로필을 backfill함.<br>
   V19에서 `organization_id`를 필수화하며 신규 주문 생성 시 활성 계정의 그룹 ID를 저장해야 함.<br>

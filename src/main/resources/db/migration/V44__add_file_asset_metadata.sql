@@ -1,0 +1,22 @@
+CREATE TABLE file_asset (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    public_id BINARY(16) NOT NULL,
+    file_type VARCHAR(40) NOT NULL,
+    owner_account_id BIGINT NULL,
+    original_file_name VARCHAR(255) NOT NULL,
+    storage_key VARCHAR(500) NOT NULL,
+    content_type VARCHAR(100) NOT NULL,
+    byte_size BIGINT NOT NULL,
+    upload_token_hash CHAR(64) NOT NULL,
+    status VARCHAR(30) NOT NULL,
+    upload_expires_at DATETIME(3) NOT NULL,
+    uploaded_at DATETIME(3) NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    CONSTRAINT UQ_file_asset_public_id UNIQUE (public_id),
+    CONSTRAINT UQ_file_asset_storage_key UNIQUE (storage_key),
+    CONSTRAINT FK_file_asset_owner FOREIGN KEY (owner_account_id) REFERENCES account(id),
+    CONSTRAINT CK_file_asset_type CHECK (file_type IN ('PRODUCT_IMAGE', 'BUSINESS_EVIDENCE')),
+    CONSTRAINT CK_file_asset_size CHECK (byte_size > 0),
+    CONSTRAINT CK_file_asset_status CHECK (status IN ('UPLOAD_PENDING', 'UPLOADED')),
+    INDEX IX_file_asset_owner_type_status (owner_account_id, file_type, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
