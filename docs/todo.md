@@ -231,7 +231,7 @@
 ### 서비스 자동화 테스트 개발 및 테스트
 
 - [x] `SALES_MANAGER` 운영 role 부여 허용, 전용 permission 경계 및 TOTP 제외 자동화 테스트 개발 및 실행
-- [ ] 운영 role 관리 HTTP endpoint permission 검사 자동화 테스트 개발 및 실행
+- [x] 운영 role 관리 HTTP endpoint permission 검사 자동화 테스트 개발 및 실행
 - [x] screen mapping과 API 직접 호출의 별도 권한 검사 자동화 테스트 개발 및 실행
 - [ ] 대표자·일반구성원 그룹별 화면·API 권한, 대표자 변경 후 권한 재계산 테스트 개발 및 실행
 - [ ] 배송 role의 결제·취소 접근 거부 및 전체 관리자 허용 테스트 개발 및 실행

@@ -348,6 +348,15 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
+    fun `role management endpoint rejects unrelated sales permission`() {
+        mockMvc.perform(
+            put("/api/operation/accounts/${UUID.randomUUID()}/roles/SALES_MANAGER")
+                .with(authorities("SALES_GROUP_ASSIGN"))
+                .with(csrf()),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
     fun `audit log endpoint denies ordinary account management permission`() {
         mockMvc.perform(get("/api/operation/audit-logs").with(authorities("ADMIN_ACCOUNT_MANAGE")))
             .andExpect(status().isForbidden)
