@@ -382,7 +382,7 @@
 - [x] 판매자 Organization 권한 격리 및 다중 판매자 주문 재고 원장 귀속 unit test 개발 및 실행
 - [x] CartService 장바구니 항목의 판매 Organization 소유 정보 보존 unit test 개발 및 실행
 - [x] 다중 판매자 주문 분리 응답·공급자 snapshot unit test 개발 및 실행
-- [ ] 다중 판매자 주문 생성 실패 시 rollback 및 재고 예약 원복 MySQL 통합 테스트 개발 및 실행
+- [x] 다중 판매자 주문 생성 실패 시 rollback 및 재고 예약 원복 MySQL 통합 테스트 개발 및 실행
 
 ### 서비스 자동화 테스트 개발 및 테스트
 

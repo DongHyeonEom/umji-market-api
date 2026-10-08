@@ -12,6 +12,7 @@ import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.account.service.CustomerAccountService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
 import com.buyeong.umji.api.operation.account.service.OperationAccountService
 import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.OrderService
@@ -33,6 +34,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest(
@@ -58,6 +60,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 @Rollback
 class OrderCheckoutOptionsMySqlIntegrationTest {
+    private data class SellerOrganizationFixture(val accountId: UUID, val internalId: Long, val publicId: UUID)
+
     @PersistenceContext
     private lateinit var entityManager: EntityManager
 
@@ -140,6 +144,48 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         cancellations.request(cancelledAccountId, pendingOrder.id)
         assertThat(jdbc.queryForObject("SELECT on_hand_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isEqualTo(76)
         assertThat(jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = ?", Int::class.java, skuInternalId)).isZero()
+    }
+
+    @Test
+    fun `multi seller checkout rolls back saved orders and earlier stock reservations when a later seller lacks stock`() {
+        val buyerId = createAccount()
+        val addressId = createAddress(buyerId)
+        val categoryId = createCategory()
+        val sellerA = createSellerOrganization("Rollback seller A")
+        val sellerB = createSellerOrganization("Rollback seller B")
+        val sellerASku = createSellerCatalogItem(categoryId, sellerA.internalId, 10)
+        val sellerBSku = createSellerCatalogItem(categoryId, sellerB.internalId, 0)
+        createCartWithItem(buyerId, sellerASku)
+        createCartWithItem(buyerId, sellerBSku)
+
+        entityManager.flush()
+        TestTransaction.flagForCommit()
+        TestTransaction.end()
+
+        assertThatThrownBy { orders.create(buyerId, addressId, false, false) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessageContaining("가용 재고가 부족합니다")
+
+        TestTransaction.start()
+        entityManager.clear()
+
+        val buyerInternalId = jdbc.queryForObject(
+            "SELECT id FROM account WHERE public_id = ?",
+            Long::class.java,
+            buyerId.toBytes(),
+        )!!
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM purchase_order WHERE account_id = ?", Int::class.java, buyerInternalId),
+        ).isZero()
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM cart_item item JOIN cart ON cart.id = item.cart_id WHERE cart.account_id = ?", Int::class.java, buyerInternalId),
+        ).isEqualTo(2)
+        assertSellerInventoryUnchanged(sellerA.internalId, sellerASku, 10)
+        assertSellerInventoryUnchanged(sellerB.internalId, sellerBSku, 0)
+
+        cleanupMultiSellerRollbackFixture(buyerId, categoryId, sellerA, sellerB)
+        TestTransaction.flagForCommit()
+        TestTransaction.end()
     }
 
     @Test
@@ -726,6 +772,151 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             skuInternalId,
         )
         return publicId
+    }
+
+    private fun createSellerOrganization(businessName: String): SellerOrganizationFixture {
+        val accountId = createAccount()
+        val registrationNumber = if (businessName.endsWith("A")) "9876543210" else "9876543211"
+        val organization = organizations.ensureForAccount(
+            accountId,
+            capability = "SELLER",
+            profileData = OrganizationProfileData(
+                businessName = businessName,
+                businessRegistrationNumber = registrationNumber,
+                representativeName = "Seller representative",
+                businessPhone = "010-9000-0000",
+                postalCode = "12345",
+                address1 = "Seller address",
+                address2 = null,
+                status = "COMPLETED",
+            ),
+        )
+        jdbc.update(
+            "UPDATE organization_business_profile SET business_registration_verification_status = 'ACTIVE', business_registration_verified_at = CURRENT_TIMESTAMP(3) WHERE organization_id = ?",
+            organization.id,
+        )
+        entityManager.clear()
+        taxInvoiceProfiles.updateForAccount(
+            accountId,
+            OrganizationTaxInvoiceProfileCommand(
+                registrationNumber,
+                businessName,
+                "Seller representative",
+                "12345",
+                "Seller address",
+                null,
+                "Wholesale",
+                "Tools",
+                "${businessName.lowercase().replace(' ', '.')}@example.com",
+            ),
+        )
+        return SellerOrganizationFixture(accountId, requireNotNull(organization.id), requireNotNull(organization.publicId))
+    }
+
+    private fun createSellerCatalogItem(categoryId: Long, sellerId: Long, stockQuantity: Int): UUID {
+        val productPublicId = UUID.randomUUID()
+        jdbc.update(
+            "INSERT INTO product (public_id, organization_id, category_id, name, display_status, sales_status) VALUES (?, ?, ?, ?, 'VISIBLE', 'ON_SALE')",
+            productPublicId.toBytes(),
+            sellerId,
+            categoryId,
+            "Rollback product ${UUID.randomUUID()}",
+        )
+        val productId = jdbc.queryForObject("SELECT id FROM product WHERE public_id = ?", Long::class.java, productPublicId.toBytes())!!
+        val skuPublicId = UUID.randomUUID()
+        jdbc.update(
+            "INSERT INTO product_sku (public_id, product_id, sku_code, name, sale_price, sales_status) VALUES (?, ?, ?, 'Rollback SKU', 2500, 'ON_SALE')",
+            skuPublicId.toBytes(),
+            productId,
+            "RB-${UUID.randomUUID()}",
+        )
+        val skuId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuPublicId.toBytes())!!
+        val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
+        jdbc.update(
+            "INSERT INTO sales_offer (public_id, sales_channel_id, organization_id, product_sku_id, sale_price, sales_status) VALUES (?, ?, ?, ?, 2500, 'ON_SALE')",
+            UUID.randomUUID().toBytes(),
+            channelId,
+            sellerId,
+            skuId,
+        )
+        jdbc.update(
+            "INSERT INTO inventory_stock (organization_id, sku_id, on_hand_quantity, reserved_quantity, safety_stock_quantity) VALUES (?, ?, ?, 0, 0)",
+            sellerId,
+            skuId,
+            stockQuantity,
+        )
+        return skuPublicId
+    }
+
+    private fun assertSellerInventoryUnchanged(sellerId: Long, skuPublicId: UUID, expectedOnHand: Int) {
+        val skuId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuPublicId.toBytes())!!
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT on_hand_quantity FROM inventory_stock WHERE organization_id = ? AND sku_id = ?",
+                Int::class.java,
+                sellerId,
+                skuId,
+            ),
+        ).isEqualTo(expectedOnHand)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT reserved_quantity FROM inventory_stock WHERE organization_id = ? AND sku_id = ?",
+                Int::class.java,
+                sellerId,
+                skuId,
+            ),
+        ).isZero()
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM stock_reservation WHERE organization_id = ? AND sku_id = ?",
+                Int::class.java,
+                sellerId,
+                skuId,
+            ),
+        ).isZero()
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM inventory_movement WHERE organization_id = ? AND sku_id = ?",
+                Int::class.java,
+                sellerId,
+                skuId,
+            ),
+        ).isZero()
+    }
+
+    private fun cleanupMultiSellerRollbackFixture(
+        buyerId: UUID,
+        categoryId: Long,
+        sellerA: SellerOrganizationFixture,
+        sellerB: SellerOrganizationFixture,
+    ) {
+        val buyerOrganizationId = jdbc.queryForObject(
+            "SELECT organization_id FROM organization_member WHERE account_id = (SELECT id FROM account WHERE public_id = ?) AND status = 'ACTIVE'",
+            Long::class.java,
+            buyerId.toBytes(),
+        )!!
+        val organizationIds = listOf(buyerOrganizationId, sellerA.internalId, sellerB.internalId)
+        jdbc.update("DELETE FROM cart_item WHERE cart_id IN (SELECT id FROM cart WHERE account_id = (SELECT id FROM account WHERE public_id = ?))", buyerId.toBytes())
+        jdbc.update("DELETE FROM cart WHERE account_id = (SELECT id FROM account WHERE public_id = ?)", buyerId.toBytes())
+        organizationIds.forEach { organizationId ->
+            jdbc.update("DELETE FROM organization_address WHERE organization_id = ?", organizationId)
+            jdbc.update("DELETE FROM organization_business_profile WHERE organization_id = ?", organizationId)
+            jdbc.update("DELETE FROM organization_capability WHERE organization_id = ?", organizationId)
+            jdbc.update("DELETE FROM organization_member WHERE organization_id = ?", organizationId)
+        }
+        listOf(sellerA.internalId, sellerB.internalId).forEach { sellerId ->
+            jdbc.update("DELETE FROM inventory_movement WHERE organization_id = ?", sellerId)
+            jdbc.update("DELETE FROM stock_reservation WHERE organization_id = ?", sellerId)
+            jdbc.update("DELETE FROM inventory_stock WHERE organization_id = ?", sellerId)
+            jdbc.update("DELETE FROM sales_offer WHERE organization_id = ?", sellerId)
+            jdbc.update("DELETE FROM product_sku WHERE product_id IN (SELECT id FROM product WHERE organization_id = ?)", sellerId)
+            jdbc.update("DELETE FROM product WHERE organization_id = ?", sellerId)
+        }
+        jdbc.update("DELETE FROM category WHERE id = ?", categoryId)
+        organizationIds.forEach { organizationId -> jdbc.update("DELETE FROM organization WHERE id = ?", organizationId) }
+        (listOf(buyerId, sellerA.accountId, sellerB.accountId)).forEach { accountId ->
+            jdbc.update("DELETE FROM account WHERE public_id = ?", accountId.toBytes())
+        }
     }
 
     private fun createStock(skuId: UUID) {
