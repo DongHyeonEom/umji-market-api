@@ -32,7 +32,10 @@ flowchart LR
 UseCase·Port를 위한 서비스 계약 인터페이스와 위임 전용 adapter/wrapper를 두지 않음.<br>
 도메인 Service는 구체 Kotlin class로 선언하고 필요한 하위 Service 또는 `JpaEntityService`를 생성자 주입함.<br>
 Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider 요구로 필요한 인터페이스는 유지 가능.<br>
-HTTP 요청·응답 DTO는 외부 계약으로 유지하며 JPA Entity를 응답에 직접 노출하지 않음.<br>
+외부 HTTP 입력 모델은 `{domain}/model/<Action>Request`, 외부 HTTP 출력 모델은 `{domain}/model/<Action>Response`로 두며 client와 Controller 사이의 계약으로 사용함.<br>
+Controller 이하 내부 계층에서 전달하는 DTO는 `<Action>Dto`로 명명하고 `{domain}/model`에 둠. 내부 DTO에는 Request/Response 접미사를 사용하지 않음.<br>
+각 Request·Response·DTO는 별도 파일의 최상위 `data class` 하나로 선언함. 중첩 데이터 클래스와 서로 다른 역할의 데이터 클래스를 한 파일에 함께 선언하는 방식은 사용하지 않음.<br>
+JPA Entity는 외부 응답에 직접 노출하지 않음.<br>
 
 ## 외부 API 오류 응답
 
@@ -53,9 +56,9 @@ flowchart LR
 
 ```text
 {domain}/
-  controller/           # Controller 및 HTTP DTO
+  controller/           # Controller
   service/              # 도메인 Service
-  model/                # 도메인 내부 모델 및 API 모델
+  model/                # <Action>Request, <Action>Response, <Action>Dto
   integration/          # 외부 연동 구체 구현과 설정
   persistence/jpa/      # 도메인별 DB 구현
     <domain>/
