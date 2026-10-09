@@ -16,6 +16,7 @@ ij_visual_guides = 120
 ktlint_code_style = intellij_idea
 ktlint_standard = enabled
 ktlint_experimental = disabled
+ktlint_umji_schema-field-layout = enabled
 
 # Pinterest 고유 규칙 비활성화 (Kotlin 공식 표준과 무관한 규칙들)
 ktlint_standard_function-signature = disabled

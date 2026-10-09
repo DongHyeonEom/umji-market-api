@@ -9,42 +9,46 @@ import java.util.UUID
 
 @Schema(description = "OrganizationProfileRequest API 데이터 모델")
 data class OrganizationProfileRequest(
-    @field:NotBlank @field:Size(max = 200,)
+    @field:NotBlank @field:Size(max = 200)
     @field:Schema(description = "사업자 상호명", example = "예시 값", type = "string", required = true)
     val businessName: String,
 
-    @field:Size(max = 30,)
+    @field:Size(max = 30)
     @field:Schema(description = "사업자 등록 번호", example = "예시 값", type = "string", required = false)
     val businessRegistrationNumber: String? = null,
 
-    @field:Size(max = 100,)
+    @field:Size(max = 100)
     @field:Schema(description = "사업자 대표자 이름", example = "예시 값", type = "string", required = false)
     val representativeName: String? = null,
 
-    @field:Size(max = 30,) @field:Schema(description = "사업자 연락처", example = "예시 값", type = "string", required = false)
+    @field:Size(max = 30)
+    @field:Schema(description = "사업자 연락처", example = "예시 값", type = "string", required = false)
     val businessPhone: String? = null,
 
-    @field:Size(max = 20,) @field:Schema(description = "우편번호", example = "예시 값", type = "string", required = false)
+    @field:Size(max = 20)
+    @field:Schema(description = "우편번호", example = "예시 값", type = "string", required = false)
     val postalCode: String? = null,
 
-    @field:Size(max = 255,) @field:Schema(description = "기본 주소", example = "예시 값", type = "string", required = false)
+    @field:Size(max = 255)
+    @field:Schema(description = "기본 주소", example = "예시 값", type = "string", required = false)
     val address1: String? = null,
 
-    @field:Size(max = 255,) @field:Schema(description = "상세 주소", example = "예시 값", type = "string", required = false)
+    @field:Size(max = 255)
+    @field:Schema(description = "상세 주소", example = "예시 값", type = "string", required = false)
     val address2: String? = null,
 )
 
 @Schema(description = "CreateOperationAccountRequest API 데이터 모델")
 data class CreateOperationAccountRequest(
-    @field:NotBlank @field:Size(max = 100,)
+    @field:NotBlank @field:Size(max = 100)
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
-    @field:NotBlank @field:Size(max = 30,)
+    @field:NotBlank @field:Size(max = 30)
     @field:Schema(description = "휴대폰 번호", example = "01012345678", type = "string", required = true)
     val phone: String,
 
-    @field:Size(max = 255,)
+    @field:Size(max = 255)
     @field:Schema(description = "이메일 주소", example = "user@example.com", type = "string", required = false)
     val email: String? = null,
 
@@ -59,7 +63,8 @@ data class CreateOperationAccountRequest(
 
 @Schema(description = "UpdateAccountStatusRequest API 데이터 모델")
 data class UpdateAccountStatusRequest(
-    @field:NotBlank @field:Schema(description = "현재 상태 코드", example = "ACTIVE", type = "string", required = true)
+    @field:NotBlank
+    @field:Schema(description = "현재 상태 코드", example = "ACTIVE", type = "string", required = true)
     val status: String,
 )
 
@@ -77,18 +82,19 @@ data class AssignOrganizationRequest(
 
 @Schema(description = "CreateConsentRequest API 데이터 모델")
 data class CreateConsentRequest(
-    @field:NotBlank @field:Size(max = 100,)
+    @field:NotBlank @field:Size(max = 100)
     @field:Schema(description = "Consent Type 정보", example = "예시 값", type = "string", required = true)
     val consentType: String,
 
-    @field:NotBlank @field:Size(max = 100,)
+    @field:NotBlank @field:Size(max = 100)
     @field:Schema(description = "Document Version 정보", example = "예시 값", type = "string", required = true)
     val documentVersion: String,
 
-    @field:NotBlank @field:Schema(description = "Consent Method 정보", example = "예시 값", type = "string", required = true)
+    @field:NotBlank
+    @field:Schema(description = "Consent Method 정보", example = "예시 값", type = "string", required = true)
     val consentMethod: String,
 
-    @field:Size(max = 500,)
+    @field:Size(max = 500)
     @field:Schema(description = "Evidence Reference 정보", example = "예시 값", type = "string", required = false)
     val evidenceReference: String? = null,
 )

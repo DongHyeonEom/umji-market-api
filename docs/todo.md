@@ -58,7 +58,7 @@
 - [x] ktlint Gradle 실행기와 Kotlin 플러그인 호환 버전 정리
 - [x] `.editorconfig` 빈 설정값 수정 및 전체 Kotlin 소스 ktlint 포맷 적용
 - [x] `ktlintCheck` 전체 source set 통과 확인
-- [x] `@field:Schema` 생성자 프로퍼티를 어노테이션 다음 줄에 배치하고 필드 사이 빈 줄, 어노테이션 합산 120자 기준, 숫자형 `@field:Size` 한 줄 표기 적용
+- [x] 전용 ktlint 룰셋에서 `@field:Schema` 배치, 필드 사이 빈 줄, 어노테이션 합산 50자 기준, 숫자형 `@field:Size` 한 줄 표기 검사
 
 ## Task 1 — 관리자 권한 경계
 

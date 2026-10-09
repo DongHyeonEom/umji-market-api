@@ -39,119 +39,20 @@ ktlint {
     version.set("1.5.0")
 }
 
-val formatSchemaProperties by tasks.registering {
-    group = "formatting"
-    description = "Formats Kotlin @field:Schema annotations and constructor properties."
-    doLast {
-        val schemaProperty = Regex("(?m)^(.*@field:Schema\\(.*\\))[ \\t]+((?:val|var)\\s+.*)$")
-        val closingSchemaProperty = Regex("(?m)^(\\s*\\))([ \\t]+)((?:val|var)\\s+.*)$")
-        val inlineDataClassProperty = Regex("(?m)^(\\s*data class [A-Za-z0-9_]+)\\((.*@field:Schema\\(.*\\))\\s+((?:val|var)\\s+.*)\\)$")
-        val sizeAnnotation = Regex("@field:Size\\(\\s*((?:(?:min|max)\\s*=\\s*\\d+\\s*,?\\s*)+)\\)", setOf(RegexOption.DOT_MATCHES_ALL))
-        val combinedAnnotations = Regex("(?m)^([ \\t]*)(@field:[^\\r\\n]*)$")
+apply(from = "$rootDir/gradle/schema-field-formatting.gradle.kts")
+tasks.named("ktlintFormat") { dependsOn("formatSchemaProperties") }
 
-        fileTree("src") { include("**/*.kt") }.forEach { sourceFile ->
-            val original = sourceFile.readText()
-            val lineEnding = if ("\r\n" in original) "\r\n" else "\n"
-            var formatted = sizeAnnotation.replace(original) { match ->
-                val arguments = match.groupValues[1]
-                    .replace(Regex("\\s*,\\s*"), ", ")
-                    .replace(Regex("\\s*=\\s*"), " = ")
-                    .replace(Regex("\\s+"), " ")
-                    .trim()
-                    .trimEnd(',')
-                "@field:Size($arguments,)"
-            }
-            formatted = inlineDataClassProperty.replace(formatted) { match ->
-                val classIndent = match.groupValues[1].takeWhile { it == ' ' || it == '\t' }
-                val parameterIndent = "$classIndent    "
-                "${match.groupValues[1]}($lineEnding$parameterIndent${match.groupValues[2]}$lineEnding$parameterIndent${match.groupValues[3]},$lineEnding$classIndent)"
-            }
-            formatted = schemaProperty.replace(formatted) { match ->
-                "${match.groupValues[1]}$lineEnding${match.groupValues[1].takeWhile { it == ' ' || it == '\t' }}${match.groupValues[2]}"
-            }
-            formatted = closingSchemaProperty.replace(formatted) { match ->
-                val indentation = match.groupValues[1].takeWhile { it == ' ' || it == '\t' }
-                "${match.groupValues[1]}$lineEnding$indentation${match.groupValues[3]}"
-            }
-            formatted = combinedAnnotations.replace(formatted) { match ->
-                val indentation = match.groupValues[1]
-                val annotations = match.groupValues[2]
-                if (annotations.count { it == '@' } < 2) {
-                    match.value
-                } else {
-                    val parts = annotations.split(Regex("[ \\t]+(?=@field:)"))
-                        .map(String::trim)
-                    val packed = mutableListOf<String>()
-                    var current = ""
-                    parts.forEach { annotation ->
-                        val candidate = if (current.isEmpty()) annotation else "$current $annotation"
-                        if (indentation.length + candidate.length <= 120) {
-                            current = candidate
-                        } else {
-                            if (current.isNotEmpty()) packed += current
-                            current = annotation
-                        }
-                    }
-                    if (current.isNotEmpty()) packed += current
-                    packed.joinToString(lineEnding) { "$indentation$it" }
-                }
-            }
-            val propertyBeforeAnnotation = Regex("(?m)^([ \\t]*(?:val|var)\\s+[^\\r\\n]*,)\\r?\\n(?=[ \\t]*@field:)")
-            formatted = propertyBeforeAnnotation.replace(formatted) { match ->
-                match.groupValues[1] + lineEnding + lineEnding
-            }
-            if (formatted != original) sourceFile.writeText(formatted)
-        }
-    }
+val ktlintRulesetJar = gradle.includedBuild("ktlint-rules").task(":jar")
+tasks.configureEach {
+    if (name.startsWith("ktlint")) dependsOn(ktlintRulesetJar)
 }
-
-val checkSchemaProperties by tasks.registering {
-    group = "verification"
-    description = "Checks Kotlin @field:Schema formatting and spacing between annotated constructor properties."
-    doLast {
-        val inlineSchemaProperty = Regex("@field:Schema\\(.*\\)\\s+(?:val|var)\\s+")
-        val closingInlineProperty = Regex("(?m)^\\s*\\)\\s+(?:val|var)\\s+")
-        val multilineNumericSize = Regex("@field:Size\\([^)]*\\r?\\n[^)]*\\)")
-        val numericSizeWithoutTrailingComma = Regex("@field:Size\\((?:(?:min|max)\\s*=\\s*\\d+\\s*,\\s*)*(?:min|max)\\s*=\\s*\\d+\\)")
-        val violations = fileTree("src") { include("**/*.kt") }.flatMap { sourceFile ->
-            val lines = sourceFile.readLines()
-            val lineViolations = lines.mapIndexedNotNull { index, line ->
-                val lineNumber = index + 1
-                when {
-                    inlineSchemaProperty.containsMatchIn(line) -> "$sourceFile:$lineNumber: property shares a line with @field:Schema"
-                    line.split("@field:").size > 2 && line.length > 120 -> "$sourceFile:$lineNumber: combined field annotations exceed 120 characters"
-                    line.trimStart().matches(Regex("(?:val|var)\\s+.*,")) && lines.getOrNull(index + 1)?.trimStart()?.startsWith("@field:") == true ->
-                        "$sourceFile:$lineNumber: add a blank line after the field"
-                    closingInlineProperty.containsMatchIn(line) -> "$sourceFile:$lineNumber: property shares a line with the closing annotation"
-                    else -> null
-                }
-            }
-            val sizeViolations = buildList {
-                if (multilineNumericSize.containsMatchIn(sourceFile.readText())) {
-                    add("$sourceFile: numeric @field:Size arguments should use one line")
-                }
-                sourceFile.readLines().forEachIndexed { index, line ->
-                    if (numericSizeWithoutTrailingComma.containsMatchIn(line)) {
-                        add("$sourceFile:${index + 1}: add a trailing comma to numeric @field:Size arguments")
-                    }
-                }
-            }
-            lineViolations + sizeViolations
-        }
-        check(violations.isEmpty()) {
-            "Format field annotations and constructor properties:\n${violations.joinToString("\n")}"
-        }
-    }
-}
-
-tasks.named("ktlintCheck") { dependsOn(checkSchemaProperties) }
-tasks.named("ktlintFormat") { dependsOn(formatSchemaProperties) }
 
 // Version constants
 val azureApplicationinsightsVersion = "3.7.6"
 val springCloudAzureVersion = "5.21.0"
 
 dependencies {
+    ktlintRuleset(files("ktlint-rules/build/libs/ktlint-rules.jar"))
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
 
     developmentOnly("org.springframework.boot:spring-boot-devtools")
