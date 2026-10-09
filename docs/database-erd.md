@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V44가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V49가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -451,6 +451,8 @@ erDiagram
         BINARY public_id UK "API 공개 UUID"
         VARCHAR order_number UK "표시용 고유 주문번호"
         BIGINT account_id FK "실제 주문 계정 ID"
+        BIGINT created_by_account_id FK "실제 주문 생성 계정 ID"
+        VARCHAR order_source "CUSTOMER·ADMIN_PHONE"
         VARCHAR sales_channel_code "주문 판매 채널"
         BIGINT organization_id FK "주문 귀속 구매자 그룹 ID"
         VARCHAR status "주문 상태"
@@ -471,7 +473,7 @@ erDiagram
     }
     PURCHASE_ORDER_TAX_INVOICE["PURCHASE_ORDER_TAX_INVOICE · 발행 요청 주문의 세금계산서 상태·snapshot"] {
         BIGINT order_id PK,FK "주문 ID"
-        VARCHAR status "LEGACY·WAITING_FOR_SHIPMENT·READY_FOR_ISSUANCE"
+        VARCHAR status "LEGACY·WAITING_FOR_SHIPMENT·READY_FOR_ISSUANCE·MANUALLY_ISSUED"
         DATE written_date "세금계산서 작성일자, nullable"
         DATE supply_date "세금계산서 제공일자, nullable"
         VARCHAR supplier_registration_number "공급자 사업자등록번호 snapshot, nullable"
@@ -490,6 +492,27 @@ erDiagram
         VARCHAR buyer_industry "공급받는자 업태 snapshot, nullable"
         VARCHAR buyer_item "공급받는자 종목 snapshot, nullable"
         VARCHAR buyer_email "공급받는자 이메일 snapshot, nullable"
+        VARCHAR invoice_approval_number "홈택스 승인번호, nullable"
+        DATE issued_at "실제 발행일, nullable"
+        BIGINT supply_amount "수기 발행 공급가액, nullable"
+        BIGINT tax_amount "수기 발행 세액, nullable"
+        BIGINT total_amount "수기 발행 합계, nullable"
+        BIGINT issued_by_account_id FK "수기 발행 처리 계정, nullable"
+    }
+    PURCHASE_ORDER_TAX_INVOICE_EVENT["PURCHASE_ORDER_TAX_INVOICE_EVENT · 수기 발행 append-only 이력"] {
+        BIGINT id PK "수기 발행 이벤트 내부 ID"
+        BIGINT order_id FK "주문 ID"
+        VARCHAR event_type "발행 이벤트 유형"
+        VARCHAR invoice_approval_number UK "세금계산서 승인번호"
+        DATE issued_at "실제 발행일"
+        DATE written_date "작성일, nullable"
+        DATE supply_date "제공일, nullable"
+        BIGINT supply_amount "공급가액"
+        BIGINT tax_amount "세액"
+        BIGINT total_amount "합계"
+        BIGINT processed_by_account_id FK "처리 계정 ID"
+        VARCHAR reason "사유, nullable"
+        DATETIME created_at "등록 시각"
     }
     ORDER_NUMBER_SEQUENCE["ORDER_NUMBER_SEQUENCE · 주문번호 발급 순번"] {
         DATE order_date PK "주문번호 발급 기준 날짜"
@@ -663,12 +686,16 @@ erDiagram
     PRODUCT_SKU ||--o{ CART_ITEM : selected
     SALES_OFFER ||--o{ CART_ITEM : priced
     ACCOUNT ||--o{ PURCHASE_ORDER : places
+    ACCOUNT ||--o{ PURCHASE_ORDER : creates
     ORGANIZATION ||--o{ PURCHASE_ORDER : owns
     PURCHASE_ORDER ||--|{ ORDER_ITEM : contains
     PRODUCT_SKU ||--o{ ORDER_ITEM : snapshots
     SALES_OFFER ||--o{ ORDER_ITEM : snapshots
     PURCHASE_ORDER ||--o{ ORDER_STATUS_HISTORY : tracks
     PURCHASE_ORDER ||--o| PURCHASE_ORDER_TAX_INVOICE : requested_tax_invoice
+    PURCHASE_ORDER ||--o{ PURCHASE_ORDER_TAX_INVOICE_EVENT : invoice_history
+    ACCOUNT ||--o{ PURCHASE_ORDER_TAX_INVOICE : issues
+    ACCOUNT ||--o{ PURCHASE_ORDER_TAX_INVOICE_EVENT : processes
     PURCHASE_ORDER ||--o| ORDER_PAYMENT : payment
     ORDER_PAYMENT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : tracks
     ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
@@ -694,6 +721,7 @@ erDiagram
   한 그룹에 여러 계정이 속할 수 있고, 계정 하나는 한 그룹에만 속함. `(organization_id, account_id)`와 `account_id`가 각각 unique임.<br>
   `organization_business_profile.business_registration_number`는 nullable이며 unique가 아님.<br>
 - `purchase_order.account_id`는 실제 주문한 계정, `purchase_order.organization_id`는 주문의 그룹 소유 범위임.<br>
+  `purchase_order.created_by_account_id`는 생성 작업자이며 `order_source`는 `CUSTOMER` 또는 `ADMIN_PHONE`을 저장. V49 전 주문의 작업자는 주문 계정으로 backfill.<br>
   V18은 기존 계정마다 그룹 하나를 생성해 기존 주문을 backfill했으며, V19부터 `organization_id`는 필수임.<br>
   기존 `business_profile`은 유지하면서 그룹 프로필로 데이터를 복사함.<br>
 - 카테고리는 자기 참조 트리임.<br>
@@ -708,6 +736,7 @@ erDiagram
 - `order_item.reservation_key`와 `stock_reservation.reservation_key`는 같은 예약 UUID로 주문 항목과 재고 예약을 대응.<br>
   둘 사이에는 DB FK가 없음.<br>
 - `order_number_sequence`는 주문번호 순번 관리용 독립 테이블임.<br>
+- `purchase_order_tax_invoice_event`는 발행 결과를 append-only로 기록하고 승인번호 unique 제약으로 중복 기록을 차단.<br>
 
 ## 마이그레이션별 테이블
 
@@ -760,6 +789,7 @@ erDiagram
 | V46 | `ui_screen`, 화면 permission mapping, 구매자 구성원 역할 permission mapping 및 access context 권한 추가 |
 | V47 | 구매 Organization의 영업 담당자·선택 인센티브율 배정 이력 및 `SALES_GROUP_ASSIGN` permission 추가 |
 | V48 | 주문별 영업 인센티브 snapshot·정산 이벤트 원장 및 전체 관리자 정산 permission 추가 |
+| V49 | 주문 출처·생성 관리자, 수기 세금계산서 발행 metadata와 append-only 이벤트 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

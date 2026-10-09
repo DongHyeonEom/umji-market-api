@@ -124,6 +124,10 @@ class OrderController(
                 buyerEmail = snapshot.buyer.email,
                 items = items.map { TaxInvoiceItemResponse(it.productName, it.skuCode, it.quantity, it.lineAmount) },
                 supplyAmount = snapshot.supplyAmount,
+                approvalNumber = snapshot.approvalNumber,
+                issuedAt = snapshot.issuedAt,
+                taxAmount = snapshot.taxAmount,
+                totalAmount = snapshot.totalAmount,
             )
         },
         channelCode,

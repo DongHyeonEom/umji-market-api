@@ -15,6 +15,14 @@ import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesChannelEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import com.buyeong.umji.api.sales.service.SalesCommissionService
 import io.kotest.assertions.throwables.shouldThrow
@@ -36,17 +44,95 @@ class OrderServiceTest : DescribeSpec({
     val taxInvoiceBuyers = mockk<OrganizationTaxInvoiceJpaEntityService>(relaxed = true)
     val bankAccounts = mockk<BankAccountInstructionsService>(relaxed = true)
     val salesCommissions = mockk<SalesCommissionService>(relaxed = true)
-    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, salesCommissions)
+    val accounts = mockk<AccountJpaEntityService>(relaxed = true)
+    val catalog = mockk<CatalogJpaEntityService>(relaxed = true)
+    val organizations = mockk<OrganizationJpaEntityService>(relaxed = true)
+    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, salesCommissions, accounts, catalog, organizations)
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()
     val offerId = UUID.randomUUID()
 
     beforeTest {
-        clearMocks(carts, inventory, orders, shippingAddresses, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, bankAccounts, salesCommissions)
+        clearMocks(carts, inventory, orders, shippingAddresses, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, bankAccounts, salesCommissions, accounts, catalog, organizations)
     }
 
     describe("주문 생성") {
+        it("활성 구매자에 대해 서버의 활성 오퍼 가격을 사용하고 전화 주문 생성자와 출처를 기록한다") {
+            val buyerId = UUID.randomUUID()
+            val creatorId = UUID.randomUUID()
+            val buyerProfile = OrganizationTaxInvoiceProfile(
+                UUID.randomUUID(), "BUSINESS", null, "구매자", null, null, null, null,
+                null, null, null, false, "NOT_REQUIRED", null, null,
+            )
+            val buyerAccount = AccountEntity().apply { status = "ACTIVE"; phoneNormalized = "01012345678" }
+            val creator = AccountEntity().apply { status = "ACTIVE" }
+            val channel = mockk<SalesChannelEntity> { every { code } returns "WHOLESALE" }
+            val product = mockk<ProductEntity> {
+                every { name } returns "전화 주문 상품"
+                every { salesStatus } returns "ON_SALE"
+                every { displayStatus } returns "DISPLAYED"
+                every { deletedAt } returns null
+            }
+            val sku = mockk<ProductSkuEntity>()
+            every { sku.publicId } returns skuId
+            every { sku.skuCode } returns "SKU-001"
+            every { sku.name } returns "규격 A"
+            every { sku.salesStatus } returns "ON_SALE"
+            every { sku.product } returns product
+            val offer = mockk<SalesOfferEntity> {
+                every { publicId } returns offerId
+                every { salesStatus } returns "ON_SALE"
+                every { salesChannel } returns channel
+                every { productSku } returns sku
+                every { salePrice } returns 1250L
+                every { unitsPerSale } returns 6
+                every { organization } returns null
+            }
+            every { accounts.findByPublicId(buyerId) } returns buyerAccount
+            every { accounts.findByPublicId(creatorId) } returns creator
+            every { taxInvoiceBuyers.forAccount(buyerId) } returns buyerProfile
+            every { catalog.salesOffer(offerId) } returns offer
+            every { bankAccounts.standard() } returns com.buyeong.umji.api.order.model.BankAccountInstructions("은행", "123", "예금주")
+            every { orders.save(any()) } answers {
+                val draft = firstArg<com.buyeong.umji.api.order.model.OrderDraft>()
+                draft.orderSource shouldBe "ADMIN_PHONE"
+                draft.createdByAccountId shouldBe creatorId
+                draft.items.single().unitPrice shouldBe 1250L
+                draft.items.single().lineAmount shouldBe 2500L
+                OrderView(
+                    UUID.randomUUID(), "UMJ-20261009-000001", draft.status, draft.subtotalAmount, draft.totalAmount, draft.orderedAt,
+                    draft.items.map { OrderItemView(UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
+                        it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale) },
+                )
+            }
+
+            val result = service.createAdminPhoneOrder(
+                creatorId, buyerId, ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
+                listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 2)), false,
+            )
+
+            result.single().totalAmount shouldBe 2500L
+            verify(exactly = 1) { inventory.reserve(skuId, 12, any(), null, null) }
+            verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, result.single().id) }
+        }
+
+        it("활성 구매자 Organization이 없으면 관리자 전화 주문을 생성하지 않는다") {
+            val buyerId = UUID.randomUUID()
+            every { accounts.findByPublicId(buyerId) } returns AccountEntity().apply { status = "ACTIVE"; phoneNormalized = "01012345678" }
+            every { taxInvoiceBuyers.forAccount(buyerId) } returns null
+
+            shouldThrow<IllegalArgumentException> {
+                service.createAdminPhoneOrder(
+                    UUID.randomUUID(), buyerId, ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
+                    listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 1)), false,
+                )
+            }
+
+            verify(exactly = 0) { orders.save(any()) }
+            verify(exactly = 0) { inventory.reserve(any(), any(), any(), any()) }
+        }
+
         it("박스 수량과 입수량을 snapshot하고 기준 SKU 재고를 예약한다") {
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
                 ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)

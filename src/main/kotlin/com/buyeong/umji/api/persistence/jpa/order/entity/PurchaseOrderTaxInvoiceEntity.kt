@@ -9,6 +9,8 @@ import jakarta.persistence.MapsId
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import java.time.LocalDate
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
+import jakarta.persistence.ManyToOne
 
 @Entity
 @Table(name = "purchase_order_tax_invoice")
@@ -78,4 +80,23 @@ class PurchaseOrderTaxInvoiceEntity {
 
     @Column(name = "buyer_email", length = 255)
     var buyerEmail: String? = null
+
+    @Column(name = "invoice_approval_number", length = 100)
+    var invoiceApprovalNumber: String? = null
+
+    @Column(name = "issued_at")
+    var issuedAt: LocalDate? = null
+
+    @Column(name = "supply_amount")
+    var supplyAmount: Long? = null
+
+    @Column(name = "tax_amount")
+    var taxAmount: Long? = null
+
+    @Column(name = "total_amount")
+    var totalAmount: Long? = null
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "issued_by_account_id")
+    var issuedBy: AccountEntity? = null
 }

@@ -11,13 +11,20 @@ import com.buyeong.umji.api.order.model.OrderDraft
 import com.buyeong.umji.api.order.model.OrderItemDraft
 import com.buyeong.umji.api.order.model.OrderPage
 import com.buyeong.umji.api.order.model.OrderView
+import com.buyeong.umji.api.order.model.CheckoutLine
+import com.buyeong.umji.api.order.model.AdminPhoneOrderLine
+import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
 import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotDraft
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import com.buyeong.umji.api.sales.service.SalesCommissionService
+import com.buyeong.umji.api.util.PhoneNumberHelper
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -35,6 +42,9 @@ class OrderService(
     private val taxInvoiceSuppliers: TaxInvoiceSupplierService,
     private val taxInvoiceBuyers: OrganizationTaxInvoiceJpaEntityService,
     private val salesCommissions: SalesCommissionService,
+    private val accounts: AccountJpaEntityService,
+    private val catalog: CatalogJpaEntityService,
+    private val organizations: OrganizationJpaEntityService,
 ) {
     fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions {
         val buyer = taxInvoiceBuyers.forAccount(accountPublicId)?.let {
@@ -172,6 +182,116 @@ class OrderService(
     fun create(accountPublicId: UUID, shippingAddressPublicId: UUID): List<OrderView> =
         create(accountPublicId, shippingAddressPublicId, false, false)
 
+    @Transactional
+    fun createAdminPhoneOrder(
+        creatorPublicId: UUID,
+        buyerPublicId: UUID,
+        shippingAddress: ShippingAddressSnapshot,
+        lines: List<AdminPhoneOrderLine>,
+        taxInvoiceRequested: Boolean,
+    ): List<OrderView> {
+        require(lines.isNotEmpty()) { "전화 주문 상품을 한 개 이상 입력해야 합니다." }
+        accounts.findByPublicId(buyerPublicId)
+            ?.takeIf { it.status == "ACTIVE" && it.phoneNormalized != null }
+            ?: throw ItemNotFoundException("활성 구매자 계정을 찾을 수 없습니다.")
+        val buyerOrganization = taxInvoiceBuyers.forAccount(buyerPublicId)
+        require(buyerOrganization != null) { "활성 구매 Organization에 속한 계정만 전화 주문할 수 있습니다." }
+        accounts.findByPublicId(creatorPublicId)
+            ?.takeIf { it.status == "ACTIVE" }
+            ?: throw ItemNotFoundException("관리자 계정을 찾을 수 없습니다.")
+
+        val checkoutLines = lines.map { requested ->
+            require(requested.quantity in 1..9999) { "상품 수량은 1개 이상 9999개 이하여야 합니다." }
+            val offer = catalog.salesOffer(requested.salesOfferId)
+                ?.takeIf {
+                    it.salesStatus == ON_SALE && it.salesChannel.code == WHOLESALE &&
+                        it.productSku.salesStatus == ON_SALE &&
+                        it.productSku.product.salesStatus == ON_SALE &&
+                        it.productSku.product.displayStatus == DISPLAYED &&
+                        it.productSku.product.deletedAt == null
+                }
+                ?: throw ItemNotFoundException("판매 중인 상품 오퍼를 찾을 수 없습니다.")
+            val sku = offer.productSku
+            CheckoutLine(
+                skuId = requireNotNull(sku.publicId),
+                skuCode = sku.skuCode,
+                productName = sku.product.name,
+                skuName = sku.name,
+                unitPrice = offer.salePrice,
+                quantity = requested.quantity,
+                salesStatus = sku.salesStatus,
+                salesOfferId = requireNotNull(offer.publicId),
+                channelCode = offer.salesChannel.code,
+                unitsPerSale = offer.unitsPerSale,
+                sellerOrganizationId = offer.organization?.publicId,
+            )
+        }
+        require(checkoutLines.map { it.salesOfferId }.distinct().size == checkoutLines.size) { "같은 상품 오퍼는 한 줄로 합산해야 합니다." }
+        require(checkoutLines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
+        require(checkoutLines.mapNotNull { it.sellerOrganizationId }.distinct().all(taxInvoiceBuyers::isSellerBusinessProfileReady)) {
+            "판매자의 확인된 사업자 Organization 프로필이 없어 주문할 수 없습니다."
+        }
+        val invoiceBuyer = buyerOrganization.let {
+            com.buyeong.umji.api.order.model.TaxInvoiceBuyer(
+                it.organizationId, it.businessRegistrationNumber, it.businessName, it.representativeName,
+                it.postalCode, it.address1, it.address2, it.businessIndustry, it.businessItem, it.email, it.complete,
+            )
+        }
+        val supplierByOrganization = checkoutLines.map { it.sellerOrganizationId }.distinct().associateWith { organizationId ->
+            if (organizationId == null) taxInvoiceSuppliers.supplier() else taxInvoiceBuyers.supplierForOrganization(organizationId)
+        }
+        if (taxInvoiceRequested && (invoiceBuyer.complete != true || supplierByOrganization.values.any { it == null })) {
+            throw ClientBadRequestException("공급자와 구매자의 세금계산서 필수 정보가 완성된 주문만 요청할 수 있습니다.")
+        }
+        val bankAccount = if (taxInvoiceRequested) bankAccounts.taxInvoice() else bankAccounts.standard()
+        val orderedAt = Instant.now()
+        val savedOrders = checkoutLines.groupBy { it.sellerOrganizationId }.map { (organizationId, sellerLines) ->
+            val items = sellerLines.map { line ->
+                val amount = Math.multiplyExact(line.unitPrice, line.quantity.toLong())
+                Math.multiplyExact(line.quantity, line.unitsPerSale)
+                OrderItemDraft(
+                    skuId = line.skuId, productName = line.productName, skuName = line.skuName, skuCode = line.skuCode,
+                    unitPrice = line.unitPrice, quantity = line.quantity, lineAmount = amount,
+                    reservationKey = UUID.randomUUID(), status = RESERVED, salesOfferId = line.salesOfferId,
+                    unitsPerSale = line.unitsPerSale,
+                )
+            }
+            val total = items.sumOf { it.lineAmount }
+            val snapshot = if (taxInvoiceRequested) TaxInvoiceSnapshotDraft(
+                requireNotNull(supplierByOrganization[organizationId]), invoiceBuyer,
+            ) else null
+            val saved = orders.save(
+                OrderDraft(
+                    accountId = buyerPublicId, status = PENDING_PAYMENT, orderedAt = orderedAt,
+                    subtotalAmount = total, totalAmount = total, taxInvoiceRequested = taxInvoiceRequested,
+                    depositBankName = bankAccount.bankName, depositAccountNumber = bankAccount.accountNumber,
+                    depositAccountHolder = bankAccount.accountHolder, shippingAddress = shippingAddress,
+                    items = items, taxInvoiceSnapshot = snapshot, channelCode = sellerLines.first().channelCode,
+                    createdByAccountId = creatorPublicId, orderSource = "ADMIN_PHONE",
+                ),
+            )
+            salesCommissions.snapshotOrder(saved.id, buyerPublicId, orderedAt, total)
+            saved
+        }
+        savedOrders.forEach { saved ->
+            saved.items.forEach { item ->
+                inventory.reserve(item.skuId, Math.multiplyExact(item.quantity, item.unitsPerSale), item.reservationKey, null, item.sellerOrganizationId)
+            }
+            notifications.record(NotificationEventType.ORDER_CREATED, saved.id)
+        }
+        return savedOrders
+    }
+
+    fun findAdminPhoneOrderBuyer(phone: String): AdminPhoneOrderBuyer? {
+        val normalized = PhoneNumberHelper.normalizeMobilePhoneNumber(phone)
+        val account = accounts.findByPhoneNormalized(normalized)?.takeIf { it.status == "ACTIVE" } ?: return null
+        val organization = organizations.activeBuyerForAccountPublicId(requireNotNull(account.publicId)) ?: return null
+        return AdminPhoneOrderBuyer(
+            requireNotNull(account.publicId), account.name, account.phone ?: normalized,
+            requireNotNull(organization.publicId), organization.displayName,
+        )
+    }
+
     fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage = orders.findAll(accountPublicId, page, size)
 
     fun detail(accountPublicId: UUID, orderId: UUID): OrderView =
@@ -181,5 +301,15 @@ class OrderService(
         const val PENDING_PAYMENT = "PENDING_PAYMENT"
         const val RESERVED = "RESERVED"
         const val ON_SALE = "ON_SALE"
+        const val WHOLESALE = "WHOLESALE"
+        const val DISPLAYED = "DISPLAYED"
     }
 }
+
+data class AdminPhoneOrderBuyer(
+    val accountId: UUID,
+    val accountName: String,
+    val phone: String,
+    val organizationId: UUID,
+    val organizationName: String,
+)

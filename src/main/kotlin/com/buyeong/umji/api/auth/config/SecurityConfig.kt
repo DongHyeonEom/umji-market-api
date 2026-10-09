@@ -74,6 +74,8 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.HEAD, "/api/operation/inventory/**").hasAuthority("INVENTORY_READ")
                         .requestMatchers(HttpMethod.PATCH, "/api/operation/inventory/**").hasAuthority("INVENTORY_WRITE")
                         .requestMatchers("/api/operation/payments/**").hasAuthority("ORDER_WRITE")
+                        .requestMatchers("/api/operation/orders/phone-orders/**").hasAuthority("ORDER_WRITE")
+                        .requestMatchers("/api/operation/orders/tax-invoices/**").hasAuthority("ORDER_WRITE")
                         .requestMatchers("/api/operation/order-cancellations/**").hasAuthority("ORDER_WRITE")
                         .requestMatchers("/api/operation/shipping-holidays/**").hasAuthority("ORDER_WRITE")
                         .requestMatchers(HttpMethod.PUT, "/api/operation/orders/*/shipment/tracking").hasAuthority("SHIPMENT_WRITE")

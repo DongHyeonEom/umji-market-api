@@ -31,6 +31,12 @@ import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.operation.payment.controller.OperationPaymentController
 import com.buyeong.umji.api.operation.shipment.controller.OperationShipmentController
 import com.buyeong.umji.api.order.controller.OperationShippingHolidayController
+import com.buyeong.umji.api.operation.order.controller.OperationPhoneOrderController
+import com.buyeong.umji.api.operation.order.controller.OperationTaxInvoiceController
+import com.buyeong.umji.api.order.service.AdminPhoneOrderBuyer
+import com.buyeong.umji.api.operation.order.service.OperationTaxInvoiceService
+import com.buyeong.umji.api.operation.order.model.TaxInvoiceQueueData
+import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.order.controller.OrderCancellationController
 import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.model.CancellationQueuePage
@@ -78,7 +84,8 @@ import java.util.UUID
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
         com.buyeong.umji.api.sales.controller.SalesAssignmentController::class,
         com.buyeong.umji.api.sales.controller.SalesCommissionController::class,
-        OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
+        OrderCancellationController::class, OperationShippingHolidayController::class, OperationPhoneOrderController::class,
+        OperationTaxInvoiceController::class, NotificationDeviceTokenController::class,
     ],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
@@ -122,6 +129,12 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var holidays: ShippingHolidayService
+
+    @MockitoBean
+    private lateinit var orders: OrderService
+
+    @MockitoBean
+    private lateinit var operationTaxInvoices: OperationTaxInvoiceService
 
     @MockitoBean
     private lateinit var deviceTokens: NotificationDeviceTokenService
@@ -571,6 +584,27 @@ class OperationEndpointAuthorizationTest(
     fun `holiday calendar accepts order write permission`() {
         Mockito.`when`(holidays.list()).thenReturn(emptyList())
         mockMvc.perform(get("/api/operation/shipping-holidays").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `phone order and manual invoice endpoints require order write permission`() {
+        mockMvc.perform(get("/api/operation/orders/phone-orders/buyers?phone=01012345678").with(authorities("PRODUCT_WRITE")))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(get("/api/operation/orders/tax-invoices").with(authorities("SHIPMENT_WRITE")))
+            .andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `order write permission can search phone order buyers and read invoice queue`() {
+        val buyerId = UUID.randomUUID()
+        Mockito.`when`(orders.findAdminPhoneOrderBuyer("01012345678"))
+            .thenReturn(AdminPhoneOrderBuyer(buyerId, "구매자", "01012345678", UUID.randomUUID(), "구매 조직"))
+        Mockito.`when`(operationTaxInvoices.queue(0, 20)).thenReturn(TaxInvoiceQueueData(emptyList(), 0, 20, 0, 0))
+
+        mockMvc.perform(get("/api/operation/orders/phone-orders/buyers?phone=01012345678").with(authorities("ORDER_WRITE")))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/api/operation/orders/tax-invoices").with(authorities("ORDER_WRITE")))
             .andExpect(status().isOk)
     }
 

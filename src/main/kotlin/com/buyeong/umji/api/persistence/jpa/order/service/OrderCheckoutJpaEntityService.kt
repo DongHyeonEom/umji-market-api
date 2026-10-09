@@ -56,11 +56,14 @@ class OrderCheckoutJpaEntityService(
             "세금계산서 발행 요청과 세금계산서 snapshot이 일치하지 않습니다."
         }
         val account = account(draft.accountId)
+        val creator = account(draft.createdByAccountId)
         val organization = organizationMembers.findFirstByAccount_IdAndStatus(requireNotNull(account.id), "ACTIVE")?.organization
             ?.takeIf { it.status == "ACTIVE" }
             ?: throw ClientBadRequestException("주문 전 개인 또는 사업자 그룹 등록이 필요합니다.")
         val order = PurchaseOrderEntity().apply {
             this.account = account
+            createdByAccount = creator
+            orderSource = draft.orderSource
             this.organization = organization
             salesChannelCode = draft.channelCode
             orderNumber = nextOrderNumber(draft.orderedAt)
@@ -189,7 +192,7 @@ class OrderCheckoutJpaEntityService(
 
     private fun PurchaseOrderEntity.toTaxInvoiceSnapshot(): TaxInvoiceSnapshot? {
         val invoice = taxInvoice ?: return null
-        if (invoice.status !in setOf(WAITING_FOR_SHIPMENT, READY_FOR_ISSUANCE)) return null
+        if (invoice.status !in setOf(WAITING_FOR_SHIPMENT, READY_FOR_ISSUANCE, MANUALLY_ISSUED)) return null
         return TaxInvoiceSnapshot(
             status = invoice.status,
             supplier = TaxInvoiceSupplier(
@@ -217,6 +220,10 @@ class OrderCheckoutJpaEntityService(
             writtenDate = invoice.writtenDate,
             supplyDate = invoice.supplyDate,
             supplyAmount = items.sumOf { it.lineAmount },
+            approvalNumber = invoice.invoiceApprovalNumber,
+            issuedAt = invoice.issuedAt,
+            taxAmount = invoice.taxAmount,
+            totalAmount = invoice.totalAmount,
         )
     }
 
@@ -224,5 +231,6 @@ class OrderCheckoutJpaEntityService(
         val ORDER_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC)
         const val WAITING_FOR_SHIPMENT = "WAITING_FOR_SHIPMENT"
         const val READY_FOR_ISSUANCE = "READY_FOR_ISSUANCE"
+        const val MANUALLY_ISSUED = "MANUALLY_ISSUED"
     }
 }

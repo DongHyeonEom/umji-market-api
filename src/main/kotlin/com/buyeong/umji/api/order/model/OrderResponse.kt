@@ -138,6 +138,10 @@ data class TaxInvoiceSnapshotResponse(
         schema = Schema(implementation = TaxInvoiceItemResponse::class),
     ) @field:Schema(description = "주문 품목별 공급가액 목록", example = "[]", type = "array", required = true) val items: List<TaxInvoiceItemResponse>,
     @field:Schema(description = "공급가액 합계(원)", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class) val supplyAmount: Long,
+    @field:Schema(description = "홈택스 발행 승인번호", type = "string") val approvalNumber: String? = null,
+    @field:Schema(description = "실제 발행일자", format = "date", type = "string") val issuedAt: LocalDate? = null,
+    @field:Schema(description = "세액(원)", format = "int64", type = "integer", implementation = Long::class) val taxAmount: Long? = null,
+    @field:Schema(description = "세금계산서 합계 금액(원)", format = "int64", type = "integer", implementation = Long::class) val totalAmount: Long? = null,
 )
 
 @Schema(description = "세금계산서에 기재할 주문 품목과 공급가액")

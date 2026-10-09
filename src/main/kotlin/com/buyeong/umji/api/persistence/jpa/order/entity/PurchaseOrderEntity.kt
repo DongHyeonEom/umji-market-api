@@ -28,6 +28,13 @@ class PurchaseOrderEntity : DomainPublicEntity() {
     lateinit var account: AccountEntity
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by_account_id", nullable = false)
+    lateinit var createdByAccount: AccountEntity
+
+    @Column(name = "order_source", nullable = false, length = 30)
+    var orderSource: String = "CUSTOMER"
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "organization_id", nullable = false)
     lateinit var organization: OrganizationEntity
 

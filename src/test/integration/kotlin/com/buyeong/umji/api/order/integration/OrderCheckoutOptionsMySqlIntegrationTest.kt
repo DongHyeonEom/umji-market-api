@@ -16,6 +16,7 @@ import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
 import com.buyeong.umji.api.operation.account.service.OperationAccountService
 import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.OrderService
+import com.buyeong.umji.api.operation.order.service.OperationTaxInvoiceService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
@@ -72,6 +73,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     private lateinit var orders: OrderService
 
     @Autowired
+    private lateinit var operationTaxInvoices: OperationTaxInvoiceService
+
+    @Autowired
     private lateinit var taxInvoiceSupplier: TaxInvoiceSupplierService
 
     @Autowired
@@ -97,6 +101,137 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
     @Autowired
     private lateinit var payments: PaymentService
+
+    @Test
+    fun `flyway v49 adds administrator order and manual invoice record schema`() {
+        val migrationCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '49' AND success = TRUE",
+            Long::class.java,
+        )
+        assertThat(migrationCount).isEqualTo(1L)
+
+        val columns = jdbc.queryForList(
+            "SELECT CONCAT(table_name, '.', column_name) FROM information_schema.columns WHERE table_schema = DATABASE() AND ((table_name = 'purchase_order' AND column_name IN ('order_source', 'created_by_account_id')) OR (table_name = 'purchase_order_tax_invoice' AND column_name IN ('invoice_approval_number', 'issued_at', 'supply_amount', 'tax_amount', 'total_amount', 'issued_by_account_id'))) ORDER BY table_name, column_name",
+            String::class.java,
+        )
+        assertThat(columns).containsExactlyInAnyOrder(
+            "purchase_order.created_by_account_id", "purchase_order.order_source",
+            "purchase_order_tax_invoice.invoice_approval_number", "purchase_order_tax_invoice.issued_at",
+            "purchase_order_tax_invoice.issued_by_account_id", "purchase_order_tax_invoice.supply_amount",
+            "purchase_order_tax_invoice.tax_amount", "purchase_order_tax_invoice.total_amount",
+        )
+        val eventTableCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'purchase_order_tax_invoice_event'",
+            Long::class.java,
+        )
+        assertThat(eventTableCount).isEqualTo(1L)
+    }
+
+    @Test
+    fun `administrator phone order snapshots current offer prices splits by seller and reserves stock`() {
+        val buyerId = createAccount()
+        organizations.ensureForAccount(buyerId)
+        val operatorId = createAccount()
+        val categoryId = createCategory()
+        val sellerA = createSellerOrganization("Phone seller A")
+        val sellerB = createSellerOrganization("Phone seller B")
+        val skuA = createSellerCatalogItem(categoryId, sellerA.internalId, 20)
+        val skuB = createSellerCatalogItem(categoryId, sellerB.internalId, 30)
+        val skuInternalA = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuA.toBytes())!!
+        val skuInternalB = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuB.toBytes())!!
+        jdbc.update("UPDATE product SET display_status = 'DISPLAYED' WHERE id IN (SELECT product_id FROM product_sku WHERE id IN (?, ?))", skuInternalA, skuInternalB)
+        val offerA = UUID.fromString(
+            jdbc.queryForObject("SELECT BIN_TO_UUID(public_id) FROM sales_offer WHERE product_sku_id = ?", String::class.java, skuInternalA),
+        )
+        val offerB = UUID.fromString(
+            jdbc.queryForObject("SELECT BIN_TO_UUID(public_id) FROM sales_offer WHERE product_sku_id = ?", String::class.java, skuInternalB),
+        )
+
+        val created = orders.createAdminPhoneOrder(
+            operatorId, buyerId,
+            com.buyeong.umji.api.order.model.ShippingAddressSnapshot("Recipient", "01012345678", "12345", "Seoul address", null),
+            listOf(
+                com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerA, 2),
+                com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerB, 3),
+            ),
+            false,
+        )
+
+        assertThat(created).hasSize(2)
+        assertThat(created.map { it.totalAmount }).containsExactlyInAnyOrder(5_000L, 7_500L)
+        assertThat(created.map { it.sellerOrganizationId }).containsExactlyInAnyOrder(sellerA.publicId, sellerB.publicId)
+        assertThat(
+            jdbc.queryForList(
+                "SELECT order_source FROM purchase_order WHERE public_id IN (?, ?) ORDER BY total_amount",
+                String::class.java,
+                created[0].id.toBytes(), created[1].id.toBytes(),
+            ),
+        ).containsExactly("ADMIN_PHONE", "ADMIN_PHONE")
+        assertThat(
+            jdbc.queryForList(
+                "SELECT created_by_account_id FROM purchase_order WHERE public_id IN (?, ?)",
+                Long::class.java,
+                created[0].id.toBytes(), created[1].id.toBytes(),
+            ),
+        ).containsOnly(jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, operatorId.toBytes()))
+        assertThat(
+            jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE organization_id = ? AND sku_id = ?", Int::class.java, sellerA.internalId, skuInternalA),
+        ).isEqualTo(2)
+        assertThat(
+            jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE organization_id = ? AND sku_id = ?", Int::class.java, sellerB.internalId, skuInternalB),
+        ).isEqualTo(3)
+    }
+
+    @Test
+    fun `administrator phone order rolls back order rows when stock reservation fails`() {
+        val buyerId = createAccount()
+        val buyerOrganization = organizations.ensureForAccount(buyerId)
+        val operatorId = createAccount()
+        val categoryId = createCategory()
+        val productId = createProduct(categoryId)
+        val skuPublicId = createSku(productId)
+        createStock(skuPublicId)
+        val skuId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuPublicId.toBytes())!!
+        val offerId = UUID.fromString(
+            jdbc.queryForObject("SELECT BIN_TO_UUID(public_id) FROM sales_offer WHERE product_sku_id = ?", String::class.java, skuId),
+        )
+        jdbc.update("UPDATE product SET display_status = 'DISPLAYED' WHERE id = ?", productId)
+        jdbc.update("UPDATE inventory_stock SET on_hand_quantity = 1 WHERE sku_id = ? AND organization_id IS NULL", skuId)
+
+        TestTransaction.flagForCommit()
+        TestTransaction.end()
+
+        assertThatThrownBy {
+            orders.createAdminPhoneOrder(
+                operatorId, buyerId,
+                com.buyeong.umji.api.order.model.ShippingAddressSnapshot("Recipient", "01012345678", "12345", "Seoul address", null),
+                listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 2)), false,
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java).hasMessage("가용 재고가 부족합니다.")
+
+        assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM purchase_order WHERE created_by_account_id = (SELECT id FROM account WHERE public_id = ?)", Int::class.java, operatorId.toBytes()),
+        ).isZero()
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM stock_reservation WHERE sku_id = ?", Int::class.java, skuId)).isZero()
+        assertThat(
+            jdbc.queryForObject("SELECT reserved_quantity FROM inventory_stock WHERE sku_id = ? AND organization_id IS NULL", Int::class.java, skuId),
+        ).isZero()
+
+        TestTransaction.start()
+        jdbc.update("DELETE FROM inventory_stock WHERE sku_id = ?", skuId)
+        jdbc.update("DELETE FROM sales_offer WHERE product_sku_id = ?", skuId)
+        jdbc.update("DELETE FROM product_sku WHERE id = ?", skuId)
+        jdbc.update("DELETE FROM product WHERE id = ?", productId)
+        jdbc.update("DELETE FROM category WHERE id = ?", categoryId)
+        val organizationInternalId = requireNotNull(buyerOrganization.id)
+        jdbc.update("DELETE FROM organization_member WHERE organization_id = ?", organizationInternalId)
+        jdbc.update("UPDATE organization SET representative_account_id = NULL WHERE id = ?", organizationInternalId)
+        jdbc.update("DELETE FROM organization_capability WHERE organization_id = ?", organizationInternalId)
+        jdbc.update("DELETE FROM organization WHERE id = ?", organizationInternalId)
+        jdbc.update("DELETE FROM account WHERE public_id IN (?, ?)", buyerId.toBytes(), operatorId.toBytes())
+        TestTransaction.flagForCommit()
+        TestTransaction.end()
+    }
 
     @Autowired
     private lateinit var shipments: ShipmentService
@@ -601,6 +736,34 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(ready?.status).isEqualTo("READY_FOR_ISSUANCE")
         assertThat(ready?.writtenDate).isEqualTo(order.orderedAt.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate())
         assertThat(ready?.supplyDate).isEqualTo(ready?.writtenDate)
+
+        val approvalNumber = "MANUAL-${UUID.randomUUID()}"
+        val issuedAt = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul"))
+        val manualIssue = operationTaxInvoices.recordManualIssue(
+            order.id, operatorId, approvalNumber, issuedAt, requireNotNull(ready?.writtenDate), requireNotNull(ready?.supplyDate),
+            order.totalAmount, 500, order.totalAmount + 500, "홈택스 수기 발행",
+        )
+        assertThat(manualIssue.status).isEqualTo("MANUALLY_ISSUED")
+        assertThat(manualIssue.supplierBusinessName).isEqualTo("Umji Market")
+        assertThat(manualIssue.buyerBusinessName).isEqualTo("Group test business")
+        assertThat(manualIssue.items).hasSize(1)
+        assertThat(manualIssue.supplyAmount).isEqualTo(order.totalAmount)
+        assertThat(operationTaxInvoices.queue(0, 20).items).anyMatch { it.orderId == order.id && it.status == "MANUALLY_ISSUED" }
+        assertThat(orders.detail(ownerId, order.id).taxInvoiceSnapshot?.approvalNumber).isEqualTo(approvalNumber)
+        assertThat(orders.detail(ownerId, order.id).taxInvoiceSnapshot?.taxAmount).isEqualTo(500L)
+        assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM purchase_order_tax_invoice_event WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+                Int::class.java,
+                order.id.toBytes(),
+            ),
+        ).isEqualTo(1)
+        assertThatThrownBy {
+            operationTaxInvoices.recordManualIssue(
+                order.id, operatorId, approvalNumber, issuedAt, requireNotNull(ready?.writtenDate), requireNotNull(ready?.supplyDate),
+                order.totalAmount, 500, order.totalAmount + 500, null,
+            )
+        }.isInstanceOf(IllegalStateException::class.java)
 
         jdbc.update(
             "UPDATE organization_business_profile SET business_name = 'Changed later' WHERE organization_id = (SELECT id FROM organization WHERE public_id = ?)",

@@ -34,6 +34,10 @@ data class TaxInvoiceSnapshot(
     val writtenDate: LocalDate?,
     val supplyDate: LocalDate?,
     val supplyAmount: Long,
+    val approvalNumber: String? = null,
+    val issuedAt: LocalDate? = null,
+    val taxAmount: Long? = null,
+    val totalAmount: Long? = null,
 )
 
 data class TaxInvoiceSnapshotDraft(

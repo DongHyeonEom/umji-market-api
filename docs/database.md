@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V48로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V49로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -72,6 +72,7 @@
 | V46 | audience별 화면·permission mapping 및 구매자 구성원 역할 permission 추가 |
 | V47 | 구매 Organization별 영업 담당자·선택 인센티브율의 유효기간 배정 이력과 배정 permission 추가 |
 | V48 | 주문별 인센티브 기준·요율 snapshot, 정산 상태·append-only 이벤트 원장 및 관리자 정산 permission 추가 |
+| V49 | 주문 출처·생성 관리자 기록, 홈택스 수기 세금계산서 발행 필드와 append-only 이벤트 추가 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -128,7 +129,9 @@
   생성 계정은 이력 식별용이며 주소 접근 범위는 구매자 그룹 기준.<br>
 - `purchase_order`의 배송지 snapshot은 주문 당시 수령인·연락처·주소를 보존함.<br>
   주소 원본과 외래 키를 두지 않아 그룹 주소 변경·삭제가 기존 주문에 영향을 주지 않음.<br>
+- `purchase_order.order_source`는 `CUSTOMER` 또는 `ADMIN_PHONE`이며 `created_by_account_id`는 실제 요청을 수행한 계정을 기록. 기존 주문은 주문 계정으로 생성자를 backfill.<br>
 - `purchase_order_tax_invoice`는 세금계산서를 요청한 주문에만 생성하며 발행 상태·일자와 공급자·공급받는자 정보를 주문 시점 snapshot으로 보관함.<br>
+  수기 발행은 `MANUALLY_ISSUED` 상태와 승인번호·발행일·공급가액·세액·합계·처리자 정보를 저장. `purchase_order_tax_invoice_event`는 수기 발행 이벤트를 append-only로 보존하고 승인번호 unique 제약으로 중복 등록을 방지.<br>
   판매자 오퍼가 연결된 주문의 공급자는 SELLER Organization 프로필이며 주문은 판매자별로 분리. 소유자 미지정 레거시 오퍼만 기존 환경 설정 공급자를 사용.<br>
   행의 존재가 발행 요청 여부이며, 일반 주문에는 세금계산서 전용 행이 없음.<br>
 - `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. RETAIL은 1, WHOLESALE은 박스 입수 수량으로 사용.<br>
