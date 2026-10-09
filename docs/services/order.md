@@ -223,6 +223,36 @@ V42 이전 판매자 미지정 레거시 오퍼 주문은 기존 환경 설정�
 세금계산서 snapshot은 사용자 그룹 주문 상세와 권한 있는 운영 조회에서 확인하며, 실제 전자세금계산서 전송은 외부 발행 연동 도입 범위.<br>
 그룹 정보가 완성되지 않은 상태에서 발행을 요청하면 주문 생성과 기본 설정 변경을 모두 거부하고 장바구니를 유지.<br>
 
+## 관리자 전화 주문 API 흐름
+
+`GET /api/operation/orders/phone-orders/buyers?phone=...`는 정확한 휴대폰 번호로 활성 계정과 활성 구매 Organization을 찾음.<br>
+`POST /api/operation/orders/phone-orders`는 관리자 전화 접수 주문을 생성. 요청에는 공개 판매 오퍼 ID와 수량만 받고 가격은 활성 도매 오퍼에서 다시 조회.<br>
+API 전체 장애 중에는 별도 운영 수단에 내용을 기록하고 복구 후 이 API로 사후 등록.<br>
+
+```mermaid
+flowchart TD
+    ADMIN[관리자 전화 주문 API 요청] --> AUTH[ORDER_WRITE permission 검사]
+    AUTH -->|거부| DENY[403 응답]
+    AUTH -->|허용| BUYER[구매자 계정·활성 BUYER Organization 지정]
+    BUYER --> BUYERVALID{활성 계정·활성 BUYER Organization인가}
+    BUYERVALID -->|아니오| INVALID[요청 검증 오류]
+    BUYERVALID -->|예| LINES[판매 오퍼와 주문 수량 입력]
+    LINES --> PRICE[활성 오퍼 가격·판매 상태·입수량 재조회]
+    PRICE --> STOCK[판매자별 주문 분리 및 재고 예약 가능 여부 검증]
+    STOCK -->|실패| INVALID
+    STOCK -->|성공| TAX{세금계산서 발행 요청}
+    TAX -->|예| PROFILE[공급자·구매자 프로필 확인 및 기존 snapshot 규칙 적용]
+    TAX -->|아니오| DRAFT[주문·품목·결제·배송 snapshot 구성]
+    PROFILE --> DRAFT
+    DRAFT --> SAVE[일반 주문과 같은 트랜잭션으로 주문 저장]
+    SAVE --> RESERVE[판매자별 재고 예약·인센티브 snapshot·outbox 처리]
+    RESERVE --> AUDIT[전화 주문 출처·처리 관리자 감사 기록]
+    AUDIT --> RESPONSE[주문 번호·판매자별 주문 결과 반환]
+    SAVE -. 하위 작업 실패 .-> ROLLBACK[주문·재고·부가 이벤트 전체 rollback]
+```
+
+계정은 기존 활성 BUYER Organization 구성원으로 제한. 활성 WHOLESALE 오퍼 가격·재고를 적용하고 주문 상태는 `PENDING_PAYMENT`. 서버 전체 장애에서는 별도 기록 후 복구된 API로 사후 등록.<br>
+
 ## 사업자 주문 귀속·조회 정책
 
 인증 계정의 활성 구매자 그룹이 주문 소유자이며, 요청을 실행한 계정은 실제 주문자로 별도 기록.<br>

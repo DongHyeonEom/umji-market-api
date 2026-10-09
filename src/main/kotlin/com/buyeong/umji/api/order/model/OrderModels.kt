@@ -31,7 +31,11 @@ data class OrderDraft(
     val items: List<OrderItemDraft>,
     val taxInvoiceSnapshot: TaxInvoiceSnapshotDraft? = null,
     val channelCode: String = "WHOLESALE",
+    val createdByAccountId: UUID = accountId,
+    val orderSource: String = "CUSTOMER",
 )
+
+data class AdminPhoneOrderLine(val salesOfferId: UUID, val quantity: Int)
 
 data class ShippingAddressSnapshot(
     val recipientName: String,

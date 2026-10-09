@@ -6,6 +6,7 @@ import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
 import com.buyeong.umji.api.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
+import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderResponse
 import java.time.Instant
 import java.util.UUID
 import org.aspectj.lang.ProceedingJoinPoint
@@ -64,6 +65,7 @@ class OperationAuditAspect(
         val resultId = when (response) {
             is OperationAccountResponse -> response.id
             is OperationCatalogResourceResponse -> response.id
+            is OperationPhoneOrderResponse -> response.orders.firstOrNull()?.id
             is InventoryStockResponse -> response.skuId
             else -> null
         }

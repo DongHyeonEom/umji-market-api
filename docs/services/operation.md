@@ -380,6 +380,30 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 입금 확인 응답에는 주문자명과 연락처가 포함되며, 실제 은행 내역 확인과 부분 입금 후속 통화는 운영 절차로 수행.<br>
 상태 변경은 payment history와 운영 변경 감사 로그에 처리자·시각을 남김.<br>
 
+### 홈택스 세금계산서 수기 발행 결과 등록 흐름
+
+`GET /api/operation/orders/tax-invoices`는 발행 준비 및 수기 발행 완료 주문을 조회. `POST /api/operation/orders/tax-invoices/{orderId}/manual-issue`는 홈택스에서 관리자가 직접 발행한 결과를 기록하며 외부 발행을 실행하지 않음.<br>
+현재는 발행 요청 주문 중 `READY_FOR_ISSUANCE` 상태만 등록 가능. 승인번호 필수, 공급가액은 주문 시점 소계와 일치, 합계는 공급가액과 세액의 합이어야 함. 홈택스 발행일·작성일·공급일은 각각 실제 값을 입력. 발행 완료 기록은 수정 불가이며 append-only 이벤트로 보존.<br>
+
+```mermaid
+flowchart TD
+    ADMIN[관리자 수기 발행 API 요청] --> AUTH[ORDER_WRITE permission 검사]
+    AUTH -->|거부| DENY[403 응답]
+    AUTH -->|허용| LIST[발행 요청 주문과 현재 발행 상태 조회]
+    LIST --> SELECT[주문·세금계산서 snapshot 확인]
+    SELECT --> ELIGIBLE{수기 발행 등록 가능한 상태인가}
+    ELIGIBLE -->|아니오| REJECT[등록 거부 및 상태 안내]
+    ELIGIBLE -->|예| HOMETAX[관리자가 홈택스에서 수기 발행]
+    HOMETAX --> INPUT[발행 식별값·일자·공급가액·세액·합계 입력]
+    INPUT --> VALIDATE[주문 snapshot과 발행 금액·중복 여부 검증]
+    VALIDATE -->|오류| REJECT
+    VALIDATE -->|통과| SAVE[수기 발행 결과·처리자·감사 이력 저장]
+    SAVE --> ISSUED[주문 세금계산서 발행 완료 표시]
+    ISSUED --> RESPONSE[현재 상태와 기록 결과 반환]
+```
+
+승인번호 unique 제약으로 동일 세금계산서의 중복 기록을 차단. 정정·취소·재발행은 현재 기능 범위에서 처리하지 않음.<br>
+
 ## 계정
 
 운영자 Organization 관리 흐름.<br>
