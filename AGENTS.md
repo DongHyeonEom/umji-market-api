@@ -14,6 +14,7 @@ Flutter 앱의 React WebView가 호출하는 Kotlin/Spring Boot 통합 API.<br>
 | 작업 범위 | 확인할 문서 |
 | --- | --- |
 | 모든 작업 | `../AGENTS.md`, `AGENTS.md`, `docs/todo.md`의 관련 Task |
+| 완료된 선행 작업의 결정·수용 기준 확인 | 필요한 경우 `docs/completed-todo.md` |
 | 제품 전체 구매·운영 흐름 변경 | 작업 공간의 `../SERVICE_FLOW.md` |
 | 패키지·계층·Request/Response/DTO 경계 변경 | `docs/architecture.md` |
 | 서비스 동작·API 변경 | `docs/services/<domain>.md`; 문서 위치 탐색이 필요할 때 `docs/services/README.md` |
@@ -30,7 +31,8 @@ Flutter 앱의 React WebView가 호출하는 Kotlin/Spring Boot 통합 API.<br>
 - `docs/database.md`: DB 규칙과 migration 변경 요약
 - `docs/database-erd.md`: 현재 schema의 테이블·컬럼·관계
 - `docs/implementation-status.md`: 구현 상태의 간결한 요약과 남은 기능 범위
-- `docs/todo.md`: 미완료 작업과 수용 기준
+- `docs/todo.md`: 진행 중·미완료 작업과 수용 기준
+- `docs/completed-todo.md`: 모든 기준이 완료된 Task의 체크리스트
 - `README.md`: 로컬 실행 방법과 필수 환경 변수
 - `../SERVICE_FLOW.md`: 저장소를 가로지르는 제품·채널 전체 흐름
 
@@ -70,7 +72,8 @@ Flutter 앱의 React WebView가 호출하는 Kotlin/Spring Boot 통합 API.<br>
 ## 문서 작성
 
 - 코드·설정·migration과 현재 동작이 일치하도록 작성함. 계획과 구현을 명확히 구분함.
-- 완료된 진행 이력, 이전 구조 설명, 중복 설명은 남기지 않음. 현재 동작·정책·미완료 범위만 기록함.
+- 진행 중 Task의 완료되지 않은 기준은 `docs/todo.md`에 유지함. 모든 기준이 완료된 Task는 삭제하지 않고 `docs/completed-todo.md`로 이동함.
+- 완료 Task는 결과 체크리스트만 보관하고 시간순 진행 메모·이전 구조 설명·중복 설명은 남기지 않음.
 - 문장은 명사형 종결 또는 간결한 서술형으로 작성함. 독자에게 직접 지시하거나 `~입니다`, `~합니다`, `~습니다`로 끝내지 않음.
 - 문장 끝에서 줄바꿈하고 마침표 뒤에 `<br>`을 붙임. 문단 구분에는 빈 줄을 사용하고 줄 끝 역슬래시는 사용하지 않음.
 
