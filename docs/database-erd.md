@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V49가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V50이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -723,7 +723,7 @@ erDiagram
 - `purchase_order.account_id`는 실제 주문한 계정, `purchase_order.organization_id`는 주문의 그룹 소유 범위임.<br>
   `purchase_order.created_by_account_id`는 생성 작업자이며 `order_source`는 `CUSTOMER` 또는 `ADMIN_PHONE`을 저장. V49 전 주문의 작업자는 주문 계정으로 backfill.<br>
   V18은 기존 계정마다 그룹 하나를 생성해 기존 주문을 backfill했으며, V19부터 `organization_id`는 필수임.<br>
-  기존 `business_profile`은 유지하면서 그룹 프로필로 데이터를 복사함.<br>
+  기존 계정별 `business_profile` 데이터를 Organization 프로필로 이관하고 V50에서 원본 테이블 제거.<br>
 - 카테고리는 자기 참조 트리임.<br>
   상품은 카테고리를 반드시 가지며 브랜드는 선택임.<br>
   상품의 이미지·옵션·SKU는 상품에 속함.<br>
@@ -790,6 +790,7 @@ erDiagram
 | V47 | 구매 Organization의 영업 담당자·선택 인센티브율 배정 이력 및 `SALES_GROUP_ASSIGN` permission 추가 |
 | V48 | 주문별 영업 인센티브 snapshot·정산 이벤트 원장 및 전체 관리자 정산 permission 추가 |
 | V49 | 주문 출처·생성 관리자, 수기 세금계산서 발행 metadata와 append-only 이벤트 추가 |
+| V50 | Organization 프로필로 이관 완료된 레거시 `business_profile` 제거 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

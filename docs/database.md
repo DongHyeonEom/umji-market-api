@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V49로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V50으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -73,6 +73,7 @@
 | V47 | 구매 Organization별 영업 담당자·선택 인센티브율의 유효기간 배정 이력과 배정 permission 추가 |
 | V48 | 주문별 인센티브 기준·요율 snapshot, 정산 상태·append-only 이벤트 원장 및 관리자 정산 permission 추가 |
 | V49 | 주문 출처·생성 관리자 기록, 홈택스 수기 세금계산서 발행 필드와 append-only 이벤트 추가 |
+| V50 | Organization 프로필로 이관 완료된 레거시 `business_profile` 제거 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -138,7 +139,7 @@
 - 판매자는 `SELLER` capability의 BUSINESS Organization과 완성·확인된 ACTIVE `organization_business_profile`이 있어야 판매 오퍼를 ON_SALE로 등록하고 주문을 받을 수 있음. 사업자 프로필은 법적 정보이고 카탈로그 소유 FK는 Organization을 직접 참조.<br>
 - `inventory_movement`와 `stock_reservation`은 재고 원장과 같은 `organization_id + sku_id` 범위를 저장. 주문 예약·해제·확정·복구는 주문 항목의 판매 오퍼 Organization에 귀속.<br>
 - `order_item.quantity`와 `unit_price`는 판매 단위 기준이며 `units_per_sale`은 주문 시점 snapshot. 재고 예약 수량은 두 수량의 곱.<br>
-- `business_profile`은 V38 이관 후 레거시 보존 테이블이며 애플리케이션에서 읽거나 쓰지 않음. 운영자·판매자·구매자의 현재 사업자 정보 원본은 `organization_business_profile`임.<br>
+- 운영자·판매자·구매자의 현재 사업자 정보 원본은 `organization_business_profile`임. V38에서 레거시 `business_profile` 데이터를 Organization 프로필로 이관하고 V50에서 원본 테이블 제거.<br>
   V31부터 그룹 발행 프로필에 업태·종목·선택 이메일을 보관함. 주문은 발행 요청 당시 공급자·공급받는자 정보를 복사하며 기존 그룹 정보 변경의 영향을 받지 않음.<br>
 - 세금계산서 품목은 주문 항목의 상품명·SKU 코드·수량·`line_amount`를 사용. 품목 공급가액과 합계는 주문 당시 확정 금액이며 별도로 재산출하지 않음.<br>
 - 사업자등록 주소는 `organization_business_profile`의 사업자등록 프로필에 저장. 배송지는 `organization_address`에서 별도 관리하며 두 주소는 자동 동기화하지 않음.<br>
