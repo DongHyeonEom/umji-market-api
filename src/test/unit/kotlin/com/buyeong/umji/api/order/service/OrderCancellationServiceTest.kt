@@ -5,6 +5,7 @@ import com.buyeong.umji.api.notification.model.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.order.model.CancellationOrder
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCancellationJpaEntityService
+import com.buyeong.umji.api.sales.service.SalesCommissionService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -17,7 +18,8 @@ class OrderCancellationServiceTest : DescribeSpec({
     val port = mockk<OrderCancellationJpaEntityService>(relaxed = true)
     val inventory = mockk<InventoryService>(relaxed = true)
     val notifications = mockk<NotificationEventService>(relaxed = true)
-    val service = OrderCancellationService(port, inventory, notifications)
+    val commissions = mockk<SalesCommissionService>(relaxed = true)
+    val service = OrderCancellationService(port, inventory, notifications, commissions)
     val customer = UUID.randomUUID()
     val orderId = UUID.randomUUID()
     val reservation = UUID.randomUUID()
@@ -32,6 +34,7 @@ class OrderCancellationServiceTest : DescribeSpec({
         verify { port.cancel(any(), null) }
         verify { port.recordRequest(orderId, customer, "CANCELLED", null) }
         verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CANCELLED, orderId, null) }
+        verify { commissions.reverseOrder(orderId, "ORDER_CANCELLED") }
     }
 
     it("배송 준비 후 송장 등록 전 취소는 운영자 확인 요청으로 접수한다") {
