@@ -18,7 +18,7 @@ tasks.register("formatSchemaProperties") {
                     .replace(Regex("\\s+"), " ")
                     .trim()
                     .trimEnd(',')
-                "@field:Size($arguments)"
+                "@field:Size($arguments,)"
             }
             formatted = inlineDataClassProperty.replace(formatted) { match ->
                 val classIndent = match.groupValues[1].takeWhile { it == ' ' || it == '\t' }

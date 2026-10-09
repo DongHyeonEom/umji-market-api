@@ -56,12 +56,12 @@ data class OperationTaxInvoiceResponse(
 
 data class OperationManualTaxInvoiceRequest(
     @field:NotBlank
-    @field:Size(max = 100) val approvalNumber: String,
+    @field:Size(max = 100,) val approvalNumber: String,
     @field:NotNull val issuedAt: LocalDate,
     @field:NotNull val writtenDate: LocalDate,
     @field:NotNull val supplyDate: LocalDate,
     @field:PositiveOrZero val supplyAmount: Long,
     @field:PositiveOrZero val taxAmount: Long,
     @field:PositiveOrZero val totalAmount: Long,
-    @field:Size(max = 500) val reason: String? = null,
+    @field:Size(max = 500,) val reason: String? = null,
 )

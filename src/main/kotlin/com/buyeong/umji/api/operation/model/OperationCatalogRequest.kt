@@ -12,7 +12,7 @@ import java.util.UUID
 
 @Schema(description = "CreateCategoryRequest API 데이터 모델")
 data class CreateCategoryRequest(
-    @field:NotBlank @field:Size(max = 100)
+    @field:NotBlank @field:Size(max = 100,)
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
@@ -31,7 +31,7 @@ data class CreateCategoryRequest(
 
 @Schema(description = "CreateBrandRequest API 데이터 모델")
 data class CreateBrandRequest(
-    @field:NotBlank @field:Size(max = 100)
+    @field:NotBlank @field:Size(max = 100,)
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
@@ -42,11 +42,11 @@ data class CreateBrandRequest(
 
 @Schema(description = "CreateProductSkuRequest API 데이터 모델")
 data class CreateProductSkuRequest(
-    @field:NotBlank @field:Size(max = 64)
+    @field:NotBlank @field:Size(max = 64,)
     @field:Schema(description = "상품 옵션 코드", example = "예시 값", type = "string", required = true)
     val skuCode: String,
 
-    @field:NotBlank @field:Size(max = 200)
+    @field:NotBlank @field:Size(max = 200,)
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
@@ -71,11 +71,11 @@ data class CreateProductSkuRequest(
 
 @Schema(description = "CreateProductImageRequest API 데이터 모델")
 data class CreateProductImageRequest(
-    @field:NotBlank @field:Size(max = 500)
+    @field:NotBlank @field:Size(max = 500,)
     @field:Schema(description = "상품 이미지 저장소 키", example = "예시 값", type = "string", required = true)
     val storageKey: String,
 
-    @field:Size(max = 200)
+    @field:Size(max = 200,)
     @field:Schema(description = "상품 이미지 대체 텍스트", example = "예시 값", type = "string", required = false)
     val altText: String? = null,
 
@@ -87,7 +87,7 @@ data class CreateProductImageRequest(
 
 @Schema(description = "CreateProductOptionValueRequest API 데이터 모델")
 data class CreateProductOptionValueRequest(
-    @field:NotBlank @field:Size(max = 100)
+    @field:NotBlank @field:Size(max = 100,)
     @field:Schema(description = "값", example = "예시 값", type = "string", required = true)
     val value: String,
 
@@ -99,7 +99,7 @@ data class CreateProductOptionValueRequest(
 
 @Schema(description = "CreateProductOptionRequest API 데이터 모델")
 data class CreateProductOptionRequest(
-    @field:NotBlank @field:Size(max = 100)
+    @field:NotBlank @field:Size(max = 100,)
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
@@ -128,7 +128,7 @@ data class CreateProductRequest(
     @field:Schema(description = "브랜드 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = false)
     val brandId: UUID? = null,
 
-    @field:NotBlank @field:Size(max = 200)
+    @field:NotBlank @field:Size(max = 200,)
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
@@ -178,7 +178,7 @@ data class UpdateProductRequest(
     @field:Schema(description = "브랜드 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = false)
     val brandId: UUID? = null,
 
-    @field:NotBlank @field:Size(max = 200)
+    @field:NotBlank @field:Size(max = 200,)
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
@@ -212,7 +212,7 @@ data class UpdateProductStatusRequest(
 
 @Schema(description = "판매 채널 전용 카테고리 등록 요청")
 data class CreateChannelCategoryRequest(
-    @field:NotBlank @field:Size(max = 100)
+    @field:NotBlank @field:Size(max = 100,)
     @field:Schema(description = "채널 카테고리명", example = "공구", type = "string", required = true)
     val name: String,
 

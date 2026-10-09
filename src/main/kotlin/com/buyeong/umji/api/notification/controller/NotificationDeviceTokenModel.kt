@@ -13,7 +13,7 @@ data class RegisterNotificationDeviceTokenRequest(
     val platform: String,
 
     @field:NotBlank
-    @field:Size(max = 4096)
+    @field:Size(max = 4096,)
     @field:Schema(description = "FCM token은 1~4096자, APNs device token은 64자리 16진수", example = "fcm-device-token-example", type = "string", required = true)
     val token: String,
 )

@@ -77,7 +77,7 @@ data class SalesAssignmentRequest(
     val commissionRateBps: Int?,
 
     @field:Schema(description = "배정 또는 변경 사유 코드", example = "INITIAL_ASSIGNMENT", type = "string", required = true)
-    @field:NotBlank @field:Size(max = 30)
+    @field:NotBlank @field:Size(max = 30,)
     val assignmentReason: String,
 )
 

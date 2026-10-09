@@ -20,15 +20,15 @@ data class OperationPhoneOrderRequest(
     val buyerAccountId: UUID,
 
     @field:NotBlank
-    @field:Size(max = 100) val recipientName: String,
+    @field:Size(max = 100,) val recipientName: String,
     @field:NotBlank
-    @field:Size(max = 30) val recipientPhone: String,
+    @field:Size(max = 30,) val recipientPhone: String,
     @field:NotBlank
-    @field:Size(max = 20) val postalCode: String,
+    @field:Size(max = 20,) val postalCode: String,
     @field:NotBlank
-    @field:Size(max = 255) val address1: String,
-    @field:Size(max = 255) val address2: String? = null,
-    @field:NotEmpty @field:Size(max = 100)
+    @field:Size(max = 255,) val address1: String,
+    @field:Size(max = 255,) val address2: String? = null,
+    @field:NotEmpty @field:Size(max = 100,)
     @field:Valid val items: List<OperationPhoneOrderLineRequest>,
     val taxInvoiceRequested: Boolean = false,
 ) {
