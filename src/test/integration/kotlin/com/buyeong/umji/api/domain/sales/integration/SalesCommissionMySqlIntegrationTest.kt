@@ -168,12 +168,13 @@ class SalesCommissionMySqlIntegrationTest {
     ) {
         jdbc.update(
             """INSERT INTO purchase_order
-                (public_id, order_number, account_id, sales_channel_code, organization_id, status,
+                (public_id, order_number, account_id, created_by_account_id, sales_channel_code, organization_id, status,
                  subtotal_amount, total_amount, ordered_at)
-                VALUES (?, ?, ?, 'WHOLESALE', ?, ?, 100001, 100001, ?)
+                VALUES (?, ?, ?, ?, 'WHOLESALE', ?, ?, 100001, 100001, ?)
             """.trimIndent(),
             orderId.toBytes(),
             number,
+            buyerAccountInternalId,
             buyerAccountInternalId,
             organizationInternalId,
             orderStatus,

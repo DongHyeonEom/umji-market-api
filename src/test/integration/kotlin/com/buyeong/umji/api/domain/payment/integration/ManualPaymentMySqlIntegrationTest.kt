@@ -239,9 +239,12 @@ class ManualPaymentMySqlIntegrationTest {
 
     private fun createCategory(): Long {
         val publicId = UUID.randomUUID()
+        val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
         jdbc.update(
-            "INSERT INTO category (public_id, name, path, depth, display_status) VALUES (?, 'Payment test', 'payment-test', 0, 'VISIBLE')",
+            "INSERT INTO category (public_id, sales_channel_id, name, path, depth, display_status) VALUES (?, ?, 'Payment test', ?, 0, 'VISIBLE')",
             publicId.toBytes(),
+            channelId,
+            "payment-${UUID.randomUUID()}",
         )
         return jdbc.queryForObject("SELECT id FROM category WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
     }
@@ -263,6 +266,14 @@ class ManualPaymentMySqlIntegrationTest {
             publicId.toBytes(),
             productId,
             "PAY-${UUID.randomUUID()}",
+        )
+        val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
+        val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
+        jdbc.update(
+            "INSERT INTO sales_offer (public_id, sales_channel_id, product_sku_id, sale_price, sales_status) VALUES (?, ?, ?, 1000, 'ON_SALE')",
+            UUID.randomUUID().toBytes(),
+            channelId,
+            skuInternalId,
         )
         return publicId
     }
@@ -288,19 +299,26 @@ class ManualPaymentMySqlIntegrationTest {
         val orderId = UUID.randomUUID()
         val now = Instant.now()
         jdbc.update(
-            "INSERT INTO purchase_order (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)",
+            "INSERT INTO purchase_order (public_id, order_number, account_id, created_by_account_id, organization_id, status, subtotal_amount, total_amount, ordered_at) VALUES (?, ?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)",
             orderId.toBytes(),
             "PAY-${UUID.randomUUID()}",
+            accountInternalId,
             accountInternalId,
             organizationInternalId,
             Timestamp.from(now),
         )
         val orderInternalId = jdbc.queryForObject("SELECT id FROM purchase_order WHERE public_id = ?", Long::class.java, orderId.toBytes())!!
+        val salesOfferId = jdbc.queryForObject(
+            "SELECT id FROM sales_offer WHERE product_sku_id = ? AND sales_channel_id = (SELECT id FROM sales_channel WHERE code = 'WHOLESALE')",
+            Long::class.java,
+            skuInternalId,
+        )!!
         jdbc.update(
-            "INSERT INTO order_item (public_id, order_id, sku_id, product_name, sku_name, sku_code, unit_price, quantity, line_amount, reservation_key, status) VALUES (?, ?, ?, 'Payment test', 'Payment test SKU', ?, 1000, 1, 1000, ?, 'RESERVED')",
+            "INSERT INTO order_item (public_id, order_id, sku_id, sales_offer_id, product_name, sku_name, sku_code, unit_price, quantity, line_amount, reservation_key, status) VALUES (?, ?, ?, ?, 'Payment test', 'Payment test SKU', ?, 1000, 1, 1000, ?, 'RESERVED')",
             UUID.randomUUID().toBytes(),
             orderInternalId,
             skuInternalId,
+            salesOfferId,
             "PAY-${UUID.randomUUID()}",
             reservationKey.toBytes(),
         )

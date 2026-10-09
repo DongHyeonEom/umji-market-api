@@ -427,7 +427,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(standardOrder.depositAccountNumber).isEqualTo("111-222")
         assertThat(standardOrder.depositAccountHolder).isEqualTo("Standard Holder")
         assertPersistedOrderSnapshot(standardOrder.id, false, "Standard Bank", "111-222", "Standard Holder")
-        assertThat(orders.checkoutOptions(standardAccountId).defaultTaxInvoiceRequested).isTrue()
+        assertThat(orders.checkoutOptions(standardAccountId).defaultTaxInvoiceRequested).isFalse()
     }
 
     @Test
@@ -662,7 +662,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             "SELECT EXISTS (SELECT 1 FROM purchase_order_tax_invoice invoice WHERE invoice.order_id = purchase_order.id) AS tax_invoice_requested, deposit_bank_name, deposit_account_number, deposit_account_holder, shipping_recipient_name, shipping_recipient_phone, shipping_postal_code, shipping_address1, shipping_address2 FROM purchase_order WHERE public_id = ?",
             orderId.toBytes(),
         )
-        assertThat(row["tax_invoice_requested"]).isEqualTo(taxInvoiceRequested)
+        assertThat((row["tax_invoice_requested"] as Number).toInt()).isEqualTo(if (taxInvoiceRequested) 1 else 0)
         assertThat(row["deposit_bank_name"]).isEqualTo(bankName)
         assertThat(row["deposit_account_number"]).isEqualTo(accountNumber)
         assertThat(row["deposit_account_holder"]).isEqualTo(accountHolder)
@@ -712,7 +712,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             )
         } else {
             jdbc.update(
-                "UPDATE organization_business_profile SET business_registration_number = '987-65-43210' WHERE organization_id = ?",
+                "UPDATE organization_business_profile SET business_registration_number = '987-65-43210', business_registration_verification_status = 'PENDING' WHERE organization_id = ?",
                 group.id,
             )
         }
