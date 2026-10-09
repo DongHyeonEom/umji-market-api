@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.domain.operation.audit.integration
 
-import com.buyeong.umji.api.domain.operation.audit.model.OperationAuditEvent
-import com.buyeong.umji.api.domain.operation.audit.model.OperationAuditQuery
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEventDto
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditQueryDto
 import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -32,7 +32,7 @@ class OperationAuditMySqlIntegrationTest {
         val orderId = UUID.randomUUID()
         val occurredAt = Instant.now()
         audit.record(
-            OperationAuditEvent(
+            OperationAuditEventDto(
                 actorId,
                 "POST /api/operation/orders/phone-orders",
                 "ORDER",
@@ -42,7 +42,7 @@ class OperationAuditMySqlIntegrationTest {
             ),
         )
 
-        val result = audit.search(OperationAuditQuery(actorId, "ORDER", occurredAt.minusSeconds(1), occurredAt.plusSeconds(1), 0, 10))
+        val result = audit.search(OperationAuditQueryDto(actorId, "ORDER", occurredAt.minusSeconds(1), occurredAt.plusSeconds(1), 0, 10))
 
         assertThat(result.totalElements).isEqualTo(1)
         assertThat(result.items.single().resourceId).isEqualTo(orderId)
@@ -103,18 +103,18 @@ class OperationAuditMySqlIntegrationTest {
         val actorId = UUID.randomUUID()
         val resourceId = UUID.randomUUID()
         val now = Instant.now()
-        audit.record(OperationAuditEvent(actorId, "PRODUCT_UPDATED", "PRODUCT", resourceId, "mysql-integration", now.minusSeconds(60)))
-        audit.record(OperationAuditEvent(actorId, "POST /api/operation/orders/phone-orders", "ORDER", resourceId, "mysql-order-integration", now.minusSeconds(45)))
-        audit.record(OperationAuditEvent(actorId, "STOCK_UPDATED", "INVENTORY", resourceId, "mysql-integration", now.minusSeconds(30)))
-        audit.record(OperationAuditEvent(actorId, "OLD_EVENT", "PRODUCT", null, "mysql-integration-expired", now.minus(Duration.ofDays(731))))
+        audit.record(OperationAuditEventDto(actorId, "PRODUCT_UPDATED", "PRODUCT", resourceId, "mysql-integration", now.minusSeconds(60)))
+        audit.record(OperationAuditEventDto(actorId, "POST /api/operation/orders/phone-orders", "ORDER", resourceId, "mysql-order-integration", now.minusSeconds(45)))
+        audit.record(OperationAuditEventDto(actorId, "STOCK_UPDATED", "INVENTORY", resourceId, "mysql-integration", now.minusSeconds(30)))
+        audit.record(OperationAuditEventDto(actorId, "OLD_EVENT", "PRODUCT", null, "mysql-integration-expired", now.minus(Duration.ofDays(731))))
 
-        val results = audit.search(OperationAuditQuery(actorId, "PRODUCT", now.minusSeconds(120), now, 0, 10))
+        val results = audit.search(OperationAuditQueryDto(actorId, "PRODUCT", now.minusSeconds(120), now, 0, 10))
         assertThat(results.totalElements).isEqualTo(1)
         assertThat(results.items.single().actorId).isEqualTo(actorId)
         assertThat(results.items.single().resourceId).isEqualTo(resourceId)
         assertThat(results.items.single().requestTraceId).isEqualTo("mysql-integration")
 
-        val orderAudit = audit.search(OperationAuditQuery(actorId, "ORDER", now.minusSeconds(120), now, 0, 10))
+        val orderAudit = audit.search(OperationAuditQueryDto(actorId, "ORDER", now.minusSeconds(120), now, 0, 10))
         assertThat(orderAudit.totalElements).isEqualTo(1)
         assertThat(orderAudit.items.single().action).isEqualTo("POST /api/operation/orders/phone-orders")
         assertThat(orderAudit.items.single().resourceId).isEqualTo(resourceId)
@@ -123,7 +123,7 @@ class OperationAuditMySqlIntegrationTest {
         val deleted = audit.purgeExpired(now.minus(Duration.ofDays(730)), 10_000)
         assertThat(deleted).isGreaterThanOrEqualTo(1)
         val deletedEvent = audit.search(
-            OperationAuditQuery(
+            OperationAuditQueryDto(
                 actorId,
                 "PRODUCT",
                 now.minus(Duration.ofDays(732)),
@@ -133,6 +133,6 @@ class OperationAuditMySqlIntegrationTest {
             ),
         )
         assertThat(deletedEvent.totalElements).isZero()
-        assertThat(audit.search(OperationAuditQuery(actorId, null, null, null, 0, 10)).totalElements).isEqualTo(3)
+        assertThat(audit.search(OperationAuditQueryDto(actorId, null, null, null, 0, 10)).totalElements).isEqualTo(3)
     }
 }

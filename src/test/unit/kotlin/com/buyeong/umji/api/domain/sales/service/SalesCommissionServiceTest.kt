@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.domain.sales.service
 
+import com.buyeong.umji.api.domain.sales.dto.SalesAssignmentSnapshotDto
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
-import com.buyeong.umji.api.persistence.jpa.sales.service.SalesAssignmentSnapshot
 import com.buyeong.umji.api.persistence.jpa.sales.service.SalesCommissionJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -21,7 +21,7 @@ class SalesCommissionServiceTest : DescribeSpec({
 
     describe("order commission snapshot") {
         it("calculates the snapshot with integer HALF_UP rounding") {
-            val assignment = SalesAssignmentSnapshot(organizationId = 1, assignmentId = 2, salesAccountId = 3, commissionRateBps = 5_000)
+            val assignment = SalesAssignmentSnapshotDto(organizationId = 1, assignmentId = 2, salesAccountId = 3, commissionRateBps = 5_000)
             every { persistence.assignmentAt(accountId, orderedAt) } returns assignment
 
             service.snapshotOrder(orderId, accountId, orderedAt, 1)
@@ -32,7 +32,7 @@ class SalesCommissionServiceTest : DescribeSpec({
         }
 
         it("stores an order without a selected rate as not applicable") {
-            val assignment = SalesAssignmentSnapshot(organizationId = 1, assignmentId = 2, salesAccountId = 3, commissionRateBps = null)
+            val assignment = SalesAssignmentSnapshotDto(organizationId = 1, assignmentId = 2, salesAccountId = 3, commissionRateBps = null)
             every { persistence.assignmentAt(accountId, orderedAt) } returns assignment
 
             service.snapshotOrder(orderId, accountId, orderedAt, 100_000)

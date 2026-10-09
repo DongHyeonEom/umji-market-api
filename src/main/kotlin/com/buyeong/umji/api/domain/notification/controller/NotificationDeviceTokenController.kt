@@ -1,12 +1,12 @@
 package com.buyeong.umji.api.domain.notification.controller
 
 import com.buyeong.umji.api.domain.auth.service.CurrentAccountService
-import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.domain.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.domain.notification.model.NotificationDeviceTokenResponse
 import com.buyeong.umji.api.domain.notification.model.RegisterNotificationDeviceTokenRequest
 import com.buyeong.umji.api.domain.notification.model.toResponse
 import com.buyeong.umji.api.domain.notification.service.NotificationDeviceTokenService
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag

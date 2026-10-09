@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.domain.operation.account.service
 
-import com.buyeong.umji.api.domain.operation.account.model.AccountData
-import com.buyeong.umji.api.domain.operation.account.model.ConsentCommand
-import com.buyeong.umji.api.domain.operation.account.model.ConsentData
-import com.buyeong.umji.api.domain.operation.account.model.OrganizationProfileData
+import com.buyeong.umji.api.domain.operation.account.dto.AccountDataDto
+import com.buyeong.umji.api.domain.operation.account.dto.ConsentCommandDto
+import com.buyeong.umji.api.domain.operation.account.dto.ConsentDataDto
+import com.buyeong.umji.api.domain.operation.account.dto.OrganizationProfileDataDto
 import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
@@ -23,9 +23,9 @@ class OperationAccountActivationTest : DescribeSpec({
     fun account(
         status: String,
         tokenVersion: Long = 0,
-        profile: OrganizationProfileData? = null,
-        consents: List<ConsentData> = emptyList(),
-    ) = AccountData(accountId, "테스트 회원", "01012345678", null, status, tokenVersion, profile, consents)
+        profile: OrganizationProfileDataDto? = null,
+        consents: List<ConsentDataDto> = emptyList(),
+    ) = AccountDataDto(accountId, "테스트 회원", "01012345678", null, status, tokenVersion, profile, consents)
 
     beforeTest {
         clearMocks(accounts)
@@ -59,7 +59,7 @@ class OperationAccountActivationTest : DescribeSpec({
         it("동의가 등록되면 프로필 미등록 계정은 프로필 대기로 이동한다") {
             val current = account(status = "PENDING_CONSENT")
             val next = account(status = "PENDING_PROFILE")
-            val consent = ConsentCommand("PERSONAL_INFORMATION", "v1", "ONLINE", null, operatorId)
+            val consent = ConsentCommandDto("PERSONAL_INFORMATION", "v1", "ONLINE", null, operatorId)
             every { accounts.find(accountId) } returns current
             every { accounts.addConsent(accountId, consent, "PENDING_PROFILE") } returns next
 
@@ -69,10 +69,10 @@ class OperationAccountActivationTest : DescribeSpec({
         }
 
         it("동의 등록 시 프로필이 있는 계정은 운영 검토 대기로 이동한다") {
-            val profile = OrganizationProfileData("엄지상회", null, null, null, null, "주소", null)
+            val profile = OrganizationProfileDataDto("엄지상회", null, null, null, null, "주소", null)
             val current = account(status = "PENDING_CONSENT", profile = profile)
             val next = account(status = "PENDING_REVIEW", profile = profile)
-            val consent = ConsentCommand("PERSONAL_INFORMATION", "v1", "ONLINE", "evidence", operatorId)
+            val consent = ConsentCommandDto("PERSONAL_INFORMATION", "v1", "ONLINE", "evidence", operatorId)
             every { accounts.find(accountId) } returns current
             every { accounts.addConsent(accountId, consent, "PENDING_REVIEW") } returns next
 
@@ -83,7 +83,7 @@ class OperationAccountActivationTest : DescribeSpec({
 
         it("프로필이 등록되면 프로필 대기 계정은 운영 검토 대기로 이동한다") {
             val current = account(status = "PENDING_PROFILE")
-            val profile = OrganizationProfileData("엄지상회", null, null, null, null, "주소", null)
+            val profile = OrganizationProfileDataDto("엄지상회", null, null, null, null, "주소", null)
             val next = account(status = "PENDING_REVIEW", profile = profile)
             every { accounts.find(accountId) } returns current
             every { accounts.updateProfile(accountId, profile, "PENDING_REVIEW") } returns next
@@ -95,8 +95,8 @@ class OperationAccountActivationTest : DescribeSpec({
 
         it("운영자는 오프라인 서면 동의를 기록한 뒤 계정을 활성화할 수 있다") {
             val current = account(status = "PENDING_CONSENT")
-            val consent = ConsentCommand("PERSONAL_INFORMATION", "privacy-v2", "WRITTEN", "paper-form-2026-001", operatorId)
-            val written = ConsentData(
+            val consent = ConsentCommandDto("PERSONAL_INFORMATION", "privacy-v2", "WRITTEN", "paper-form-2026-001", operatorId)
+            val written = ConsentDataDto(
                 "PERSONAL_INFORMATION",
                 "privacy-v2",
                 "WRITTEN",

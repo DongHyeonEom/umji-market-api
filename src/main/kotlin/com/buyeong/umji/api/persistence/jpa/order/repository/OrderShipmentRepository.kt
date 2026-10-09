@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.order.repository
 
-import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock

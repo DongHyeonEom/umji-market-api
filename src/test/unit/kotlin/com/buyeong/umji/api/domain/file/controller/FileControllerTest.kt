@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.domain.file.controller
 
 import com.buyeong.umji.api.domain.auth.security.OperationAuthorization
-import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.domain.file.model.CreateFileUploadRequest
 import com.buyeong.umji.api.domain.file.model.FileUploadResponse
 import com.buyeong.umji.api.domain.file.service.FileService
+import com.buyeong.umji.api.exception.ForbiddenOperationException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks

@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.shipment.integration
 
-import com.buyeong.umji.api.domain.account.model.OrganizationRegistrationCommand
+import com.buyeong.umji.api.domain.account.dto.OrganizationRegistrationCommandDto
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.domain.order.service.CustomerOrderListingService
 import com.buyeong.umji.api.domain.order.service.OrderCancellationService
@@ -252,7 +252,7 @@ class OrderShipmentMySqlIntegrationTest {
             suffix,
             "555${UUID.randomUUID().toString().take(7)}",
         )
-        groupMembership.register(publicId, OrganizationRegistrationCommand("INDIVIDUAL", null))
+        groupMembership.register(publicId, OrganizationRegistrationCommandDto("INDIVIDUAL", null))
         return publicId
     }
 

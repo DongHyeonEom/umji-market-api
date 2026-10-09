@@ -41,7 +41,9 @@
 ### 서비스 자동화 테스트 개발 및 테스트
 
 - [x] Service 단위 테스트 및 Controller·JPA 통합 테스트를 계층별로 작성·실행
-- [ ] 전체 기존 동작·권한·트랜잭션 회귀 검증
+- [x] 계층·도메인·DTO 구조 변경 뒤 테스트의 import와 타입 참조 갱신 및 unit·integration 테스트 소스 컴파일
+- [x] unit 테스트 224개 실행 및 통과
+- [ ] 전체 기존 동작·권한·트랜잭션 회귀 검증. `check` 실행 중 integration 테스트 97개 가운데 14개 실패
 
 ## Task 12 — Organization 구조와 공통 사업자 정보
 

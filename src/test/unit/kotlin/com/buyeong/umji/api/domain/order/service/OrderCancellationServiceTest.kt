@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.domain.order.service
 
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
-import com.buyeong.umji.api.domain.notification.model.NotificationEventType
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
-import com.buyeong.umji.api.domain.order.model.CancellationOrder
-import com.buyeong.umji.api.persistence.jpa.order.service.OrderCancellationJpaEntityService
+import com.buyeong.umji.api.domain.order.dto.CancellationOrderDto
 import com.buyeong.umji.api.domain.sales.service.SalesCommissionService
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderCancellationJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -23,7 +23,7 @@ class OrderCancellationServiceTest : DescribeSpec({
     val customer = UUID.randomUUID()
     val orderId = UUID.randomUUID()
     val reservation = UUID.randomUUID()
-    fun order(status: String) = CancellationOrder(orderId, customer, "UMJ-20260930-000001", "PENDING_PAYMENT", "WAITING_FOR_DEPOSIT", status, listOf(reservation))
+    fun order(status: String) = CancellationOrderDto(orderId, customer, "UMJ-20260930-000001", "PENDING_PAYMENT", "WAITING_FOR_DEPOSIT", status, listOf(reservation))
 
     beforeTest { io.mockk.clearMocks(port, inventory, notifications, answers = false, recordedCalls = true, childMocks = true, verificationMarks = true, exclusionRules = true) }
 

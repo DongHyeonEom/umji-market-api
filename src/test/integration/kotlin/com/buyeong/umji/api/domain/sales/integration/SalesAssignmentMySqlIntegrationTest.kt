@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.domain.sales.integration
 
+import com.buyeong.umji.api.domain.sales.dto.SalesAssignmentCommandDto
+import com.buyeong.umji.api.domain.sales.service.SalesAssignmentService
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.persistence.jpa.sales.service.OrganizationSalesAssignmentJpaEntityService
-import com.buyeong.umji.api.domain.sales.model.SalesAssignmentCommand
-import com.buyeong.umji.api.domain.sales.service.SalesAssignmentService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -78,11 +78,11 @@ class SalesAssignmentMySqlIntegrationTest {
     fun `reassignment closes previous period and preserves owner and rate history`() {
         val first = assignments.assign(
             organizationPublicId,
-            SalesAssignmentCommand(firstSalesPublicId, 30, "INITIAL_ASSIGNMENT", operatorPublicId),
+            SalesAssignmentCommandDto(firstSalesPublicId, 30, "INITIAL_ASSIGNMENT", operatorPublicId),
         ).single()
         val history = assignments.assign(
             organizationPublicId,
-            SalesAssignmentCommand(secondSalesPublicId, null, "RATE_NOT_SET", operatorPublicId),
+            SalesAssignmentCommandDto(secondSalesPublicId, null, "RATE_NOT_SET", operatorPublicId),
         )
 
         assertThat(history).hasSize(2)
@@ -112,7 +112,7 @@ class SalesAssignmentMySqlIntegrationTest {
 
     @Test
     fun `repeating same active assignment is idempotent`() {
-        val command = SalesAssignmentCommand(firstSalesPublicId, 30, "INITIAL_ASSIGNMENT", operatorPublicId)
+        val command = SalesAssignmentCommandDto(firstSalesPublicId, 30, "INITIAL_ASSIGNMENT", operatorPublicId)
 
         assignments.assign(organizationPublicId, command)
         val repeated = assignments.assign(organizationPublicId, command)
@@ -126,14 +126,14 @@ class SalesAssignmentMySqlIntegrationTest {
         assertThatThrownBy {
             service.assign(
                 organizationPublicId,
-                SalesAssignmentCommand(nonSalesPublicId, 30, "INVALID_ROLE", operatorPublicId),
+                SalesAssignmentCommandDto(nonSalesPublicId, 30, "INVALID_ROLE", operatorPublicId),
             )
         }.isInstanceOf(InvalidRequestParameterException::class.java)
 
         assertThatThrownBy {
             service.assign(
                 organizationPublicId,
-                SalesAssignmentCommand(firstSalesPublicId, 10_001, "INVALID_RATE", operatorPublicId),
+                SalesAssignmentCommandDto(firstSalesPublicId, 10_001, "INVALID_RATE", operatorPublicId),
             )
         }.isInstanceOf(InvalidRequestParameterException::class.java)
     }

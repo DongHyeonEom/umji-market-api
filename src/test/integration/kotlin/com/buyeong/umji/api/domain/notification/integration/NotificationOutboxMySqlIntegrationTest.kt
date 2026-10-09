@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.notification.integration
 
-import com.buyeong.umji.api.domain.notification.model.NotificationEventType
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy

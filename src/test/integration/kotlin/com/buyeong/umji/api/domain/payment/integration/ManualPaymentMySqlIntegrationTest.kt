@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.payment.integration
 
-import com.buyeong.umji.api.domain.account.model.OrganizationRegistrationCommand
+import com.buyeong.umji.api.domain.account.dto.OrganizationRegistrationCommandDto
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.domain.order.service.OrderService
 import com.buyeong.umji.api.domain.payment.service.PaymentService
@@ -233,7 +233,7 @@ class ManualPaymentMySqlIntegrationTest {
             "payment-$suffix-${UUID.randomUUID()}",
             suffix,
         )
-        groupMembership.register(publicId, OrganizationRegistrationCommand("INDIVIDUAL", null))
+        groupMembership.register(publicId, OrganizationRegistrationCommandDto("INDIVIDUAL", null))
         return publicId
     }
 

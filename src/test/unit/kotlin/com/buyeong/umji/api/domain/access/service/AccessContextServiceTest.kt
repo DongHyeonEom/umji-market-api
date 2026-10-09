@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.domain.access.service
 
+import com.buyeong.umji.api.domain.access.dto.AdminAccessSnapshotDto
+import com.buyeong.umji.api.domain.access.dto.BuyerMembershipSnapshotDto
+import com.buyeong.umji.api.domain.access.dto.ScreenPermissionMappingDto
 import com.buyeong.umji.api.domain.access.model.AccessAudience
 import com.buyeong.umji.api.domain.auth.service.CurrentAccountService
 import com.buyeong.umji.api.persistence.jpa.access.service.AccessContextJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.access.service.AdminAccessSnapshot
-import com.buyeong.umji.api.persistence.jpa.access.service.BuyerMembershipSnapshot
-import com.buyeong.umji.api.persistence.jpa.access.service.ScreenPermissionMapping
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -61,8 +61,8 @@ class AccessContextServiceTest : DescribeSpec({
             clearMocks(currentAccounts, accessContexts)
             every { currentAccounts.activeAccountPublicId() } returns accountId
             every { accessContexts.findBuyerMembership(accountId) } returnsMany listOf(
-                BuyerMembershipSnapshot(organizationId, true),
-                BuyerMembershipSnapshot(organizationId, false),
+                BuyerMembershipSnapshotDto(organizationId, true),
+                BuyerMembershipSnapshotDto(organizationId, false),
             )
             every { accessContexts.findBuyerPermissions("REPRESENTATIVE") } returns setOf("BUYER_GROUP_ORDER_READ", "BUYER_GROUP_INVITE")
             every { accessContexts.findBuyerPermissions("MEMBER") } returns setOf("BUYER_GROUP_ORDER_READ")
@@ -83,7 +83,7 @@ class AccessContextServiceTest : DescribeSpec({
     }
 })
 
-private fun screen(code: String, requiredPermission: String) = ScreenPermissionMapping(
+private fun screen(code: String, requiredPermission: String) = ScreenPermissionMappingDto(
     screenCode = code,
     routeKey = code,
     permissionMatchMode = "ALL",
@@ -92,7 +92,7 @@ private fun screen(code: String, requiredPermission: String) = ScreenPermissionM
 )
 
 private fun adminAccess() =
-    AdminAccessSnapshot(
+    AdminAccessSnapshotDto(
         roles = setOf("SHIPPING_MANAGER"),
         permissions = setOf("SHIPMENT_READ"),
     )

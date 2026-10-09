@@ -1,15 +1,15 @@
 package com.buyeong.umji.api.domain.seller.service
 
-import com.buyeong.umji.api.domain.account.model.OrganizationSummary
+import com.buyeong.umji.api.domain.account.dto.OrganizationSummaryDto
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.domain.account.service.OrganizationTaxInvoiceProfileService
+import com.buyeong.umji.api.domain.inventory.service.InventoryService
+import com.buyeong.umji.api.domain.operation.catalog.dto.BrandViewDto
+import com.buyeong.umji.api.domain.operation.catalog.dto.ProductPageViewDto
+import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferViewDto
+import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.domain.inventory.service.InventoryService
-import com.buyeong.umji.api.domain.operation.catalog.model.BrandView
-import com.buyeong.umji.api.domain.operation.catalog.model.ProductPageView
-import com.buyeong.umji.api.domain.operation.catalog.model.SalesOfferView
-import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
@@ -35,7 +35,7 @@ class SellerCatalogServiceTest : DescribeSpec({
 
     beforeTest {
         clearMocks(organizations, catalog, inventory, commonCatalog, businessProfiles)
-        every { organizations.current(accountId) } returns OrganizationSummary(
+        every { organizations.current(accountId) } returns OrganizationSummaryDto(
             organizationId,
             "BUSINESS",
             "Seller",
@@ -46,8 +46,8 @@ class SellerCatalogServiceTest : DescribeSpec({
 
     describe("판매자 카탈로그 조회") {
         it("브랜드와 상품 조회를 현재 판매 Organization 범위로 제한한다") {
-            val brands = listOf(BrandView(UUID.randomUUID(), "Brand", "DISPLAYED"))
-            val products = mockk<ProductPageView>()
+            val brands = listOf(BrandViewDto(UUID.randomUUID(), "Brand", "DISPLAYED"))
+            val products = mockk<ProductPageViewDto>()
             every { catalog.sellerBrands(organizationId, 2, 25) } returns brands
             every { catalog.sellerProducts(organizationId, 3, 10) } returns products
 
@@ -59,7 +59,7 @@ class SellerCatalogServiceTest : DescribeSpec({
         }
 
         it("SELLER capability가 없는 Organization은 카탈로그 조회를 할 수 없다") {
-            every { organizations.current(accountId) } returns OrganizationSummary(
+            every { organizations.current(accountId) } returns OrganizationSummaryDto(
                 organizationId,
                 "BUSINESS",
                 "Buyer",
@@ -102,7 +102,7 @@ class SellerCatalogServiceTest : DescribeSpec({
             every { businessProfiles.isSellerBusinessProfileReady(organizationId) } returns true
             every { commonCatalog.sku(skuId) } returns sku
             every { catalog.updateSellerSalesOffer(any(), any()) } returns
-                SalesOfferView(UUID.randomUUID(), "WHOLESALE", skuId, 1000, null, "ON_SALE", 1, organizationId)
+                SalesOfferViewDto(UUID.randomUUID(), "WHOLESALE", skuId, 1000, null, "ON_SALE", 1, organizationId)
 
             service.updateOffer(accountId, "WHOLESALE", skuId, 1000, null, "ON_SALE", 1).salesStatus shouldBe "ON_SALE"
 

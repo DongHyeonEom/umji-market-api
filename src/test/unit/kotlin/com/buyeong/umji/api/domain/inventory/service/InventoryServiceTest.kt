@@ -24,6 +24,7 @@ class InventoryServiceTest : DescribeSpec({
     beforeTest {
         every { catalog.salesOffer("WHOLESALE", skuId) } returns mockk<SalesOfferEntity> { every { unitsPerSale } returns 12 }
         every { catalog.sku(skuId) } returns skuEntity
+        every { inventory.organizationId(null) } returns null
         every { skuEntity.id } returns 9L
         every { skuEntity.publicId } returns skuId
         every { skuEntity.skuCode } returns "SKU-001"
@@ -42,7 +43,7 @@ class InventoryServiceTest : DescribeSpec({
     describe("운영 재고 조정") {
         it("실재고를 조정하고 변동 이력을 남긴다") {
             val entity = stock(10, 2)
-            every { inventory.lockedStock(skuEntity) } returns entity
+            every { inventory.lockedStock(skuEntity, null) } returns entity
 
             val result = service.adjust(skuId, 5, "INITIAL_RECEIPT", "입고", null)
 
@@ -61,7 +62,7 @@ class InventoryServiceTest : DescribeSpec({
         }
 
         it("예약 재고보다 낮게 실재고를 조정하지 못한다") {
-            every { inventory.lockedStock(skuEntity) } returns stock(10, 8)
+            every { inventory.lockedStock(skuEntity, null) } returns stock(10, 8)
             shouldThrow<IllegalArgumentException> { service.adjust(skuId, -3, "CORRECTION", null, null) }
         }
     }
@@ -70,7 +71,7 @@ class InventoryServiceTest : DescribeSpec({
         it("가용 재고보다 많은 수량은 예약하지 못한다") {
             val key = UUID.randomUUID()
             every { inventory.reservation(key) } returns null
-            every { inventory.lockedStock(skuEntity) } returns stock(5, 2)
+            every { inventory.lockedStock(skuEntity, null) } returns stock(5, 2)
             shouldThrow<IllegalArgumentException> { service.reserve(skuId, 4, key, null) }
         }
 
@@ -84,8 +85,8 @@ class InventoryServiceTest : DescribeSpec({
             }
             val entity = stock(8, 0)
             every { inventory.reservation(key) } returns reservation
-            every { inventory.lockedStock(skuEntity) } returns entity
-            every { inventory.stock(9L) } returns entity
+            every { inventory.lockedStock(skuEntity, null) } returns entity
+            every { inventory.stock(9L, null) } returns entity
 
             service.restoreConfirmed(key).onHand shouldBe 10
             service.restoreConfirmed(key).onHand shouldBe 10

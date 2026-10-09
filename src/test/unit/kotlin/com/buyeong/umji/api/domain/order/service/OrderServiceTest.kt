@@ -1,18 +1,19 @@
 package com.buyeong.umji.api.domain.order.service
 
-import com.buyeong.umji.api.domain.account.model.OrganizationTaxInvoiceProfile
-import com.buyeong.umji.api.domain.cart.model.CartItemView
-import com.buyeong.umji.api.domain.cart.model.CartView
+import com.buyeong.umji.api.domain.account.dto.OrganizationTaxInvoiceProfileDto
+import com.buyeong.umji.api.domain.cart.dto.CartItemViewDto
+import com.buyeong.umji.api.domain.cart.dto.CartViewDto
 import com.buyeong.umji.api.domain.cart.service.CartService
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
-import com.buyeong.umji.api.domain.notification.model.NotificationEventType
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
-import com.buyeong.umji.api.domain.order.model.OrderItemView
-import com.buyeong.umji.api.domain.order.model.OrderView
-import com.buyeong.umji.api.domain.order.model.ShippingAddressSnapshot
-import com.buyeong.umji.api.domain.order.model.TaxInvoiceSupplier
+import com.buyeong.umji.api.domain.order.dto.OrderItemViewDto
+import com.buyeong.umji.api.domain.order.dto.OrderViewDto
+import com.buyeong.umji.api.domain.order.dto.ShippingAddressSnapshotDto
+import com.buyeong.umji.api.domain.order.dto.TaxInvoiceSupplierDto
 import com.buyeong.umji.api.domain.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.domain.payment.integration.TaxInvoiceSupplierService
+import com.buyeong.umji.api.domain.sales.service.SalesCommissionService
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
@@ -24,7 +25,6 @@ import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesChannelEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
-import com.buyeong.umji.api.domain.sales.service.SalesCommissionService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -48,21 +48,27 @@ class OrderServiceTest : DescribeSpec({
     val catalog = mockk<CatalogJpaEntityService>(relaxed = true)
     val organizations = mockk<OrganizationJpaEntityService>(relaxed = true)
     val service =
-        OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, salesCommissions, accounts, catalog, organizations)
+        OrderService(
+            carts, inventory, orders, shippingAddresses, bankAccounts, notifications,
+            taxInvoiceSuppliers, taxInvoiceBuyers, salesCommissions, accounts, catalog, organizations
+        )
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()
     val offerId = UUID.randomUUID()
 
     beforeTest {
-        clearMocks(carts, inventory, orders, shippingAddresses, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, bankAccounts, salesCommissions, accounts, catalog, organizations)
+        clearMocks(
+            carts, inventory, orders, shippingAddresses, notifications, taxInvoiceSuppliers,
+            taxInvoiceBuyers, bankAccounts, salesCommissions, accounts, catalog, organizations,
+        )
     }
 
     describe("주문 생성") {
         it("활성 구매자에 대해 서버의 활성 오퍼 가격을 사용하고 전화 주문 생성자와 출처를 기록한다") {
             val buyerId = UUID.randomUUID()
             val creatorId = UUID.randomUUID()
-            val buyerProfile = OrganizationTaxInvoiceProfile(
+            val buyerProfile = OrganizationTaxInvoiceProfileDto(
                 UUID.randomUUID(), "BUSINESS", null, "구매자", null, null, null, null,
                 null, null, null, false, "NOT_REQUIRED", null, null,
             )
@@ -97,14 +103,14 @@ class OrderServiceTest : DescribeSpec({
             every { accounts.findByPublicId(creatorId) } returns creator
             every { taxInvoiceBuyers.forAccount(buyerId) } returns buyerProfile
             every { catalog.salesOffer(offerId) } returns offer
-            every { bankAccounts.standard() } returns com.buyeong.umji.api.domain.order.model.BankAccountInstructions("은행", "123", "예금주")
+            every { bankAccounts.standard() } returns com.buyeong.umji.api.domain.order.dto.BankAccountInstructionsDto("은행", "123", "예금주")
             every { orders.save(any()) } answers {
-                val draft = firstArg<com.buyeong.umji.api.domain.order.model.OrderDraft>()
+                val draft = firstArg<com.buyeong.umji.api.domain.order.dto.OrderDraftDto>()
                 draft.orderSource shouldBe "ADMIN_PHONE"
                 draft.createdByAccountId shouldBe creatorId
                 draft.items.single().unitPrice shouldBe 1250L
                 draft.items.single().lineAmount shouldBe 2500L
-                OrderView(
+                OrderViewDto(
                     UUID.randomUUID(),
                     "UMJ-20261009-000001",
                     draft.status,
@@ -112,7 +118,7 @@ class OrderServiceTest : DescribeSpec({
                     draft.totalAmount,
                     draft.orderedAt,
                     draft.items.map {
-                        OrderItemView(
+                        OrderItemViewDto(
                             UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
                             it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale
                         )
@@ -123,8 +129,8 @@ class OrderServiceTest : DescribeSpec({
             val result = service.createAdminPhoneOrder(
                 creatorId,
                 buyerId,
-                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
-                listOf(com.buyeong.umji.api.domain.order.model.AdminPhoneOrderLine(offerId, 2)),
+                ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null),
+                listOf(com.buyeong.umji.api.domain.order.dto.AdminPhoneOrderLineDto(offerId, 2)),
                 false,
             )
 
@@ -145,8 +151,8 @@ class OrderServiceTest : DescribeSpec({
                 service.createAdminPhoneOrder(
                     UUID.randomUUID(),
                     buyerId,
-                    ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
-                    listOf(com.buyeong.umji.api.domain.order.model.AdminPhoneOrderLine(offerId, 1)),
+                    ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null),
+                    listOf(com.buyeong.umji.api.domain.order.dto.AdminPhoneOrderLineDto(offerId, 1)),
                     false,
                 )
             }
@@ -157,15 +163,15 @@ class OrderServiceTest : DescribeSpec({
 
         it("박스 수량과 입수량을 snapshot하고 기준 SKU 재고를 예약한다") {
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
-                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
+                ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null)
             every { carts.cart(accountId) } returns
-                CartView(listOf(CartItemView(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", 3, 12000, "ON_SALE", offerId, "WHOLESALE", 12)))
+                CartViewDto(listOf(CartItemViewDto(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", 3, 12000, "ON_SALE", offerId, "WHOLESALE", 12)))
             every { orders.save(any()) } answers {
-                val draft = firstArg<com.buyeong.umji.api.domain.order.model.OrderDraft>()
+                val draft = firstArg<com.buyeong.umji.api.domain.order.dto.OrderDraftDto>()
                 draft.channelCode shouldBe "WHOLESALE"
                 draft.items.single().salesOfferId shouldBe offerId
                 draft.items.single().unitsPerSale shouldBe 12
-                OrderView(
+                OrderViewDto(
                     UUID.randomUUID(),
                     "UMJ-20260923-000001",
                     draft.status,
@@ -173,7 +179,7 @@ class OrderServiceTest : DescribeSpec({
                     draft.totalAmount,
                     draft.orderedAt,
                     draft.items.map {
-                        OrderItemView(
+                        OrderItemViewDto(
                             UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
                             it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale,
                         )
@@ -198,11 +204,11 @@ class OrderServiceTest : DescribeSpec({
 
         it("입수량을 곱한 재고 수량이 정수 범위를 넘으면 주문을 저장하지 않는다") {
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
-                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
+                ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null)
             every { carts.cart(accountId) } returns
-                CartView(
+                CartViewDto(
                     listOf(
-                        CartItemView(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", Int.MAX_VALUE, 1, "ON_SALE", offerId, "WHOLESALE", 2),
+                        CartItemViewDto(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", Int.MAX_VALUE, 1, "ON_SALE", offerId, "WHOLESALE", 2),
                     ),
                 )
 
@@ -217,18 +223,18 @@ class OrderServiceTest : DescribeSpec({
             val sellerB = UUID.randomUUID()
             val sellerASku = UUID.randomUUID()
             val sellerBSku = UUID.randomUUID()
-            val buyer = OrganizationTaxInvoiceProfile(
+            val buyer = OrganizationTaxInvoiceProfileDto(
                 UUID.randomUUID(), "BUSINESS", "1234567890", "구매자", "대표", "12345", "주소", null,
                 "도소매", "공구", null, true, "ACTIVE", null, null,
             )
-            val supplierA = TaxInvoiceSupplier("1111111111", "판매자 A", "대표 A", "주소 A", "도소매", "공구", "a@example.com")
-            val supplierB = TaxInvoiceSupplier("2222222222", "판매자 B", "대표 B", "주소 B", "도소매", "공구", "b@example.com")
+            val supplierA = TaxInvoiceSupplierDto("1111111111", "판매자 A", "대표 A", "주소 A", "도소매", "공구", "a@example.com")
+            val supplierB = TaxInvoiceSupplierDto("2222222222", "판매자 B", "대표 B", "주소 B", "도소매", "공구", "b@example.com")
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
-                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
-            every { carts.cart(accountId) } returns CartView(
+                ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null)
+            every { carts.cart(accountId) } returns CartViewDto(
                 listOf(
-                    CartItemView(UUID.randomUUID(), sellerASku, "A-001", "상품 A", "규격 A", 2, 1000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 4, sellerA),
-                    CartItemView(UUID.randomUUID(), sellerBSku, "B-001", "상품 B", "규격 B", 3, 2000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 6, sellerB),
+                    CartItemViewDto(UUID.randomUUID(), sellerASku, "A-001", "상품 A", "규격 A", 2, 1000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 4, sellerA),
+                    CartItemViewDto(UUID.randomUUID(), sellerBSku, "B-001", "상품 B", "규격 B", 3, 2000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 6, sellerB),
                 ),
             )
             every { taxInvoiceBuyers.forAccount(accountId) } returns buyer
@@ -236,17 +242,17 @@ class OrderServiceTest : DescribeSpec({
             every { taxInvoiceBuyers.isSellerBusinessProfileReady(sellerB) } returns true
             every { taxInvoiceBuyers.supplierForOrganization(sellerA) } returns supplierA
             every { taxInvoiceBuyers.supplierForOrganization(sellerB) } returns supplierB
-            every { bankAccounts.taxInvoice() } returns com.buyeong.umji.api.domain.order.model.BankAccountInstructions("은행", "123", "예금주")
+            every { bankAccounts.taxInvoice() } returns com.buyeong.umji.api.domain.order.dto.BankAccountInstructionsDto("은행", "123", "예금주")
             every { orders.save(any()) } answers {
-                val draft = firstArg<com.buyeong.umji.api.domain.order.model.OrderDraft>()
+                val draft = firstArg<com.buyeong.umji.api.domain.order.dto.OrderDraftDto>()
                 val savedSeller = if (draft.items.single().skuId == sellerASku) sellerA else sellerB
                 draft.items.size shouldBe 1
                 draft.taxInvoiceSnapshot?.supplier shouldBe if (savedSeller == sellerA) supplierA else supplierB
-                OrderView(
+                OrderViewDto(
                     UUID.randomUUID(), "UMJ-20260923-000001", draft.status, draft.subtotalAmount, draft.totalAmount,
                     draft.orderedAt,
                     draft.items.map {
-                        OrderItemView(
+                        OrderItemViewDto(
                             UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
                             it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale, savedSeller,
                         )
@@ -270,10 +276,10 @@ class OrderServiceTest : DescribeSpec({
         it("확인 완료된 사업자 프로필이 없는 판매자의 상품은 주문할 수 없다") {
             val sellerOrganizationId = UUID.randomUUID()
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
-                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null)
-            every { carts.cart(accountId) } returns CartView(
+                ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null)
+            every { carts.cart(accountId) } returns CartViewDto(
                 listOf(
-                    CartItemView(
+                    CartItemViewDto(
                         UUID.randomUUID(), skuId, "SKU-001", "판매자 상품", "규격 A", 1, 1000,
                         "ON_SALE", offerId, "WHOLESALE", 1, sellerOrganizationId,
                     ),

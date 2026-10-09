@@ -3,8 +3,8 @@ package com.buyeong.umji.api.persistence.jpa.account.service
 import com.buyeong.umji.api.domain.account.dto.CustomerProfileDto
 import com.buyeong.umji.api.domain.account.dto.SharedAddressCommandDto
 import com.buyeong.umji.api.domain.account.dto.SharedAddressDto
-import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.domain.order.dto.ShippingAddressSnapshotDto
+import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationAddressEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity

@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.persistence.jpa.catalog.service
 
-import com.buyeong.umji.api.domain.operation.catalog.model.ProductCommand
+import com.buyeong.umji.api.domain.operation.catalog.dto.ProductCommandDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.BrandEntity
@@ -53,7 +53,7 @@ class OperationCatalogJpaEntityServiceSellerScopeTest : DescribeSpec({
         shouldThrow<IllegalArgumentException> {
             service.createSellerProduct(
                 sellerOrganizationId,
-                ProductCommand(categoryId, brandId, "Product", null, "DISPLAYED", "ON_SALE", 0),
+                ProductCommandDto(categoryId, brandId, "Product", null, "DISPLAYED", "ON_SALE", 0),
             )
         }
 
@@ -69,7 +69,7 @@ class OperationCatalogJpaEntityServiceSellerScopeTest : DescribeSpec({
         service.updateSellerProduct(
             sellerOrganizationId,
             productId,
-            ProductCommand(UUID.randomUUID(), null, "Changed", null, "DISPLAYED", "ON_SALE", 0),
+            ProductCommandDto(UUID.randomUUID(), null, "Changed", null, "DISPLAYED", "ON_SALE", 0),
         ) shouldBe null
 
         verify(exactly = 1) { catalog.sellerProduct(productId, sellerOrganizationId) }

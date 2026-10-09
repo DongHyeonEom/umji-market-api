@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.domain.payment.service
 
-import com.buyeong.umji.api.domain.notification.model.NotificationEventType
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
+import com.buyeong.umji.api.domain.sales.service.SalesCommissionService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderPaymentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderPaymentJpaEntityService
-import com.buyeong.umji.api.domain.sales.service.SalesCommissionService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
