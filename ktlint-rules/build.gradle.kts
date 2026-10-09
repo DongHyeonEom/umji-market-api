@@ -12,5 +12,6 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(21)
+    // Ktlint rules use no Java 21 APIs; keep their bytecode target compatible with IDE Kotlin compilers.
+    jvmToolchain(17)
 }
