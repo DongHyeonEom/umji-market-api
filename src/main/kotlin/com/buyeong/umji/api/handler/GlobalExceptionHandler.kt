@@ -59,8 +59,8 @@ class GlobalExceptionHandler(
     @ExceptionHandler(ApiCallException::class)
     protected fun handleApiCallException(ex: ApiCallException): ResponseEntity<ErrorResponseModel> {
         logger.error("ApiCallException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.INTERNAL_SERVER_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HttpStatus.valueOf(ex.httpStatus.value()))
+        val response: ErrorResponseModel = ErrorResponseModel.of(ex.errorCode, ex.message)
+        return ResponseEntity<ErrorResponseModel>(response, HttpStatus.valueOf(ex.errorCode.status))
     }
 
     // ================================

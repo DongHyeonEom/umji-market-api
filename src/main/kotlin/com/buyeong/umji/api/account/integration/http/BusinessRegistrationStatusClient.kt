@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.account.integration.http
 
+import com.buyeong.umji.api.enums.ErrorCode
 import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
 import com.buyeong.umji.api.exception.ApiCallException
 import com.buyeong.umji.api.exception.ClientBadRequestException
@@ -33,7 +34,7 @@ class BusinessRegistrationStatusClient(
 
     fun lookup(businessRegistrationNumber: String): BusinessRegistrationStatus {
         if (properties.serviceKey.isBlank()) {
-            throw ApiCallException("사업자등록 상태 확인 서비스가 설정되지 않았습니다.")
+            throw ApiCallException("사업자등록 상태 확인 서비스가 설정되지 않았습니다.", ErrorCode.INTERNAL_SERVER_ERROR)
         }
         val response = try {
             client.post()
@@ -43,10 +44,12 @@ class BusinessRegistrationStatusClient(
                 .retrieve()
                 .body(NationalTaxBusinessStatusResponse::class.java)
         } catch (ex: RestClientException) {
-            throw ApiCallException("국세청 사업자등록 상태 확인에 실패했습니다.", org.springframework.http.HttpStatus.BAD_GATEWAY, ex)
+            throw ApiCallException("국세청 사업자등록 상태 확인에 실패했습니다.", ErrorCode.BAD_GATEWAY_ERROR, ex)
         }
 
-        if (response?.statusCode != "OK") throw ApiCallException("국세청 사업자등록 상태 응답을 확인할 수 없습니다.")
+        if (response?.statusCode != "OK") {
+            throw ApiCallException("국세청 사업자등록 상태 응답을 확인할 수 없습니다.", ErrorCode.BAD_GATEWAY_ERROR)
+        }
         val item = response.data.singleOrNull()?.takeIf { it.businessRegistrationNumber == businessRegistrationNumber }
             ?: throw ClientBadRequestException("사업자등록번호 상태를 확인할 수 없습니다.")
         return when (item.statusCode) {

@@ -59,6 +59,9 @@ enum class ErrorCode(
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(500, "G999", "Internal Server Error Exception"),
 
+    // 외부 upstream API 호출 실패
+    BAD_GATEWAY_ERROR(502, "G013", "Bad Gateway Exception"),
+
     /******************************** Custom Error CodeList ****************************************/
     INSERT_ERROR(200, "9999", "Insert Transaction Error Exception"),
     // Transaction Insert Error

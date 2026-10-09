@@ -1,5 +1,6 @@
 package com.buyeong.umji.api.handler
 
+import com.buyeong.umji.api.enums.ErrorCode
 import com.buyeong.umji.api.exception.ApiCallException
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.DefaultErrorMessageService
@@ -15,7 +16,6 @@ import jakarta.validation.constraints.Size
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.test.web.servlet.MockMvc
@@ -64,11 +64,11 @@ class GlobalExceptionHandlerTest(
                     .andExpect(jsonPath("$.reason").value("Parameter 'id' must be positive"))
             }
 
-            it("should handle ApiCallException with custom status") {
+            it("should use ApiCallException error code for HTTP status and response code") {
                 mockMvc
                     .perform(get("/test/exception/api-call"))
-                    .andExpect(status().isServiceUnavailable)
-                    .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
+                    .andExpect(status().isBadGateway)
+                    .andExpect(jsonPath("$.code").value("BAD_GATEWAY_ERROR"))
                     .andExpect(jsonPath("$.reason").value("External service is unavailable"))
             }
         }
@@ -158,7 +158,8 @@ class TestExceptionController {
     fun throwInvalidRequestParameterException(): ResponseEntity<Any> = throw InvalidRequestParameterException("Parameter 'id' must be positive")
 
     @GetMapping("/api-call")
-    fun throwApiCallException(): ResponseEntity<Any> = throw ApiCallException("External service is unavailable", HttpStatus.SERVICE_UNAVAILABLE)
+    fun throwApiCallException(): ResponseEntity<Any> =
+        throw ApiCallException("External service is unavailable", ErrorCode.BAD_GATEWAY_ERROR)
 
     @PostMapping("/validate")
     fun validateRequest(

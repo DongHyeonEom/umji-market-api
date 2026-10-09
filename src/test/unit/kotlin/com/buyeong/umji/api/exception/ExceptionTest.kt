@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.exception
 
+import com.buyeong.umji.api.enums.ErrorCode
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.springframework.http.HttpStatus
 
 class ExceptionTest : DescribeSpec({
 
@@ -95,33 +95,33 @@ class ExceptionTest : DescribeSpec({
     }
 
     describe("ApiCallException") {
-        it("should create with default message and status") {
+        it("should create with default message and gateway error code") {
             val exception = ApiCallException()
 
             exception.message shouldBe "외부 API 호출에 실패했습니다."
-            exception.httpStatus shouldBe HttpStatus.BAD_GATEWAY
+            exception.errorCode shouldBe ErrorCode.BAD_GATEWAY_ERROR
         }
 
         it("should create with custom message") {
             val exception = ApiCallException("Custom API error")
 
             exception.message shouldBe "Custom API error"
-            exception.httpStatus shouldBe HttpStatus.BAD_GATEWAY
+            exception.errorCode shouldBe ErrorCode.BAD_GATEWAY_ERROR
         }
 
-        it("should create with message and status") {
-            val exception = ApiCallException("Service unavailable", HttpStatus.SERVICE_UNAVAILABLE)
+        it("should create with message and error code") {
+            val exception = ApiCallException("Service configuration is missing", ErrorCode.INTERNAL_SERVER_ERROR)
 
-            exception.message shouldBe "Service unavailable"
-            exception.httpStatus shouldBe HttpStatus.SERVICE_UNAVAILABLE
+            exception.message shouldBe "Service configuration is missing"
+            exception.errorCode shouldBe ErrorCode.INTERNAL_SERVER_ERROR
         }
 
-        it("should create with message, status, and cause") {
+        it("should create with message, error code, and cause") {
             val cause = RuntimeException("Original error")
-            val exception = ApiCallException("API failed", HttpStatus.GATEWAY_TIMEOUT, cause)
+            val exception = ApiCallException("API failed", ErrorCode.BAD_GATEWAY_ERROR, cause)
 
             exception.message shouldBe "API failed"
-            exception.httpStatus shouldBe HttpStatus.GATEWAY_TIMEOUT
+            exception.errorCode shouldBe ErrorCode.BAD_GATEWAY_ERROR
             exception.cause shouldBe cause
         }
     }

@@ -34,6 +34,19 @@ UseCase·Port를 위한 서비스 계약 인터페이스와 위임 전용 adapte
 Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider 요구로 필요한 인터페이스는 유지 가능.<br>
 HTTP 요청·응답 DTO는 외부 계약으로 유지하며 JPA Entity를 응답에 직접 노출하지 않음.<br>
 
+## 외부 API 오류 응답
+
+외부 API 호출 오류는 `ApiCallException`에 `ErrorCode`와 원인을 보관하고 `GlobalExceptionHandler`에서 처리함.<br>
+오류 응답 본문의 코드와 HTTP 상태는 동일한 `ErrorCode`에서 생성함. upstream 통신 실패는 `BAD_GATEWAY_ERROR`(502), 로컬 설정 누락은 `INTERNAL_SERVER_ERROR`(500) 사용.<br>
+
+```mermaid
+flowchart LR
+    FAIL[외부 API 또는 로컬 설정 오류] --> EX[ApiCallException + ErrorCode]
+    EX --> HANDLER[GlobalExceptionHandler]
+    HANDLER --> BODY[ErrorResponseModel.code = ErrorCode]
+    HANDLER --> STATUS[HTTP status = ErrorCode.status]
+```
+
 ## 패키지 구조
 
 도메인별 기능 구분을 유지하고 패키지 경계도 계층 책임과 일치시킴.<br>

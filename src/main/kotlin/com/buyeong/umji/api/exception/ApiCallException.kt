@@ -1,26 +1,12 @@
 package com.buyeong.umji.api.exception
 
-import org.springframework.http.HttpStatus
+import com.buyeong.umji.api.enums.ErrorCode
 
 /**
- * 외부 API 호출 실패 시 발생하는 예외
+ * 외부 API 호출 오류를 공통 ErrorCode와 함께 전달하는 예외
  */
-class ApiCallException : RuntimeException {
-    val httpStatus: HttpStatus
-
-    constructor() : super("외부 API 호출에 실패했습니다.") {
-        this.httpStatus = HttpStatus.BAD_GATEWAY
-    }
-
-    constructor(message: String) : super(message) {
-        this.httpStatus = HttpStatus.BAD_GATEWAY
-    }
-
-    constructor(message: String, httpStatus: HttpStatus) : super(message) {
-        this.httpStatus = httpStatus
-    }
-
-    constructor(message: String, httpStatus: HttpStatus, cause: Throwable) : super(message, cause) {
-        this.httpStatus = httpStatus
-    }
-}
+class ApiCallException(
+    message: String = "외부 API 호출에 실패했습니다.",
+    val errorCode: ErrorCode = ErrorCode.BAD_GATEWAY_ERROR,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)
