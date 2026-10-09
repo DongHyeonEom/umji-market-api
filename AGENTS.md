@@ -1,107 +1,77 @@
 # umji-market-api 작업 기준
 
-## 기반 아키텍처
+## 프로젝트
 
-이 서비스의 최상위 아키텍처 기준은 **계층형 아키텍처**임.
-주요 요청 흐름은 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`임.
+Flutter 앱의 React WebView가 호출하는 Kotlin/Spring Boot 통합 API.<br>
+사용자와 관리자는 별도 서비스가 아니라 role·permission 기반으로 구분.<br>
+패키지 루트: `com.buyeong.umji.api`.<br>
 
-- Controller는 HTTP 입력 검증과 응답 변환을 담당하고, 구체 도메인 Service를 직접 호출함
-- 도메인 Service는 업무 흐름·권한·트랜잭션을 조정하고 `JpaEntityService` 및 외부 연동 구체 클래스를 직접 호출함
-- `JpaEntityService`와 Spring Data Repository는 조회·저장과 Entity 생명주기를 담당함
-- UseCase·Port·Adapter 목적의 서비스 인터페이스 및 위임 wrapper를 새로 만들지 않음
-- Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider interface는 유지 가능
-- JPA Entity는 영속성 처리에 사용하고, 외부 HTTP 응답에는 전용 DTO를 사용함
-- 서비스 도메인 패키지는 `domain/<domain>/` 아래에 두고, 도메인별 `controller`, `service`, `model`, `dto`, `integration`으로 구분함. `persistence/jpa`는 도메인 패키지 바깥의 별도 영속성 영역으로 유지함
-- `adapter`, `application`, `port`를 계층 패키지로 새로 사용하지 않으며 세부 기준은 `docs/architecture.md`를 따름
-- 세부 패키지 경계와 전환 수용 기준은 `docs/architecture.md`를 기준으로 함
+## 문서 기준과 작업 전 확인
 
-## 역할
+작업 공간 공통 기준은 `../AGENTS.md`, 저장소별 규율은 이 문서를 기준으로 함.<br>
+모든 Markdown 문서를 매번 읽지 않고 변경 범위에 해당하는 기준 문서만 확인함.<br>
 
-Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통합 API.
-사용자·관리자 기능은 별도 서비스가 아니라 role/permission 기반 서버 권한 검사로 구분함
+| 작업 범위 | 확인할 문서 |
+| --- | --- |
+| 모든 작업 | `../AGENTS.md`, `AGENTS.md`, `docs/todo.md`의 관련 Task |
+| 제품 전체 구매·운영 흐름 변경 | 작업 공간의 `../SERVICE_FLOW.md` |
+| 패키지·계층·Request/Response/DTO 경계 변경 | `docs/architecture.md` |
+| 서비스 동작·API 변경 | `docs/services/<domain>.md`; 문서 위치 탐색이 필요할 때 `docs/services/README.md` |
+| DB schema·영속 규칙 변경 | 관련 서비스 문서, `docs/database.md`, `docs/database-erd.md` |
+| 실행 방법·환경 변수 변경 | `README.md` |
+| 구현 범위 요약 변경 | `docs/implementation-status.md`와 해당 상세 기준 문서 |
 
-## 구현 원칙
+각 문서의 기준 범위는 다음과 같음.<br>
 
-- 패키지 루트: `com.buyeong.umji.api`
-- Controller는 HTTP 입출력 변환, 도메인 Service는 유스케이스 흐름과 핵심 규칙, JpaEntityService·Repository는 DB 접근 담당
-- 외부 request/response에 Entity 직접 노출 금지
-- 외부 HTTP 입력 모델은 `domain/{domain}/model/<Action>Request`, 외부 HTTP 출력 모델은 `domain/{domain}/model/<Action>Response`에 둠. 이 모델은 client와 Controller 사이의 계약으로 사용함
-- Controller 이하 내부 계층에서 전달하는 DTO는 `domain/{domain}/dto/<Action>Dto`에 둠. 내부 DTO에는 Request/Response 접미사를 사용하지 않음
-- DTO·Request·Response 등 데이터 객체는 각각 별도의 최상위 `data class` 파일로 선언함. 다른 클래스 내부에 중첩 선언하지 않으며, Request와 Response처럼 역할이 다른 클래스를 한 파일에 함께 선언하지 않음
-- 한 파일에는 하나의 데이터 클래스만 선언함. 관련 필드 묶음은 별도 데이터 클래스로 분리하고, 실제로 전달 경계와 변경 이유가 같은 경우에만 한 DTO로 구성함
-- 관리자 API는 UI 노출 여부와 무관하게 서버 권한 검사 필수
-- 신규 DB 변경은 Flyway 마이그레이션으로만 적용.
-  이미 배포된 마이그레이션 수정 금지
-- 시크릿은 설정 파일에 저장하지 않고 환경 변수 또는 프로젝트 외부 파일 경로로 주입
+- `AGENTS.md`: 에이전트 작업 순서, 저장소 규율, 문서 탐색 기준
+- `docs/architecture.md`: 계층 책임, 패키지 구조, API 모델·내부 DTO 규칙
+- `docs/services/README.md`: 도메인 상세 문서의 목차
+- `docs/services/<domain>.md`: 해당 도메인의 현재 API 동작, 흐름, 명시적 미구현 범위
+- `docs/database.md`: DB 규칙과 migration 변경 요약
+- `docs/database-erd.md`: 현재 schema의 테이블·컬럼·관계
+- `docs/implementation-status.md`: 구현 상태의 간결한 요약과 남은 기능 범위
+- `docs/todo.md`: 미완료 작업과 수용 기준
+- `README.md`: 로컬 실행 방법과 필수 환경 변수
+- `../SERVICE_FLOW.md`: 저장소를 가로지르는 제품·채널 전체 흐름
 
-## 실운용 전 개발 규율
+같은 규칙이나 기능 설명을 여러 문서에 복사하지 않고 기준 문서를 연결함.<br>
 
-- 사용자가 실운용 전이라고 명시한 기간에는 구현·검증에 실제로 필요한 테이블과 코드만 유지함. 향후 기능을 위한 추정성 테이블·코드, 사용처가 없는 추상화와 호환 계층은 추가하지 않음.
-- 테스트를 위해 생성한 데이터는 검증 후 삭제함. 테스트 데이터가 공유·개발 DB에 남지 않도록 테스트 종료 시 정리하고, 테스트 실패로 정리가 수행되지 않은 경우에도 후속 작업에서 잔여 데이터를 확인해 제거함.
-- 실운용 데이터 보존·감사·이력 요구사항은 임의로 적용하지 않음. 실운용 전환은 사용자의 명시적 안내를 기준으로 하며, 안내 후 테이블·코드 보존 및 데이터 정리 규율을 사용자와 다시 정리함.
+## 구현·운영 규율
 
-## 브랜치 및 커밋 전략
+- 아키텍처와 모델 명명 규칙은 `docs/architecture.md`를 단일 기준으로 사용함.
+- 관리자 API는 UI 노출 여부와 무관하게 서버 권한 검사를 수행함.
+- 신규 DB 변경은 Flyway migration으로만 적용하고, 이미 배포된 migration은 수정하지 않음.
+- 시크릿은 설정 파일에 저장하지 않고 환경 변수, 저장소 밖 파일 또는 Secret Manager로 주입함.
+- 사용자가 실운용 전이라고 명시한 동안 구현·검증에 필요한 테이블과 코드만 유지함. 추정성 테이블, 사용처 없는 추상화·호환 계층은 추가하지 않음.
+- 테스트 데이터는 검증 후 정리함. 정리 실패 시 후속 작업에서 잔여 데이터를 확인해 제거함.
+- 실운용 데이터 보존·감사·이력 요구는 임의로 적용하지 않음. 실운용 전환 시 보존 규율을 사용자와 다시 정리함.
 
-- 신규 기능은 `codex/feature/<기능명>` 브랜치에서 작업하고, 구현·검토 가능한 상태가 되면 PR을 생성함.
-  PR 전까지 해당 기능의 수정은 같은 feature 브랜치에서 진행함.
-- PR 제목은 변경의 주 목적에 맞춰 `feat: <영문 요약>`, `fix: <영문 요약>`, `test: <영문 요약>`, `docs: <영문 요약>` 등 Conventional Commit 형식으로 작성함.
-  GitHub가 자동 생성한 `Merge pull request ...` 문구를 PR 제목으로 사용하지 않음.
-- `dev` 병합은 기존 이력처럼 GitHub merge commit 방식을 사용함.
-  PR 제목 규칙과 자동 생성되는 merge commit 제목 규칙은 구분함.
-- 기능 브랜치 push 시 해당 브랜치를 `origin`에도 push하고 upstream을 설정함. push 전 `docs/todo.md`를 갱신해 완료된 수용 기준만 `[x]`로 체크하며, 미완료·부분 완료·검증되지 않은 항목은 `[ ]`로 유지함.
-- PR 생성과 병합은 사용자가 진행함.
-  PR 병합 후 다음 feature를 시작할 때 `origin/dev`를 fetch하고 로컬 `dev`를 최신 상태로 fast-forward한 뒤, 해당 기준점에서 새 `codex/feature/<기능명>` 브랜치를 생성함.
-- 같은 Task의 자동화 테스트는 수용 기준별로 각각 구현·검증하고, 각 테스트 진행분을 동일한 feature 브랜치에 개별 커밋·push함.
-  해당 Task의 테스트 범위를 모두 마친 뒤 feature 단위 PR 하나로 제출하며 테스트 항목별 PR은 만들지 않음.
-  이미 완료·병합된 테스트는 반복하지 않으며, 해당 Task의 미완료 테스트 범위를 마친 뒤 다음 feature로 이동함.
-- 이미 진행 중이거나 병합된 기능의 일반 수정은 `dev`에서 바로 작업하고 커밋함.
-  커밋 메시지는 `fix: <수정 내용>` 형식으로 작성함.
-- 기존 기능에 대한 수정 범위가 방대하면 `codex/feature/<기존 기능명>-fix` 브랜치에서 작업하고 PR을 생성함.
-- 문서 수정 및 신규 문서 작업은 `dev`에서 바로 반영하고 커밋함.
-  커밋 메시지는 `docs: <문서 작업 내용>` 형식으로 작성함.
-- 일관되고 가독성 있는 이력을 위해 모든 커밋 메시지는 영문으로 작성함.
-- 기능 브랜치는 최신 `dev`를 기준으로 생성함.
-  위 규칙의 작업 대상 브랜치와 PR 여부는 작업 종류별 기준을 따름.
+## 서비스 변경 순서
 
-## 문서
+- 서비스 동작을 새로 만들거나 변경할 때 관련 `docs/services/<domain>.md`의 실제 흐름도와 수용 기준을 먼저 갱신함.
+- 흐름도에는 입력, 인증·인가, 분기·검증, Service·JpaEntityService·외부 연동, 저장·상태 변경, 성공·실패 결과를 반영함.
+- 기존 흐름도가 없으면 먼저 코드 흐름을 확인해 작성함. 계획 흐름과 구현 흐름을 섞지 않음.
+- `docs/todo.md` Task는 서비스 코드와 자동화 테스트 작성·실행 항목을 구분함. 실행하지 않은 테스트는 완료 처리하지 않음.
+- DB schema 또는 영속 규칙 변경 시 migration과 함께 `docs/database.md`, `docs/database-erd.md`를 갱신하고 실제 DDL 및 전체 migration과 대조함.
 
-- `README.md`: 실행 방법과 필수 환경 변수
-- `docs/architecture.md`: 현재 아키텍처, 의존성 규칙, 패키지 구조
-- `docs/services/`: 구현된 API 동작과 도메인별 미구현 범위
-- `docs/database.md`: 현재 DB 규칙과 적용된 migration 목록
-- `docs/database-erd.md`: 현재 migration에 존재하는 테이블 관계
-- `docs/implementation-status.md`: 현재 구현 상태 요약
-- `docs/todo.md`: 우선순위가 있는 미완료 작업과 완료 체크리스트
+## 브랜치·커밋
 
-DB 스키마나 영속 데이터 규칙을 변경하면 해당 Flyway migration과 같은 변경에 `docs/database.md`, `docs/database-erd.md`를 함께 갱신함.
-`database.md`에는 migration 버전과 변경 요약·현재 DB 규칙을 반영하고, `database-erd.md`에는 전체 현재 스키마의 테이블·컬럼·타입·nullable·키·관계를 반영함.
-변경 후 두 문서를 전체 migration 및 실제 DDL과 대조해 누락·불일치가 없는지 확인함.
+- 신규 기능은 최신 `dev`에서 `codex/feature/<기능명>` 브랜치를 생성해 작업함.
+- PR 전까지 같은 feature 브랜치에서 수정하며, 검토 가능한 상태가 되면 원격에 push함. PR 생성·병합은 사용자가 진행함.
+- PR 제목은 `feat: <English summary>`, `fix: <English summary>`, `test: <English summary>`, `docs: <English summary>` 등 Conventional Commit 형식으로 작성함.
+- dev 병합은 GitHub merge commit 방식을 유지함. PR 제목과 자동 생성 merge commit 제목은 별도 규칙으로 취급함.
+- 기능 브랜치 push 전에 `docs/todo.md`에서 검증된 수용 기준만 완료 처리함.
+- 같은 Task의 자동화 테스트는 수용 기준별로 같은 feature 브랜치에 반영하고, 전체 완료 후 feature 단위 PR 하나로 제출함. 완료·병합된 테스트는 반복하지 않음.
+- 이미 진행 중이거나 병합된 기능의 일반 수정은 `dev`에서 작업하고 `fix: <English summary>` 형식으로 커밋함. 수정 범위가 방대하면 `codex/feature/<기존 기능명>-fix` 브랜치와 PR을 사용함.
+- 문서 전용 변경은 `dev`에서 `docs: <English summary>` 형식으로 커밋함.
+- 모든 커밋 메시지는 영문으로 작성함.
+- 다음 feature 시작 시 `origin/dev`를 fetch하고 로컬 `dev`를 fast-forward한 뒤 브랜치를 생성함.
 
-## 문서 작성 규칙
+## 문서 작성
 
-- 문서의 현재 동작은 코드·설정·Flyway migration과 일치시킴.
-  불일치하면 실제 구현을 확인하고 수정함.
-- 구현된 기능과 미구현 계획을 명확히 구분하고, 계획 endpoint나 테이블을 현재 제공되는 것처럼 적지 않음.
-- 완료된 작업의 시간순 진행 내역, 이미 정리된 구조의 설명, 중복된 규칙은 문서에 남기지 않음.
-  현재 동작·유지해야 할 정책·명시적인 미구현 범위만 기록함.
-- 자세한 내용은 한 문서를 단일 기준으로 유지하고, 다른 문서에서는 링크로 연결해 복사된 설명이 어긋나지 않게 함.
-- 문서는 명사형 종결 또는 개조식 문체로 작성함.
-  `~입니다`, `~합니다`, `~습니다` 종결과 독자에게 직접 지시하는 `~하세요` 표현은 피하고, 짧은 설명은 명사형이나 간결한 서술형으로 통일함.
-- 문장은 마침표(`.`) 뒤에서 줄바꿈하고, Markdown 화면에서도 줄바꿈이 유지되도록 문장 끝에 `<br>`을 붙임.
-  문단을 나눌 때는 빈 줄을 사용하며, 줄 끝 역슬래시(`\`)는 사용하지 않음.
-- 작업 착수 전 `docs/todo.md`에서 관련 항목의 상태와 수용 기준을 확인함.
-  신규 기능은 기존 항목에 연결하거나 체크리스트에 먼저 추가함.
-- 작업 완료 시 실제 코드와 필요한 검증이 끝난 항목만 `[x]`로 변경함.
-  미완료·부분 완료·검증되지 않은 항목은 `[ ]`로 유지하고, 범위 변경은 체크리스트와 수용 기준에 반영함.
-- 기능 작업의 체크리스트 변경은 해당 기능 브랜치와 PR에 포함함.
-  문서 작업 및 일반 수정의 체크리스트 변경은 해당 작업 브랜치의 기존 커밋 규칙을 따름.
+- 코드·설정·migration과 현재 동작이 일치하도록 작성함. 계획과 구현을 명확히 구분함.
+- 완료된 진행 이력, 이전 구조 설명, 중복 설명은 남기지 않음. 현재 동작·정책·미완료 범위만 기록함.
+- 문장은 명사형 종결 또는 간결한 서술형으로 작성함. 독자에게 직접 지시하거나 `~입니다`, `~합니다`, `~습니다`로 끝내지 않음.
+- 문장 끝에서 줄바꿈하고 마침표 뒤에 `<br>`을 붙임. 문단 구분에는 빈 줄을 사용하고 줄 끝 역슬래시는 사용하지 않음.
 
-## 서비스 개발 순서
-
-- 서비스 기능을 새로 개발하거나 기존 동작을 변경할 때 해당 도메인의 `docs/services/<service>.md`에서 알고리즘 흐름도를 Mermaid로 먼저 작성·갱신함.
-- 흐름도에는 입력, 인증·인가, 주요 분기와 검증, Service·JpaEntityService·외부 연동 호출, 저장, 상태 변경, 성공·실패 결과를 실제 구현 기준으로 표현함.
-- 흐름도와 관련 수용 기준을 먼저 검토한 뒤 코드와 자동화 테스트를 구현함. 코드는 문서에 정의된 흐름을 따르며, 구현 중 정책이나 흐름이 달라지면 문서와 `docs/todo.md`를 먼저 갱신함.
-- 기존에 구현된 서비스의 흐름도가 없으면 해당 서비스의 현재 코드 흐름을 확인해 `service.md`에 Mermaid 다이어그램을 추가함. 미구현 서비스의 계획 흐름은 현재 구현 흐름과 섞지 않으며, 구현 착수 시 먼저 작성함.
-- `docs/todo.md`의 각 Task는 `서비스 개발`과 `서비스 자동화 테스트 개발 및 테스트`를 구분함. 코드 작업 항목과 자동화 테스트 작성·실행 항목을 각각 관리하며, 실행하지 않은 테스트는 완료로 표시하지 않음.
-
-상위 경로 `../AGENTS.md`의 공통 기준도 함께 적용함
+상위 경로 `../AGENTS.md`의 공통 기준도 적용함.

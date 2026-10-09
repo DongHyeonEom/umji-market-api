@@ -115,23 +115,10 @@ Organization은 여러 계정을 구성원으로 가질 수 있고, 계정은 �
 구성원 초대·가입 요청·역할과 그룹 프로필 관리 흐름은 이 문서의 단일 기준. 주문 소유권, 실제 주문자와 주문 조회 범위는 [주문 문서](order.md)를 기준으로 함.<br>
 현재 DB 테이블과 관계는 [database-erd.md](../database-erd.md)를 기준으로 함.<br>
 
-## 대표자·일반구성원 화면 권한 설계
+## 대표자·일반구성원 접근 권한
 
-현재 대표자는 `organization.representative_account_id`와 활성 `organization_member` 소속으로 식별. 활성 구성원 중 해당 계정만 대표자이며 나머지는 일반구성원. 대표 여부를 계정 role에 복제하지 않아 대표자 변경 시 역할 데이터가 어긋나는 것을 방지.<br>
-
-목표 설계에서는 `organization_role_permission`이 `REPRESENTATIVE`·`MEMBER`별 permission을 설정하고, `ui_screen_permission`이 각 사용자 화면을 보기 위한 permission을 지정. 그룹 onboarding/current 조회가 현재 그룹 역할, 허용 screen code, capability를 반환해 React가 화면·버튼을 표시.<br>
-그룹 미소속 계정은 `UNASSIGNED` 역할로 onboarding 화면만 접근. `REPRESENTATIVE`와 `MEMBER`는 그룹 주문·공용 주소·거래 이력을 공유하며, 초대·가입 요청 관리 화면과 action은 대표자만 허용.<br>
-
-| 사용자 역할 | 노출 screen code 예시 | permission code 예시 |
-| --- | --- | --- |
-| `UNASSIGNED` | `BUYER_GROUP_ONBOARDING` | `BUYER_GROUP_ONBOARDING_READ`, `BUYER_GROUP_CREATE`, `BUYER_GROUP_SEARCH`, `BUYER_GROUP_JOIN_REQUEST_CREATE` |
-| `REPRESENTATIVE` | 주문·공용 주소·구성원 관리 화면 | `BUYER_GROUP_ORDER_READ`, `BUYER_GROUP_ORDER_CREATE`, `BUYER_GROUP_ADDRESS_MANAGE`, `BUYER_GROUP_INVITE`, `BUYER_GROUP_JOIN_REQUEST_MANAGE` |
-| `MEMBER` | 주문·공용 주소 화면 | `BUYER_GROUP_ORDER_READ`, `BUYER_GROUP_ORDER_CREATE`, `BUYER_GROUP_ADDRESS_MANAGE`, `BUYER_GROUP_SEARCH`, `BUYER_GROUP_JOIN_REQUEST_CREATE` |
-
-가입 요청 승인·거절과 전화번호 초대 등 대표자 전용 API는 현재처럼 서버가 그룹 대표 계정을 다시 검증. 화면 목록이나 클라이언트가 전달한 role 값을 신뢰하지 않음.<br>
-사용자가 그룹 소속을 바꾸거나 운영자가 대표자를 변경한 경우 다음 access context 조회부터 새 그룹·역할을 기준으로 권한을 계산. 기존 주문의 귀속 그룹과 주문자 정보는 변경하지 않음.<br>
-
-화면 permission mapping table 및 API 계약은 [operation.md](operation.md)의 운영자·사용자 화면 권한 설계를 단일 기준으로 함.<br>
+대표자는 `organization.representative_account_id`와 활성 `organization_member` 소속으로 판정. 화면 permission은 활성 그룹 역할에서 계산하며 계정 role에 복제하지 않음.<br>
+화면별 permission mapping과 access context API 계약은 [운영 문서](operation.md)의 단일 기준을 사용. 각 업무 API는 화면 접근 metadata와 별도로 서버 인가를 수행.<br>
 
 ## 그룹 구성원 가입 흐름
 

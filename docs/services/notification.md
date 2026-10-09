@@ -43,65 +43,46 @@ OS push permission과 마케팅 수신 동의는 별개로 처리. 마케팅 pus
 알림 title/body는 이벤트별 일반 문구로 고정하고 주문 ID는 앱 내부 이동용 data field로만 전달.<br>
 알림 전달 기록은 주문·입금·배송 상태 변경과 같은 DB 트랜잭션에서 outbox에 저장해 상태 변경 commit 후 발송되도록 연계.<br>
 업무 API는 DB commit 후 알림 전송 완료를 기다리지 않고 응답. 배송 관리자는 배송 상태·송장 정보 저장이 끝나면 작업을 이어갈 수 있음.<br>
-worker의 push 전송은 비동기이며, provider 전송 결과는 별도 알림 전달 상태로 추적. push provider의 접수 성공은 단말 표시·열람을 보장하지 않음.<br>
+worker의 push 전송은 비동기이며 event 단위 outbox 상태로 전송 결과를 관리. push provider의 접수 성공은 단말 표시·열람을 보장하지 않음.<br>
 FCM/APNs 장애는 주문·입금·배송 상태 변경을 rollback하지 않으며, outbox worker가 실패 메시지를 재시도.<br>
 일시 실패는 최초 시도 후 1분·5분·15분 간격으로 최대 3회 재시도. 최초 시도를 포함해 최대 4회 전송.<br>
 네트워크·timeout·provider throttling·provider 5xx는 일시 실패로 분류. 요청 형식 오류와 유효하지 않은 token은 영구 실패로 분류하고 재시도하지 않음.<br>
-유효하지 않은 token은 해당 기기 token을 비활성화. 기타 영구 실패와 재시도 소진은 `FAILED`로 남기고 provider·실패 분류·응답 코드·시각을 운영 확인에 필요한 범위로 기록.<br>
-자동 재시도 소진 뒤 추가 발송은 자동 수행하지 않음. 운영자가 실패 원인을 확인하고 수정한 뒤 명시적 재처리 기능을 통해 재시도 상태로 되돌리는 복구 정책으로 처리.<br>
+유효하지 않은 token은 비활성화. 영구 실패와 재시도 소진은 outbox 상태를 `FAILED`로 바꾸고 정제된 오류 코드를 저장.<br>
+별도 delivery 이력, 운영자 실패 조회 및 수동 재처리 기능은 미구현.<br>
 외부 provider 접수 후 결과 저장 전에 worker가 중단되면 중복 접수 가능성이 있는 at-least-once 전달로 취급. 업무 상태 변경은 알림 전송 실패나 재처리로 rollback하지 않음.<br>
 FCM/APNs 자격 증명은 secret 설정으로 주입.<br>
 
-## 예정 흐름
+## 현재 발송 흐름
 
-아래 흐름은 현재 구현과 미구현 범위를 함께 나타냄. delivery 이력 및 운영자 조회·재처리는 미구현 상태.<br>
+상태 변경과 outbox event는 같은 트랜잭션에서 저장. worker는 설정에 따라 5초 주기로 최대 100건을 claim하고, 주문 생성 계정의 활성 token에 메시지를 전달.<br>
+단말별 delivery 이력은 별도 저장하지 않으며 event 단위 outbox 상태·시도 횟수·다음 시각·마지막 오류 코드만 관리.<br>
 
 ```mermaid
 flowchart TD
-    subgraph TOKEN[기기 token 관리]
-        ClientToken["인증된 활성 계정"] --> TokenRequest["platform·OS token 등록/갱신"]
-        TokenRequest --> TokenAuth{"인증 subject의 활성 계정 확인"}
-        TokenAuth -->|실패| TokenDeny["401 또는 403 응답"]
-        TokenAuth -->|성공| TokenValidate{"platform·길이 검증"}
-        TokenValidate -->|실패| TokenInvalid["요청 거부"]
-        TokenValidate -->|통과| TokenHash["SHA-256 계산·token hash 기준 upsert"]
-        TokenHash --> TokenOwner["token을 인증 계정에 연결·활성화"]
-        TokenOwner --> TokenResult["공개 token ID·platform·등록 시각 반환"]
-        ClientToken --> TokenDelete["공개 token ID로 해제 요청"]
-        TokenDelete --> TokenOwnerCheck{"계정 소유 token인가?"}
-        TokenOwnerCheck -->|아니오| TokenDeny
-        TokenOwnerCheck -->|예| TokenInactive["token 비활성화"]
-    end
-
-    Event["주문·입금·배송 상태 변경"] --> Eligible{"정의된 알림 이벤트인가?"}
-    Eligible -->|아니오·마케팅 이벤트| Ignore["현재 미지원 이벤트 생략"]
-    Eligible -->|정보성 이벤트| Build["최소 개인정보로 메시지 구성"]
-    Build --> Idempotency{"이벤트별 멱등 key가 이미 처리됐는가?"}
-    Idempotency -->|예| Ignore
-    Idempotency -->|아니오| Queue["상태 변경과 같은 트랜잭션에 outbox 저장"]
-    Queue -->|commit 성공| Response["업무 API 응답 반환"]
-    Queue --> Worker["DB outbox polling worker"]
-    Worker --> Recipients["주문 생성 계정의 활성 token 조회"]
-    Recipients --> Fanout["이벤트별 일반 문구 생성·기기별 fanout"]
-    Fanout --> Provider{"기기 platform"}
-    Provider -->|ANDROID_FCM| FCM["Firebase Admin SDK FCM adapter"]
-    Provider -->|IOS_APNS| APNS["APNs HTTP/2 token-auth adapter"]
-    FCM -->|성공 또는 실패| Result["전달 결과 기록"]
-    APNS -->|성공 또는 실패| Result
-    Result -->|성공| Sent["발송 완료 기록"]
-    Result -->|일시 실패·재시도 잔여| Retry["1분·5분·15분 간격으로 예약"]
+    Event["주문·입금·배송 상태 변경"] --> Eligible{"발송 대상 event인가?"}
+    Eligible -->|아니오| Skip["outbox 생성 안 함"]
+    Eligible -->|예| Transaction["업무 변경과 같은 트랜잭션에 outbox 저장"]
+    Transaction --> Commit{"commit 성공"}
+    Commit -->|실패| Rollback["업무 변경과 outbox rollback"]
+    Commit -->|성공| ApiResponse["업무 API 응답"]
+    Commit --> Worker["설정된 scheduler가 outbox batch claim"]
+    Worker --> Recipients["주문 생성 계정의 활성 기기 조회"]
+    Recipients --> Provider{"기기 platform"}
+    Provider -->|ANDROID_FCM| FCM["FCM 전달"]
+    Provider -->|IOS_APNS| APNS["APNs 전달"]
+    FCM --> Result{"event 전달 결과"}
+    APNS --> Result
+    Result -->|성공·수신 기기 없음·무효 token만 존재| Sent["outbox SENT"]
+    Result -->|일시 실패·시도 횟수 잔여| Retry["1분·5분·15분 뒤 재시도"]
     Retry --> Worker
-    Result -->|영구 실패| Failed["FAILED 기록·유효하지 않은 token 비활성화"]
-    Result -->|재시도 소진| Failed
-    Failed --> Inspect["운영자가 실패 원인 확인·수정"]
-    Inspect --> Replay["명시적 재처리 기능으로 재시도"]
-    Replay --> Worker
+    Result -->|일시 실패·최대 시도 도달| Failed["outbox FAILED·오류 코드 저장"]
+    Result -->|영구 실패| Failed
+    Provider -. 무효 token .-> Deactivate["token 비활성화"]
 ```
 
-발송 조건·정보성/마케팅 동의·outbox·재시도 정책은 위 기준을 따름.<br>
 기기 token API는 `POST /api/notifications/device-tokens`에서 등록·갱신, `DELETE /api/notifications/device-tokens/{tokenId}`에서 인증 계정 소유 token 비활성화 제공.<br>
 FCM은 Firebase Admin SDK와 Application Default Credentials, APNs는 HTTP/2·TLS 1.2 이상과 ES256 token-based authentication 사용.<br>
 FCM project/service account와 APNs team ID·key ID·private key·bundle ID·환경 endpoint는 secret 또는 환경 설정으로 주입.<br>
-운영자 실패 조회·명시적 재처리 endpoint는 worker 구현 task의 범위에서 권한과 감사 이력을 확정.<br>
+운영자 실패 조회·명시적 재처리 endpoint는 미구현.<br>
 별도 배포 서비스 분리는 발송량·장애 격리 요구가 발생할 때 검토하며, outbox 경계는 추후 분리를 지원하도록 유지.<br>
 RabbitMQ 등 broker 도입은 초기 범위에서 제외. worker 처리량이나 독립 확장 요구가 생기면 outbox relay가 broker에 발행하고 전송 worker가 소비하는 구조로 확장.<br>

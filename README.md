@@ -4,10 +4,8 @@ Flutter 앱의 React WebView가 사용하는 Kotlin/Spring Boot API임.
 
 ## 아키텍처
 
-도메인별 계층형 구조를 사용함.
-요청 흐름은 Controller → 구체 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity임.
-도메인 코드는 `controller`, `service`, `model`, `integration` 패키지로 구분하고 영속성 코드는 `persistence/jpa`에 배치.
-상세 규칙과 Mermaid 흐름도는 [docs/architecture.md](docs/architecture.md)를 참고.
+도메인 코드는 `api/domain/<domain>/`, 영속성 코드는 `api/persistence/jpa/`에 배치.<br>
+계층 책임과 모델 규칙은 [docs/architecture.md](docs/architecture.md)를 기준으로 함.<br>
 
 ## 로컬 실행
 
