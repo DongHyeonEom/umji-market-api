@@ -9,14 +9,13 @@ Flutter 앱의 React WebView가 호출하는 Kotlin/Spring Boot 통합 API.<br>
 ## 문서 기준과 작업 전 확인
 
 작업 공간 공통 기준은 `../AGENTS.md`, 저장소별 규율은 이 문서를 기준으로 함.<br>
-모든 Markdown 문서를 매번 읽지 않고 변경 범위에 해당하는 기준 문서만 확인함.<br>
+모든 작업에서 공통 기준과 `docs/architecture.md`를 먼저 확인하고, 나머지 문서는 변경 범위에 따라 추가로 확인함.<br>
 
 | 작업 범위 | 확인할 문서 |
 | --- | --- |
-| 모든 작업 | `../AGENTS.md`, `AGENTS.md`, `docs/todo.md`의 관련 Task |
+| 모든 작업 | `../AGENTS.md`, `AGENTS.md`, `docs/architecture.md`, `docs/todo.md`의 관련 Task |
 | 완료된 선행 작업의 결정·수용 기준 확인 | 필요한 경우 `docs/completed-todo.md` |
 | 제품 전체 구매·운영 흐름 변경 | 작업 공간의 `../SERVICE_FLOW.md` |
-| 패키지·계층·Request/Response/DTO 경계 변경 | `docs/architecture.md` |
 | 서비스 동작·API 변경 | `docs/services/<domain>.md`; 문서 위치 탐색이 필요할 때 `docs/services/README.md` |
 | DB schema·영속 규칙 변경 | 관련 서비스 문서, `docs/database.md`, `docs/database-erd.md` |
 | 실행 방법·환경 변수 변경 | `README.md` |
