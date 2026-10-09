@@ -9,6 +9,7 @@ import com.buyeong.umji.api.payment.model.PaymentRecord
 import com.buyeong.umji.api.payment.model.PaymentStatusChange
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderPaymentEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderPaymentJpaEntityService
+import com.buyeong.umji.api.sales.service.SalesCommissionService
 import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional
 class PaymentService(
     private val payments: OrderPaymentJpaEntityService,
     private val notifications: NotificationEventService,
+    private val salesCommissions: SalesCommissionService,
 ) {
     fun queue(status: String?, page: Int, size: Int): PaymentQueuePage {
         require(status == null || status in PAYMENT_STATUSES) { "유효하지 않은 결제 상태입니다." }
@@ -57,6 +59,9 @@ class PaymentService(
         }
 
         val updatedPayment = payments.saveChange(payment, status, operatorId)
+        if (status == REFUNDED) {
+            salesCommissions.reverseOrder(orderId, "ORDER_REFUND")
+        }
         val updated = PaymentStatusChange(requireNotNull(updatedPayment.order.publicId), updatedPayment.order.status, updatedPayment.status, true)
         if (updated.changed) notifications.record(NotificationEventType.PAYMENT_STATUS_CHANGED, updated.orderId, updated.paymentStatus)
         return updated

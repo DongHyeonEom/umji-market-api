@@ -7,6 +7,7 @@ import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.order.model.CancellationChange
 import com.buyeong.umji.api.order.model.CancellationQueuePage
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCancellationJpaEntityService
+import com.buyeong.umji.api.sales.service.SalesCommissionService
 import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,6 +18,7 @@ class OrderCancellationService(
     private val cancellations: OrderCancellationJpaEntityService,
     private val inventory: InventoryService,
     private val notifications: NotificationEventService,
+    private val salesCommissions: SalesCommissionService,
 ) {
     fun request(accountId: UUID, orderId: UUID): CancellationChange {
         val order = cancellations.lock(orderId) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다.")
@@ -26,6 +28,7 @@ class OrderCancellationService(
             READY_TO_SHIP -> {
                 order.reservationKeys.forEach(inventory::release)
                 cancellations.cancel(order, null)
+                salesCommissions.reverseOrder(orderId, "ORDER_CANCELLED")
                 cancellations.recordRequest(orderId, accountId, CANCELLED)
                 notifications.record(NotificationEventType.ORDER_CANCELLED, orderId)
                 return CancellationChange(orderId, CANCELLED, CANCELLED)
@@ -54,6 +57,7 @@ class OrderCancellationService(
         if (approved) {
             order.reservationKeys.forEach(inventory::restoreConfirmed)
             cancellations.cancel(order, operatorId)
+            salesCommissions.reverseOrder(orderId, "ORDER_CANCELLED")
             notifications.record(NotificationEventType.ORDER_CANCELLED, orderId)
         }
         cancellations.resolveRequest(orderId, status, operatorId)

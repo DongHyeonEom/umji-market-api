@@ -169,6 +169,34 @@ erDiagram
         BIGINT assigned_by_account_id FK "배정 처리자 계정 ID"
         DATETIME created_at "생성 시각"
     }
+    SALES_COMMISSION["SALES_COMMISSION · 주문별 영업 인센티브 snapshot 및 정산 상태"] {
+        BIGINT id PK "내부 인센티브 ID"
+        BINARY public_id UK "인센티브 공개 UUID"
+        BIGINT order_id UK,FK "주문 ID"
+        BIGINT organization_id FK "구매 Organization ID"
+        BIGINT assignment_id FK "주문 시점 담당 배정 ID, nullable"
+        BIGINT sales_account_id FK "주문 시점 담당 계정 ID, nullable"
+        INT rate_bps_snapshot "주문 시점 basis points, nullable"
+        VARCHAR basis_snapshot "세금 제외 순상품 판매액 기준"
+        BIGINT basis_amount "주문 시점 상품 기준액"
+        BIGINT commission_amount "주문 시점 계산 인센티브"
+        VARCHAR status "NOT_APPLICABLE·WAITING·PAYABLE·PAID·REVERSED"
+        DATE settlement_month "정산 대상 월, nullable"
+        DATETIME qualified_at "배송완료·전액입금 자격 충족 시각, nullable"
+        DATETIME paid_at "지급 시각, nullable"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    SALES_COMMISSION_EVENT["SALES_COMMISSION_EVENT · 인센티브 정산 append-only 이벤트"] {
+        BIGINT id PK "이벤트 내부 ID"
+        BIGINT commission_id FK "인센티브 ID"
+        VARCHAR event_type "SNAPSHOT·ACCRUED·REVERSED·PAID"
+        BIGINT amount_delta "정산 원화 증감"
+        VARCHAR idempotency_key UK "재처리 방지 키"
+        BIGINT processed_by_account_id FK "처리자 계정, nullable"
+        VARCHAR reason_code "처리 사유 코드, nullable"
+        DATETIME created_at "생성 시각"
+    }
     ORGANIZATION_BUSINESS_PROFILE["ORGANIZATION_BUSINESS_PROFILE · Organization 공통 사업자 정보"] {
         BIGINT id PK "사업자 프로필 내부 ID"
         BIGINT organization_id FK,UK "사업자 그룹 ID"
@@ -587,6 +615,12 @@ erDiagram
     ORGANIZATION ||--o{ ORGANIZATION_SALES_ASSIGNMENT : assigned
     ACCOUNT ||--o{ ORGANIZATION_SALES_ASSIGNMENT : sales_owner
     ACCOUNT ||--o{ ORGANIZATION_SALES_ASSIGNMENT : assigns
+    PURCHASE_ORDER ||--o| SALES_COMMISSION : attributes
+    ORGANIZATION ||--o{ SALES_COMMISSION : purchases
+    ORGANIZATION_SALES_ASSIGNMENT o|--o{ SALES_COMMISSION : snapshots
+    ACCOUNT o|--o{ SALES_COMMISSION : earns
+    SALES_COMMISSION ||--o{ SALES_COMMISSION_EVENT : records
+    ACCOUNT o|--o{ SALES_COMMISSION_EVENT : processes
     ACCOUNT ||--o{ ORGANIZATION : represents
     ORGANIZATION ||--o{ ORGANIZATION_INVITATION : invites
     ACCOUNT ||--o{ ORGANIZATION_INVITATION : invites
@@ -725,6 +759,7 @@ erDiagram
 | V45 | `file_asset`에 공통 낙관적 잠금 버전과 수정 시각 추가 |
 | V46 | `ui_screen`, 화면 permission mapping, 구매자 구성원 역할 permission mapping 및 access context 권한 추가 |
 | V47 | 구매 Organization의 영업 담당자·선택 인센티브율 배정 이력 및 `SALES_GROUP_ASSIGN` permission 추가 |
+| V48 | 주문별 영업 인센티브 snapshot·정산 이벤트 원장 및 전체 관리자 정산 permission 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>
