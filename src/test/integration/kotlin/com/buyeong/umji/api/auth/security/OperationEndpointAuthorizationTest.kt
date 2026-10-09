@@ -40,6 +40,8 @@ import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.shipment.model.ShipmentChange
 import com.buyeong.umji.api.shipment.service.ShipmentService
+import com.buyeong.umji.api.sales.model.SalesAssignmentCommand
+import com.buyeong.umji.api.sales.service.SalesAssignmentService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -70,6 +72,7 @@ import java.util.UUID
         AccessContextController::class,
         OperationAccountController::class, OperationOrganizationController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
+        com.buyeong.umji.api.sales.controller.SalesAssignmentController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
     ],
     properties = ["umji.security.authentication.mode=REQUIRED"],
@@ -84,6 +87,9 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var accounts: OperationAccountService
+
+    @MockitoBean
+    private lateinit var salesAssignments: SalesAssignmentService
 
     @MockitoBean
     private lateinit var taxInvoiceProfiles: OrganizationTaxInvoiceProfileService
@@ -346,6 +352,42 @@ class OperationEndpointAuthorizationTest(
     fun `account endpoint accepts account management permission`() {
         mockMvc.perform(get("/api/operation/accounts/roles").with(authorities("ADMIN_ACCOUNT_MANAGE")))
             .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `sales assignment read and change endpoints require their dedicated permissions`() {
+        val organizationId = UUID.randomUUID()
+        val salesAccountId = UUID.randomUUID()
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(salesAssignments.history(organizationId)).thenReturn(emptyList())
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(
+            salesAssignments.assign(
+                organizationId,
+                SalesAssignmentCommand(salesAccountId, null, "INITIAL_ASSIGNMENT", operatorId),
+            ),
+        ).thenReturn(emptyList())
+
+        mockMvc.perform(get("/api/operation/organizations/$organizationId/sales-assignment").with(authorities("PRODUCT_READ")))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(get("/api/operation/organizations/$organizationId/sales-assignment").with(authorities("SALES_GROUP_READ")))
+            .andExpect(status().isOk)
+
+        val body = """{"salesAccountId":"$salesAccountId","commissionRateBps":null,"assignmentReason":"INITIAL_ASSIGNMENT"}"""
+        mockMvc.perform(
+            put("/api/operation/organizations/$organizationId/sales-assignment")
+                .with(authorities("SALES_GROUP_READ"))
+                .with(csrf())
+                .contentType("application/json")
+                .content(body),
+        ).andExpect(status().isForbidden)
+        mockMvc.perform(
+            put("/api/operation/organizations/$organizationId/sales-assignment")
+                .with(authorities("SALES_GROUP_ASSIGN"))
+                .with(csrf())
+                .contentType("application/json")
+                .content(body),
+        ).andExpect(status().isOk)
     }
 
     @Test
