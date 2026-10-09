@@ -42,6 +42,10 @@ import com.buyeong.umji.api.shipment.model.ShipmentChange
 import com.buyeong.umji.api.shipment.service.ShipmentService
 import com.buyeong.umji.api.sales.model.SalesAssignmentCommand
 import com.buyeong.umji.api.sales.service.SalesAssignmentService
+import com.buyeong.umji.api.sales.model.SalesCommissionPage
+import com.buyeong.umji.api.sales.model.SalesCommissionSettlementResult
+import com.buyeong.umji.api.sales.model.SalesCommissionView
+import com.buyeong.umji.api.sales.service.SalesCommissionService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -73,6 +77,7 @@ import java.util.UUID
         OperationAccountController::class, OperationOrganizationController::class, OperationAuditController::class, OperationCatalogController::class,
         OperationInventoryController::class, OperationPaymentController::class, OperationShipmentController::class,
         com.buyeong.umji.api.sales.controller.SalesAssignmentController::class,
+        com.buyeong.umji.api.sales.controller.SalesCommissionController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class, NotificationDeviceTokenController::class,
     ],
     properties = ["umji.security.authentication.mode=REQUIRED"],
@@ -90,6 +95,9 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var salesAssignments: SalesAssignmentService
+
+    @MockitoBean
+    private lateinit var salesCommissions: SalesCommissionService
 
     @MockitoBean
     private lateinit var taxInvoiceProfiles: OrganizationTaxInvoiceProfileService
@@ -388,6 +396,35 @@ class OperationEndpointAuthorizationTest(
                 .contentType("application/json")
                 .content(body),
         ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `sales commission reads settlement and payout require dedicated permissions`() {
+        val operatorId = UUID.randomUUID()
+        val commissionId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(salesCommissions.mine(operatorId, 0, 20)).thenReturn(SalesCommissionPage(emptyList(), 0, 20, 0, 0))
+        Mockito.`when`(salesCommissions.all(0, 20)).thenReturn(SalesCommissionPage(emptyList(), 0, 20, 0, 0))
+        Mockito.`when`(salesCommissions.settle(java.time.YearMonth.parse("2026-09"), operatorId))
+            .thenReturn(SalesCommissionSettlementResult(java.time.YearMonth.parse("2026-09"), 0, 0))
+        Mockito.`when`(salesCommissions.markPaid(commissionId, operatorId)).thenReturn(
+            SalesCommissionView(commissionId, UUID.randomUUID(), UUID.randomUUID(), 30, 100_000, 300, "PAID", java.time.LocalDate.parse("2026-09-01"), null, null, java.time.Instant.now()),
+        )
+
+        mockMvc.perform(get("/api/operation/sales-commissions/me").with(authorities("SALES_GROUP_READ")))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(get("/api/operation/sales-commissions/me").with(authorities("SALES_COMMISSION_READ")))
+            .andExpect(status().isOk)
+        mockMvc.perform(get("/api/operation/sales-commissions").with(authorities("SALES_COMMISSION_READ")))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(get("/api/operation/sales-commissions").with(authorities("SALES_COMMISSION_READ_ALL")))
+            .andExpect(status().isOk)
+        mockMvc.perform(post("/api/operation/sales-commissions/settlements/2026-09").with(authorities("SALES_COMMISSION_READ_ALL")).with(csrf()))
+            .andExpect(status().isForbidden)
+        mockMvc.perform(post("/api/operation/sales-commissions/settlements/2026-09").with(authorities("SALES_COMMISSION_SETTLE")).with(csrf()))
+            .andExpect(status().isOk)
+        mockMvc.perform(put("/api/operation/sales-commissions/$commissionId/paid").with(authorities("SALES_COMMISSION_SETTLE")).with(csrf()))
+            .andExpect(status().isOk)
     }
 
     @Test
