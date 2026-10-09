@@ -41,7 +41,12 @@ flowchart TD
         UNITCHECK -- 아니오 --> C14[요청 거부·장바구니 유지]
         UNITCHECK -- 예 --> SPLIT[장바구니 항목을 판매 Organization별로 분리]
         SPLIT --> C15[판매자별 주문에 구매자·주문자·배송지·가격·수량·결제 snapshot 저장]
-        C15 --> C16{세금계산서 발행 요청}
+        C15 --> COMMISSION[구매 Organization 담당자·요율·세금 제외 상품액·인센티브 계산 snapshot]
+        COMMISSION --> COMMISSIONSTATUS{활성 담당자와 요율 설정}
+        COMMISSIONSTATUS -- 아니오 --> COMMISSIONNA[NOT_APPLICABLE 인센티브 snapshot]
+        COMMISSIONSTATUS -- 예 --> COMMISSIONWAIT[WAITING 인센티브 snapshot]
+        COMMISSIONNA --> C16{세금계산서 발행 요청}
+        COMMISSIONWAIT --> C16
         C16 -- 예 --> C17[purchase_order_tax_invoice에 판매자 공급자·구매자 snapshot 저장]
         C16 -- 아니오 --> C18[세금계산서 하위 행 생성 생략]
         C17 --> C19[결제 대기·배송 대기·송장 등록 대기 저장]
@@ -134,6 +139,22 @@ flowchart TD
         PAY13 --> PAY16[사용자 부분 입금 상태 갱신]
         PAY14 --> PAY17[사용자 입금 완료 상태 갱신]
     end
+
+    subgraph COMMISSION[월말 인센티브 정산]
+        COMMISSIONWAIT --> QUALIFY{배송완료 및 전액 입금 확인}
+        DONE --> QUALIFY
+        PAY4 --> QUALIFY
+        QUALIFY -- 한 조건이라도 미충족 --> KEEPWAIT[WAITING 유지]
+        QUALIFY -- 월말 마감 전 모두 충족 --> MONTHEND[ADMIN·SUPER_ADMIN이 해당 월 정산 실행]
+        MONTHEND --> PAYABLE[PAYABLE 및 ACCRUED 이벤트 기록]
+        PAYABLE --> PAYOUT[ADMIN·SUPER_ADMIN이 지급 처리]
+        PAYOUT --> PAID[PAID 및 지급 이벤트 기록]
+        C2 --> REVERSE[취소·환불 시 주문 인센티브 전액 취소]
+        C6 --> REVERSE
+        C11 --> REVERSE
+        PAID --> REVERSEPAID[이미 지급된 경우 전액 음수 reversal 기록]
+        REVERSE --> REVERSED[REVERSED 및 idempotency key 저장]
+    end
 ```
 
 입금 및 배송 상태는 각 운영 작업에서 별도로 갱신.<br>
@@ -147,7 +168,7 @@ flowchart TD
 `SHIPMENT_WRITE` 권한 운영자는 배송 완료 상태를 수동 보정 가능. 결제·취소·휴무일 관리는 기존 `ORDER_WRITE` 권한을 유지. 배송 상태 전이 이력 및 외부 연동 실패 재처리 정책은 별도 범위.<br>
 입금 만료는 두지 않으며, 미입금 주문도 운영자가 별도 입금 상태로 관리.<br>
 주문 생성·결제 확인의 현재 구현과 target 변경사항은 각각 아래 동작 설명과 [payment.md](payment.md)를 기준으로 함.<br>
-주문에는 요청 계정과 구매자 그룹이 함께 기록되므로 영업 인센티브는 그룹·주문 시점 담당 배정과 선택 요율을 기준으로 제안. 요율 미설정 주문은 미지급 상태로 snapshot하고, 설정 주문은 상품 판매액을 기준으로 계산하는 방향. 배송비·세금 포함 여부와 인센티브 확정 시점은 미확정이며 세부 설계는 [operation.md](operation.md)를 기준으로 함.<br>
+주문 생성 시 구매 Organization의 유효 담당자·선택 요율과 세금 미포함 상품 순판매액을 snapshot. 상품 할인은 기준액에서 차감하고 배송비는 제외하며, 요율 미설정 주문은 `NOT_APPLICABLE`로 보존. 배송완료와 전액 입금 중 늦은 시각을 기준으로 KST 월말 정산하고 인센티브액은 원 단위 HALF_UP 반올림. 부분 환불을 포함한 환불 완료 시 주문 인센티브 전체를 reversal. 상세 정책과 운영 API는 [operation.md](operation.md)를 기준으로 함.<br>
 
 ## Endpoint
 

@@ -17,6 +17,7 @@ import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
+import com.buyeong.umji.api.sales.service.SalesCommissionService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -33,6 +34,7 @@ class OrderService(
     private val notifications: NotificationEventService,
     private val taxInvoiceSuppliers: TaxInvoiceSupplierService,
     private val taxInvoiceBuyers: OrganizationTaxInvoiceJpaEntityService,
+    private val salesCommissions: SalesCommissionService,
 ) {
     fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions {
         val buyer = taxInvoiceBuyers.forAccount(accountPublicId)?.let {
@@ -138,7 +140,7 @@ class OrderService(
             val snapshot = if (selectedPreference) TaxInvoiceSnapshotDraft(
                 requireNotNull(supplierByOrganization[organizationId]), requireNotNull(invoiceBuyer),
             ) else null
-            orders.save(
+            val savedOrder = orders.save(
                 OrderDraft(
                     accountPublicId, PENDING_PAYMENT, orderedAt, subtotal, subtotal,
                     selectedPreference,
@@ -151,6 +153,8 @@ class OrderService(
                     sellerLines.first().channelCode,
                 ),
             )
+            salesCommissions.snapshotOrder(savedOrder.id, accountPublicId, orderedAt, items.sumOf { it.lineAmount })
+            savedOrder
         }
         if (updateDefaultTaxInvoicePreference && selectedPreference != defaultPreference) {
             orders.updateDefaultTaxInvoiceRequested(accountPublicId, selectedPreference)

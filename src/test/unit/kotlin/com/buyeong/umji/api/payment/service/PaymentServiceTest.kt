@@ -5,6 +5,7 @@ import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderPaymentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderPaymentJpaEntityService
+import com.buyeong.umji.api.sales.service.SalesCommissionService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -17,7 +18,8 @@ import java.util.UUID
 class PaymentServiceTest : DescribeSpec({
     val payments = mockk<OrderPaymentJpaEntityService>()
     val notifications = mockk<NotificationEventService>(relaxed = true)
-    val service = PaymentService(payments, notifications)
+    val commissions = mockk<SalesCommissionService>(relaxed = true)
+    val service = PaymentService(payments, notifications, commissions)
     val orderId = UUID.randomUUID()
     val operatorId = UUID.randomUUID()
 
@@ -46,6 +48,7 @@ class PaymentServiceTest : DescribeSpec({
 
             service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId).orderStatus shouldBe "PAID"
             verify(exactly = 1) { notifications.record(NotificationEventType.PAYMENT_STATUS_CHANGED, orderId, "PAYMENT_CONFIRMED") }
+            verify(exactly = 0) { commissions.reverseOrder(any(), any()) }
         }
 
         it("같은 입금 상태 요청은 중복 변경하지 않는다") {
@@ -71,6 +74,21 @@ class PaymentServiceTest : DescribeSpec({
             clearMocks(payments)
             every { payments.findForUpdate(orderId) } returns payment(orderId, "PAID", "REFUND_PENDING")
             shouldThrow<IllegalArgumentException> { service.updateStatus(orderId, "REFUNDED", operatorId) }
+        }
+
+        it("환불 대기 중에는 인센티브를 취소하지 않고 환불 완료 때 전체 취소한다") {
+            clearMocks(payments)
+            clearMocks(commissions)
+            val pending = payment(orderId, "CANCELLED", "PAYMENT_CONFIRMED")
+            every { payments.findForUpdate(orderId) } returnsMany listOf(pending, payment(orderId, "CANCELLED", "REFUND_PENDING"))
+            every { payments.saveChange(pending, "REFUND_PENDING", operatorId) } returns payment(orderId, "CANCELLED", "REFUND_PENDING")
+            every { payments.saveChange(any(), "REFUNDED", operatorId) } returns payment(orderId, "CANCELLED", "REFUNDED")
+
+            service.updateStatus(orderId, "REFUND_PENDING", operatorId)
+            verify(exactly = 0) { commissions.reverseOrder(any(), any()) }
+
+            service.updateStatus(orderId, "REFUNDED", operatorId)
+            verify(exactly = 1) { commissions.reverseOrder(orderId, "ORDER_REFUND") }
         }
     }
 

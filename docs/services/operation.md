@@ -82,7 +82,7 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 ## 운영자 화면·업무영역 권한 설계
 
 배송 role과 인가 범위는 현재 구현이며, 화면별 접근 설정과 영업 role·permission은 미구현 설계 범위.<br>
-현재 role은 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SALES_MANAGER`. `SALES_MANAGER`는 V37에서 `SALES_GROUP_CREATE`, `SALES_GROUP_READ`, `SALES_COMMISSION_READ`만 부여되며 실제 영업 그룹·인센티브 API는 미구현.<br>
+현재 role은 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SALES_MANAGER`. 영업 배정 조회·변경과 인센티브 조회·월 정산·지급 API는 구현됨.<br>
 
 | 운영 role | 책임 화면·업무 | 목표 permission |
 | --- | --- | --- |
@@ -95,7 +95,7 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 | --- | --- | --- | --- |
 | `ADMIN_SHIPMENT_LIST`, `ADMIN_SHIPMENT_DETAIL` | `ADMIN` | `SHIPMENT_READ` | 송장·배송 상태 변경에 `SHIPMENT_WRITE` |
 | `ADMIN_SALES_GROUP_LIST` | `ADMIN` | `SALES_GROUP_READ` | 담당 재배정·요율 변경에 `SALES_GROUP_ASSIGN` |
-| `ADMIN_SALES_COMMISSION_LIST` | `ADMIN` | `SALES_COMMISSION_READ` | 지급 확정에 `SALES_COMMISSION_SETTLE` |
+| `ADMIN_SALES_COMMISSION_LIST` | `ADMIN` | `SALES_COMMISSION_READ_ALL` | 월 정산·지급 확정에 `SALES_COMMISSION_SETTLE` |
 | `ADMIN_ACCOUNT_ROLE_SETTINGS` | `ADMIN` | `ADMIN_ACCOUNT_MANAGE` | role 부여·회수에 `ADMIN_ACCOUNT_MANAGE` |
 
 상품·주문·재고 전용 기존 role은 호환을 위해 유지. `SALES_MANAGER`는 그룹 생성, 본인 담당 그룹 조회, 본인 인센티브 조회 범위로 제한하며 담당자 재배정·요율 변경·지급 확정 권한은 포함하지 않음.<br>
@@ -115,7 +115,7 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 | `ui_screen_permission` | `ui_screen_id`, `permission_id` 복합 PK | 화면을 보기 위해 필요한 permission 연결 |
 | `organization_role_permission` | `membership_role`, `permission_id` 복합 PK | 미소속·대표자·일반구성원 역할별 사용자 permission 설정 |
 
-제안 컬럼·제약:<br>
+현재 영업 배정·인센티브 테이블 컬럼·제약:<br>
 
 | Table | 컬럼·타입·제약 |
 | --- | --- |
@@ -172,44 +172,67 @@ flowchart TD
     RESPONSE -. 화면 표시용 metadata이며 업무 API는 별도 권한·소유 범위 검사 .-> API[업무 API 직접 요청]
 ```
 
-## 영업 담당 그룹 및 인센티브 DB 설계안
+### 영업 담당 배정 이력 관리 흐름
 
-아래 구조는 설계안이며 현재 schema·API에는 미적용.<br>
-기존 `organization` 행에 현재 담당자와 요율을 덮어쓰지 않고 배정 이력과 주문별 확정 금액을 분리해 과거 정산 근거를 보존.<br>
+```mermaid
+flowchart TD
+    CLIENT[GET 또는 PUT /api/operation/organizations/{id}/sales-assignment] --> AUTH[운영 계정 인증]
+    AUTH --> PERMISSION{조회 SALES_GROUP_READ 또는 변경 SALES_GROUP_ASSIGN}
+    PERMISSION -->|거부| DENY[403 응답]
+    PERMISSION -->|허용| ORG[BUYER capability 활성 Organization 잠금·조회]
+    ORG -->|없음| NOTFOUND[404 응답]
+    ORG -->|있음| ACTION{조회 또는 담당 변경}
+    ACTION -->|조회| HISTORY[배정 이력 valid_from 내림차순 조회]
+    ACTION -->|변경| STAFF[활성 SALES_MANAGER 계정 확인]
+    STAFF -->|아님| INVALID[요청 검증 실패]
+    STAFF -->|맞음| CURRENT[현재 유효 배정 조회]
+    CURRENT --> SAME{담당자와 요율 동일}
+    SAME -->|예| HISTORY
+    SAME -->|아니오| CLOSE[이전 배정 종료 시각 기록]
+    CLOSE --> INSERT[새 담당자·요율 배정 이력 추가]
+    INSERT --> HISTORY
+    HISTORY --> RESPONSE[담당자·선택 요율·유효기간 응답]
+```
+
+## 영업 담당 배정 및 인센티브
+
+`organization_sales_assignment`는 V47, 주문별 인센티브 원장과 이벤트는 V48에서 적용하며 구매 Organization별 담당 영업자·선택 인센티브율의 유효기간 이력을 보관.<br>
 
 | 설계 테이블 | 주요 데이터 | 규칙 |
 | --- | --- | --- |
-| `organization_sales_assignment` | 구매자 그룹, 영업 계정, 선택적 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 그룹당 시점별 담당 영업자 1명. 수수료 없는 담당 연결도 허용. 직원·그룹 연결별 요율이 다를 수 있으며 재배정은 기존 행 종료 후 새 행 추가 |
+| `organization_sales_assignment` | 구매자 그룹, 영업 계정, 선택적 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 구현됨. 그룹당 현재 담당자 한 명. 요율 미설정도 허용하며 재배정은 기존 행 종료 후 새 행 추가 |
 | `sales_commission` | 주문·그룹·담당 영업자·배정 ID, 적용 요율·상품 판매 기준액·인센티브액 snapshot, 상태(`NOT_APPLICABLE`, `WAITING`, `PAYABLE`, `PAID`, `REVERSED`), 확정·지급 시각 | 주문당 attribution/정산 요약 한 건. 담당자나 요율이 없어도 `NOT_APPLICABLE`로 snapshot해 미지급 근거를 보존. 취소·환불은 event로 보정 |
-| `sales_commission_event` | 원장 ID, `ACCRUED`·`REVERSED`·`PAID` 이벤트, 금액 증감, 처리 계정, 사유, 발생 시각 | 인센티브 상태 변경을 append-only로 기록. 중복 주문 이벤트 재처리 방지 key 보유 |
+| `sales_commission_event` | 원장 ID, `SNAPSHOT`·`ACCRUED`·`REVERSED`·`PAID` 이벤트, 금액 증감, 처리 계정, 사유, 발생 시각 | 인센티브 상태 변경을 append-only로 기록. 중복 이벤트 재처리 방지 key 보유 |
 
 제안 컬럼·제약:<br>
 
 | Table | 컬럼·타입·제약 |
 | --- | --- |
 | `organization_sales_assignment` | `id BIGINT PK`, `public_id BINARY(16) UK`, `organization_id BIGINT FK`, `sales_account_id BIGINT FK`, `commission_rate_bps INT NULL`, `assignment_reason VARCHAR(30)`, `valid_from DATETIME(3)`, `valid_until DATETIME(3) NULL`, `assigned_by_account_id BIGINT FK`, `created_at DATETIME(3)`. 요율 `NULL`은 수수료 없음, 양수 요율은 해당 그룹 담당자의 판매 인센티브. `CHECK (commission_rate_bps IS NULL OR commission_rate_bps BETWEEN 1 AND 10000)`. 활성 그룹당 담당자 한 명을 generated active key unique로 보장하고, 재배정은 그룹 행 잠금으로 기간 중복 방지 |
-| `sales_commission` | `id BIGINT PK`, `public_id BINARY(16) UK`, `order_id BIGINT FK UK`, `organization_id BIGINT FK`, `assignment_id BIGINT FK NULL`, `sales_account_id BIGINT FK NULL`, `rate_bps_snapshot INT NULL`, `basis_snapshot VARCHAR(30)` (`NET_ITEM_SALES`), `basis_amount BIGINT`, `commission_amount BIGINT`, `status VARCHAR(30)`, `qualified_at DATETIME(3) NULL`, `created_at DATETIME(3)`, `updated_at DATETIME(3)`. 주문 생성 시 담당/요율 부재면 `NOT_APPLICABLE`, 요율이 있으면 `WAITING` |
-| `sales_commission_event` | `id BIGINT PK`, `commission_id BIGINT FK`, `event_type VARCHAR(30)`, `amount_delta BIGINT`, `idempotency_key VARCHAR(150) UK`, `processed_by_account_id BIGINT FK NULL`, `reason_code VARCHAR(50) NULL`, `created_at DATETIME(3)` |
+| `sales_commission` | `id BIGINT PK`, `public_id BINARY(16) UK`, `order_id BIGINT FK UK`, `organization_id BIGINT FK`, `assignment_id BIGINT FK NULL`, `sales_account_id BIGINT FK NULL`, `rate_bps_snapshot INT NULL`, `basis_snapshot VARCHAR(40)` (`NET_ITEM_SALES_EX_TAX`), `basis_amount BIGINT`, `commission_amount BIGINT`, `status VARCHAR(30)`, `settlement_month DATE NULL`, `qualified_at DATETIME(3) NULL`, `paid_at DATETIME(3) NULL`, `created_at DATETIME(3)`, `updated_at DATETIME(3)`. 주문 생성 시 담당/요율 부재면 `NOT_APPLICABLE`, 요율이 있으면 `WAITING` |
+| `sales_commission_event` | `id BIGINT PK`, `commission_id BIGINT FK`, `event_type VARCHAR(30)` (`SNAPSHOT`, `ACCRUED`, `REVERSED`, `PAID`), `amount_delta BIGINT`, `idempotency_key VARCHAR(150) UK`, `processed_by_account_id BIGINT FK NULL`, `reason_code VARCHAR(50) NULL`, `created_at DATETIME(3)` |
 
-`organization`에는 `created_by_account_id BIGINT FK NULL`을 추가해 그룹 생성 주체를 기록. 영업자가 그룹을 생성하면 그룹·작성자·생성자를 초기 담당자로 한 배정 row를 한 트랜잭션으로 저장. 초기 요율은 `NULL`(미지급)이며 `SALES_GROUP_ASSIGN` 권한 운영자가 요율을 설정할 때 별도 유효기간 배정 row를 추가.<br>
-요율은 `commission_rate_bps`에 basis points로 저장. 예를 들어 `30`은 0.3%이며 고정 기본값을 강제하지 않음. 생성 영업자의 본인 담당 연결은 자동화하되, 요율 설정·담당자 재배정은 `SALES_GROUP_ASSIGN` permission에 제한.<br>
+`GET /api/operation/organizations/{organizationId}/sales-assignment`는 배정 이력을 반환. `PUT`은 현재 배정 종료와 새 담당자·요율 행 추가를 하나의 transaction으로 수행. 변경 때 Organization 행을 잠가 동시 재배정을 직렬화하며 같은 담당자·요율 재요청은 멱등 처리.<br>
+배정 대상은 활성 BUYER capability Organization 및 활성 `SALES_MANAGER` 계정. 조회는 `SALES_GROUP_READ`, 변경은 `SALES_GROUP_ASSIGN` permission을 요구하며 변경 permission은 `ADMIN`·`SUPER_ADMIN`에만 부여.<br>
+요율은 `commission_rate_bps`에 basis points로 저장. 예를 들어 `30`은 0.3%이며 고정 기본값을 강제하지 않음. 현재는 배정 API에서 관리하며 영업자 그룹 생성에 따른 자동 초기 배정은 영업 그룹 생성 API가 없어 미구현.<br>
 주문 snapshot은 주문 생성 시점의 담당자·선택 요율·상품 판매 기준액을 고정. 주문 한 건당 요약 원장 한 건이며 `sales_commission_event`가 발생·reversal·지급 이력을 보존.<br>
 
 금액 계산은 정수 원화와 basis points 사용. `0.3%`는 `30 / 10,000`으로 저장해 부동소수점 반올림 차이를 방지.<br>
-인센티브 기준액은 상품 판매액으로 제안. 주문 상품 금액에서 상품 할인·취소·환불 금액을 차감하고 배송비는 제외. 판매가가 세금 포함 가격인지 별도 가격인지는 결제·세금계산 정책과 함께 확정 필요.<br>
+인센티브 기준액은 세금 미포함 상품 순판매액. 현재 주문 생성은 `line_amount`를 상품 순판매액으로 저장하며 별도 상품 할인·배송비 항목은 없음. 할인 기능 추가 시 할인 적용 후 상품 금액을 기준액에 반영하고 배송비는 계속 제외.<br>
 주문 시점의 담당자·선택 요율을 snapshot. 요율 `NULL` 또는 담당자 미배정 주문은 `NOT_APPLICABLE`이며 정산 대상에 포함하지 않음.<br>
 
-### 정책 추천안·미확정 사항
+### 확정된 인센티브 정책
 
 - 그룹별 활성 담당자는 한 명으로 제한하는 안을 기준으로 설계. 다수 담당자 동시 배정이 필요하면 주문 인센티브 분배 규칙을 별도 추가.<br>
 - 0.3%는 판매액 기준의 예시 요율이며, 실제 rate는 직원·업체 연결마다 선택적으로 설정. 미지급 그룹은 요율 `NULL`로 구분하고, 영업 관리자가 임의로 본인 요율을 정하지 않도록 별도 운영자 권한으로 설정하는 안을 추천.<br>
-- 기준액은 주문 상품 순판매액으로 제안하고 배송비는 제외. 취소·환불은 상품 판매액에서 차감하거나 기존 인센티브를 reversal.<br>
-- 인센티브 확정은 배송완료와 전액 입금 확인이 모두 끝난 시점으로 제안. 배송 후 미입금 주문은 `WAITING` 상태를 유지. 두 조건 충족 시 `PAYABLE`로 전환하고, 지급 시 `PAID`.<br>
-- 전체 취소·환불은 미지급 인센티브를 무효화하고, 지급 후 환불은 별도 음수 reversal event로 다음 정산에 반영.<br>
-- 영업 관리자는 담당 그룹·본인 인센티브 조회 가능. 지급 확정은 본인과 분리해 전체 관리자 또는 별도 정산 권한자만 수행하도록 제안.<br>
+- 인센티브 기준액은 세금이 포함되지 않은 주문 상품 순판매액. 상품 할인은 차감하고 배송비는 제외.<br>
+- 인센티브 대상은 배송완료와 전액 입금이 모두 확인된 주문. 한국 시간 기준 월말 마감 시점까지 두 조건을 충족한 주문을 해당 월 정산 대상으로 확정. 마감 후 조건을 충족한 주문은 다음 달 정산 대상.<br>
+- `commission_rate_bps × basis_amount / 10,000`을 원 단위로 계산하고 소수점은 사사오입(HALF_UP).<br>
+- 부분 환불을 포함한 모든 환불은 해당 주문의 인센티브 전액을 취소. 미지급이면 `REVERSED`, 이미 지급됐으면 전체 인센티브 음수 reversal event를 다음 정산에서 차감.<br>
+- 영업 관리자는 본인 인센티브와 담당 그룹을 조회. 지급 확정과 월 정산 처리는 `ADMIN`·`SUPER_ADMIN` 전체 관리자만 수행.<br>
 - 적용 요율 변경은 효력 발생 이후 생성된 주문에만 적용. 주문별 snapshot은 이후 그룹 담당자·요율 변경으로 수정하지 않음.<br>
 
-배송비·세금 포함 여부, 발생 시점 및 지급 권한은 설계 제안이며 schema migration·정산 API 착수 전 확정 필요.<br>
+정산은 자동 배치가 아닌 관리자 호출로 실행. `POST /api/operation/sales-commissions/settlements/{YYYY-MM}`는 마감된 과거 월만 허용하고, 같은 월을 재호출해도 이미 확정한 원장을 중복 집계하지 않음. 이 API의 정산 확정은 지급 완료와 별도이며, 지급 처리는 `PUT /api/operation/sales-commissions/{commissionId}/paid`로 기록.<br>
 
 ```mermaid
 flowchart TD
@@ -226,16 +249,27 @@ flowchart TD
     RATE -->|아니오| NOCOMMISSION[NOT_APPLICABLE snapshot]
     RATE -->|예| BASE[상품 판매액 기준액 snapshot]
     BASE --> QUALIFY{정산 조건 충족}
-    QUALIFY -->|대기| PENDING[대기 인센티브 원장]
-    QUALIFY -->|취소·환불| REVERSE[미지급 인센티브 미생성·reversal]
-    PENDING --> REVIEW[영업자 본인 내역 또는 운영자 전체 내역 조회]
-    REVIEW --> SETTLE[권한 운영자가 지급 처리]
-    SETTLE --> PAID[지급완료 원장 기록]
+    QUALIFY -->|조건 미충족| PENDING[WAITING 원장]
+    QUALIFY -->|주문 취소·환불| REVERSE[전체 인센티브 REVERSED]
+    PENDING --> CLOSE[월말 KST 기준 배송완료 및 전액 입금 확인]
+    CLOSE -->|자격 충족| PAYABLE[해당 월 PAYABLE 확정 및 ACCRUED 기록]
+    CLOSE -->|월말 이후 자격 충족| NEXT[다음 월 정산 대상으로 유지]
+    PAYABLE --> REVIEW[본인 내역 또는 관리자 전체 내역 조회]
+    REVIEW --> SETTLE[ADMIN 또는 SUPER_ADMIN 지급 기록]
+    SETTLE --> PAID[PAID 원장 및 이벤트 기록]
+    PAID --> REFUND[부분 환불 포함 환불 발생]
+    REFUND --> REVERSAL[인센티브 전액 reversal 기록]
 ```
 
 | Endpoint | Required permission |
 | --- | --- |
 | `/api/operation/accounts/**` | `ADMIN_ACCOUNT_MANAGE` |
+| `GET /api/operation/organizations/{organizationId}/sales-assignment` | `SALES_GROUP_READ` |
+| `PUT /api/operation/organizations/{organizationId}/sales-assignment` | `SALES_GROUP_ASSIGN` |
+| `GET /api/operation/sales-commissions/me` | `SALES_COMMISSION_READ` |
+| `GET /api/operation/sales-commissions` | `SALES_COMMISSION_READ_ALL` |
+| `POST /api/operation/sales-commissions/settlements/{month}` | `SALES_COMMISSION_SETTLE` |
+| `PUT /api/operation/sales-commissions/{commissionId}/paid` | `SALES_COMMISSION_SETTLE` |
 | `GET /api/operation/audit-logs` | `ADMIN_AUDIT_READ` |
 | `/api/operation/payments/**` | `ORDER_WRITE` |
 | `/api/operation/orders/{orderId}/shipment/**` | `ORDER_WRITE` |
@@ -244,7 +278,7 @@ flowchart TD
 | 재고 조회·변동 조회 endpoint | `INVENTORY_READ` |
 | 재고 조정 endpoint | `INVENTORY_WRITE` |
 
-기본 role-permission 매핑은 Flyway V10, 감사 로그 조회 permission은 V11, 배송 전용 role·permission은 V23, 영업 role·permission은 V37에서 적용함.<br>
+기본 role-permission 매핑은 Flyway V10, 감사 로그 조회 permission은 V11, 배송 전용 role·permission은 V23, 영업 role·permission은 V37·V47·V48에서 적용함.<br>
 `ADMIN_ACCOUNT_MANAGE` 권한으로 role 관리 endpoint를 이용할 수 있음.<br>
 운영 API에서 관리 가능한 role은 `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SALES_MANAGER`로 제한하며 `ADMIN`, `SUPER_ADMIN`, `CUSTOMER`는 API로 부여·회수할 수 없음.<br>
 중복 부여와 이미 회수된 role의 회수는 멱등 처리.<br>

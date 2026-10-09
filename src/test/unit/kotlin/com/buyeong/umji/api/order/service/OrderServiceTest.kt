@@ -16,6 +16,7 @@ import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
+import com.buyeong.umji.api.sales.service.SalesCommissionService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -34,14 +35,15 @@ class OrderServiceTest : DescribeSpec({
     val taxInvoiceSuppliers = mockk<TaxInvoiceSupplierService>(relaxed = true)
     val taxInvoiceBuyers = mockk<OrganizationTaxInvoiceJpaEntityService>(relaxed = true)
     val bankAccounts = mockk<BankAccountInstructionsService>(relaxed = true)
-    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers)
+    val salesCommissions = mockk<SalesCommissionService>(relaxed = true)
+    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, salesCommissions)
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()
     val offerId = UUID.randomUUID()
 
     beforeTest {
-        clearMocks(carts, inventory, orders, shippingAddresses, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, bankAccounts)
+        clearMocks(carts, inventory, orders, shippingAddresses, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, bankAccounts, salesCommissions)
     }
 
     describe("주문 생성") {
@@ -81,6 +83,7 @@ class OrderServiceTest : DescribeSpec({
             order.items.single().quantity shouldBe 3
             order.items.single().unitsPerSale shouldBe 12
             verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, order.id, null) }
+            verify(exactly = 1) { salesCommissions.snapshotOrder(order.id, accountId, any(), 36_000L) }
             verify(exactly = 1) { inventory.reserve(skuId, 36, any(), null) }
             verify(exactly = 1) { carts.clearForCheckout(accountId) }
         }
