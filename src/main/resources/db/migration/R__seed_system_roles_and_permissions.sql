@@ -18,5 +18,13 @@ INSERT INTO permission (code, name) VALUES
     ('SHIPMENT_WRITE', '배송 정보 변경'),
     ('SALES_GROUP_CREATE', '영업 담당 그룹 생성'),
     ('SALES_GROUP_READ', '영업 담당 그룹 조회'),
+    ('SALES_GROUP_ASSIGN', '영업 담당자·인센티브율 배정'),
     ('SALES_COMMISSION_READ', '본인 인센티브 조회')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+INSERT INTO role_permission (role_id, permission_id)
+SELECT role.id, permission.id
+FROM role
+JOIN permission ON permission.code = 'SALES_GROUP_ASSIGN'
+WHERE role.code IN ('ADMIN', 'SUPER_ADMIN')
+ON DUPLICATE KEY UPDATE permission_id = VALUES(permission_id);

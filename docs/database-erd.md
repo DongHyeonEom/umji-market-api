@@ -157,6 +157,18 @@ erDiagram
         VARCHAR capability_code "BUYER, SELLER 또는 OPERATOR"
         DATETIME created_at "생성 시각"
     }
+    ORGANIZATION_SALES_ASSIGNMENT["ORGANIZATION_SALES_ASSIGNMENT · 영업 담당·인센티브율 유효기간 이력"] {
+        BIGINT id PK "내부 배정 ID"
+        BINARY public_id UK "배정 공개 UUID"
+        BIGINT organization_id FK "구매 Organization ID"
+        BIGINT sales_account_id FK "담당 영업 계정 ID"
+        INT commission_rate_bps "선택 요율 basis points, nullable"
+        VARCHAR assignment_reason "배정 변경 사유 코드"
+        DATETIME valid_from "적용 시작 시각"
+        DATETIME valid_until "적용 종료 시각, nullable"
+        BIGINT assigned_by_account_id FK "배정 처리자 계정 ID"
+        DATETIME created_at "생성 시각"
+    }
     ORGANIZATION_BUSINESS_PROFILE["ORGANIZATION_BUSINESS_PROFILE · Organization 공통 사업자 정보"] {
         BIGINT id PK "사업자 프로필 내부 ID"
         BIGINT organization_id FK,UK "사업자 그룹 ID"
@@ -572,6 +584,9 @@ erDiagram
     ACCOUNT ||--o{ ORGANIZATION_MEMBER : joins
     ORGANIZATION ||--o{ ORGANIZATION_MEMBER : includes
     ORGANIZATION ||--o{ ORGANIZATION_CAPABILITY : supports
+    ORGANIZATION ||--o{ ORGANIZATION_SALES_ASSIGNMENT : assigned
+    ACCOUNT ||--o{ ORGANIZATION_SALES_ASSIGNMENT : sales_owner
+    ACCOUNT ||--o{ ORGANIZATION_SALES_ASSIGNMENT : assigns
     ACCOUNT ||--o{ ORGANIZATION : represents
     ORGANIZATION ||--o{ ORGANIZATION_INVITATION : invites
     ACCOUNT ||--o{ ORGANIZATION_INVITATION : invites
@@ -709,6 +724,7 @@ erDiagram
 | V44 | 공개 이미지·사업자 증빙 파일 metadata인 `file_asset` 추가. 원본 byte는 파일시스템에 저장 |
 | V45 | `file_asset`에 공통 낙관적 잠금 버전과 수정 시각 추가 |
 | V46 | `ui_screen`, 화면 permission mapping, 구매자 구성원 역할 permission mapping 및 access context 권한 추가 |
+| V47 | 구매 Organization의 영업 담당자·선택 인센티브율 배정 이력 및 `SALES_GROUP_ASSIGN` permission 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

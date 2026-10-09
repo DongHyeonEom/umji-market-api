@@ -58,6 +58,8 @@ class SecurityConfig {
                         .requestMatchers("/api/files/**").authenticated()
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/operation/accounts/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
+                        .requestMatchers(HttpMethod.GET, "/api/operation/organizations/*/sales-assignment").hasAuthority("SALES_GROUP_READ")
+                        .requestMatchers(HttpMethod.PUT, "/api/operation/organizations/*/sales-assignment").hasAuthority("SALES_GROUP_ASSIGN")
                         .requestMatchers("/api/operation/organizations/**").hasAuthority("ADMIN_ACCOUNT_MANAGE")
                         .requestMatchers(HttpMethod.GET, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")
                         .requestMatchers(HttpMethod.HEAD, "/api/operation/categories/**", "/api/operation/brands/**", "/api/operation/products/**").hasAuthority("PRODUCT_READ")

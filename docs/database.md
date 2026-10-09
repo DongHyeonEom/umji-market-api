@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V46로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V47로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -70,6 +70,7 @@
 | V44 | 파일 분류·소유 계정·불투명 저장 key·MIME·크기·업로드 상태 metadata를 보관하는 `file_asset` 추가. 원본 파일은 저장하지 않음 |
 | V45 | `file_asset`에 공통 낙관적 잠금 버전과 수정 시각 추가 |
 | V46 | audience별 화면·permission mapping 및 구매자 구성원 역할 permission 추가 |
+| V47 | 구매 Organization별 영업 담당자·선택 인센티브율의 유효기간 배정 이력과 배정 permission 추가 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -99,6 +100,8 @@
   공개 상품 이미지와 사업자 증빙은 분리된 로컬 파일 저장 경로를 사용하며 storage root는 `UMJI_FILE_STORAGE_ROOT`로 지정.<br>
 - `ui_screen`은 화면 code·audience·route key·permission 결합 방식을 보관. `ui_screen_permission`은 화면별 조회 permission을, `organization_role_permission`은 미소속·대표자·일반구성원별 permission을 보관.<br>
   Access context는 활성 계정과 현재 role·구성원 관계로 허용 화면을 계산하며 화면 표시용 metadata를 반환. 업무 API 권한·소유권 검사를 대체하지 않음.<br>
+- `organization_sales_assignment`는 구매 Organization의 담당 영업자·선택 인센티브율과 유효기간 이력을 보관. 담당자 또는 요율 변경은 기존 행 종료 후 새 행 추가로 보존하며, 현재 담당 변경은 Organization 행 잠금으로 직렬화.<br>
+  `SALES_GROUP_ASSIGN`은 `ADMIN`·`SUPER_ADMIN`에게만 부여. 배정 endpoint는 활성 구매 Organization과 활성 `SALES_MANAGER` 계정을 요구.<br>
 - 구매 주문은 `organization_id`로 구매 Organization에 귀속하고, 기존 `purchase_order.account_id`는 실제 주문한 계정으로 유지함.<br>
   현재 각 기존 계정에 개인 또는 사업자 구매자 그룹 하나를 생성해 기존 주문·프로필을 backfill함.<br>
   V19에서 `organization_id`를 필수화하며 신규 주문 생성 시 활성 계정의 그룹 ID를 저장해야 함.<br>

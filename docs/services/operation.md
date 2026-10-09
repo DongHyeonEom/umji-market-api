@@ -172,14 +172,36 @@ flowchart TD
     RESPONSE -. 화면 표시용 metadata이며 업무 API는 별도 권한·소유 범위 검사 .-> API[업무 API 직접 요청]
 ```
 
-## 영업 담당 그룹 및 인센티브 DB 설계안
+### 영업 담당 배정 이력 관리 흐름
 
-아래 구조는 설계안이며 현재 schema·API에는 미적용.<br>
-기존 `organization` 행에 현재 담당자와 요율을 덮어쓰지 않고 배정 이력과 주문별 확정 금액을 분리해 과거 정산 근거를 보존.<br>
+```mermaid
+flowchart TD
+    CLIENT[GET 또는 PUT /api/operation/organizations/{id}/sales-assignment] --> AUTH[운영 계정 인증]
+    AUTH --> PERMISSION{조회 SALES_GROUP_READ 또는 변경 SALES_GROUP_ASSIGN}
+    PERMISSION -->|거부| DENY[403 응답]
+    PERMISSION -->|허용| ORG[BUYER capability 활성 Organization 잠금·조회]
+    ORG -->|없음| NOTFOUND[404 응답]
+    ORG -->|있음| ACTION{조회 또는 담당 변경}
+    ACTION -->|조회| HISTORY[배정 이력 valid_from 내림차순 조회]
+    ACTION -->|변경| STAFF[활성 SALES_MANAGER 계정 확인]
+    STAFF -->|아님| INVALID[요청 검증 실패]
+    STAFF -->|맞음| CURRENT[현재 유효 배정 조회]
+    CURRENT --> SAME{담당자와 요율 동일}
+    SAME -->|예| HISTORY
+    SAME -->|아니오| CLOSE[이전 배정 종료 시각 기록]
+    CLOSE --> INSERT[새 담당자·요율 배정 이력 추가]
+    INSERT --> HISTORY
+    HISTORY --> RESPONSE[담당자·선택 요율·유효기간 응답]
+```
+
+## 영업 담당 배정 및 인센티브
+
+`organization_sales_assignment`는 V47에서 적용하며 구매 Organization별 담당 영업자·선택 인센티브율의 유효기간 이력을 보관.<br>
+주문별 인센티브 snapshot과 정산 원장·확정·지급 API는 미구현 설계 범위.<br>
 
 | 설계 테이블 | 주요 데이터 | 규칙 |
 | --- | --- | --- |
-| `organization_sales_assignment` | 구매자 그룹, 영업 계정, 선택적 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 그룹당 시점별 담당 영업자 1명. 수수료 없는 담당 연결도 허용. 직원·그룹 연결별 요율이 다를 수 있으며 재배정은 기존 행 종료 후 새 행 추가 |
+| `organization_sales_assignment` | 구매자 그룹, 영업 계정, 선택적 요율(basis points), 적용 시작·종료, 배정 사유·설정 운영자 | 구현됨. 그룹당 현재 담당자 한 명. 요율 미설정도 허용하며 재배정은 기존 행 종료 후 새 행 추가 |
 | `sales_commission` | 주문·그룹·담당 영업자·배정 ID, 적용 요율·상품 판매 기준액·인센티브액 snapshot, 상태(`NOT_APPLICABLE`, `WAITING`, `PAYABLE`, `PAID`, `REVERSED`), 확정·지급 시각 | 주문당 attribution/정산 요약 한 건. 담당자나 요율이 없어도 `NOT_APPLICABLE`로 snapshot해 미지급 근거를 보존. 취소·환불은 event로 보정 |
 | `sales_commission_event` | 원장 ID, `ACCRUED`·`REVERSED`·`PAID` 이벤트, 금액 증감, 처리 계정, 사유, 발생 시각 | 인센티브 상태 변경을 append-only로 기록. 중복 주문 이벤트 재처리 방지 key 보유 |
 
@@ -191,8 +213,9 @@ flowchart TD
 | `sales_commission` | `id BIGINT PK`, `public_id BINARY(16) UK`, `order_id BIGINT FK UK`, `organization_id BIGINT FK`, `assignment_id BIGINT FK NULL`, `sales_account_id BIGINT FK NULL`, `rate_bps_snapshot INT NULL`, `basis_snapshot VARCHAR(30)` (`NET_ITEM_SALES`), `basis_amount BIGINT`, `commission_amount BIGINT`, `status VARCHAR(30)`, `qualified_at DATETIME(3) NULL`, `created_at DATETIME(3)`, `updated_at DATETIME(3)`. 주문 생성 시 담당/요율 부재면 `NOT_APPLICABLE`, 요율이 있으면 `WAITING` |
 | `sales_commission_event` | `id BIGINT PK`, `commission_id BIGINT FK`, `event_type VARCHAR(30)`, `amount_delta BIGINT`, `idempotency_key VARCHAR(150) UK`, `processed_by_account_id BIGINT FK NULL`, `reason_code VARCHAR(50) NULL`, `created_at DATETIME(3)` |
 
-`organization`에는 `created_by_account_id BIGINT FK NULL`을 추가해 그룹 생성 주체를 기록. 영업자가 그룹을 생성하면 그룹·작성자·생성자를 초기 담당자로 한 배정 row를 한 트랜잭션으로 저장. 초기 요율은 `NULL`(미지급)이며 `SALES_GROUP_ASSIGN` 권한 운영자가 요율을 설정할 때 별도 유효기간 배정 row를 추가.<br>
-요율은 `commission_rate_bps`에 basis points로 저장. 예를 들어 `30`은 0.3%이며 고정 기본값을 강제하지 않음. 생성 영업자의 본인 담당 연결은 자동화하되, 요율 설정·담당자 재배정은 `SALES_GROUP_ASSIGN` permission에 제한.<br>
+`GET /api/operation/organizations/{organizationId}/sales-assignment`는 배정 이력을 반환. `PUT`은 현재 배정 종료와 새 담당자·요율 행 추가를 하나의 transaction으로 수행. 변경 때 Organization 행을 잠가 동시 재배정을 직렬화하며 같은 담당자·요율 재요청은 멱등 처리.<br>
+배정 대상은 활성 BUYER capability Organization 및 활성 `SALES_MANAGER` 계정. 조회는 `SALES_GROUP_READ`, 변경은 `SALES_GROUP_ASSIGN` permission을 요구하며 변경 permission은 `ADMIN`·`SUPER_ADMIN`에만 부여.<br>
+요율은 `commission_rate_bps`에 basis points로 저장. 예를 들어 `30`은 0.3%이며 고정 기본값을 강제하지 않음. 현재는 배정 API에서 관리하며 영업자 그룹 생성에 따른 자동 초기 배정은 영업 그룹 생성 API가 없어 미구현.<br>
 주문 snapshot은 주문 생성 시점의 담당자·선택 요율·상품 판매 기준액을 고정. 주문 한 건당 요약 원장 한 건이며 `sales_commission_event`가 발생·reversal·지급 이력을 보존.<br>
 
 금액 계산은 정수 원화와 basis points 사용. `0.3%`는 `30 / 10,000`으로 저장해 부동소수점 반올림 차이를 방지.<br>
@@ -236,6 +259,8 @@ flowchart TD
 | Endpoint | Required permission |
 | --- | --- |
 | `/api/operation/accounts/**` | `ADMIN_ACCOUNT_MANAGE` |
+| `GET /api/operation/organizations/{organizationId}/sales-assignment` | `SALES_GROUP_READ` |
+| `PUT /api/operation/organizations/{organizationId}/sales-assignment` | `SALES_GROUP_ASSIGN` |
 | `GET /api/operation/audit-logs` | `ADMIN_AUDIT_READ` |
 | `/api/operation/payments/**` | `ORDER_WRITE` |
 | `/api/operation/orders/{orderId}/shipment/**` | `ORDER_WRITE` |
