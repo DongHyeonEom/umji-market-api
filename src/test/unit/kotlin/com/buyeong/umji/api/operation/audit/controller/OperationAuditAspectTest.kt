@@ -6,6 +6,8 @@ import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
 import com.buyeong.umji.api.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
+import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderResponse
+import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderSummary
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -106,6 +108,35 @@ class OperationAuditAspectTest : DescribeSpec({
 
             recorded.captured.resourceType shouldBe "PRODUCT"
             recorded.captured.resourceId shouldBe productId
+        }
+
+        it("전화 주문 생성 감사 기록은 첫 주문 공개 ID를 대상으로 사용한다") {
+            val orderId = UUID.randomUUID()
+            val joinPoint = mockk<ProceedingJoinPoint>()
+            every { joinPoint.proceed() } returns OperationPhoneOrderResponse(
+                listOf(OperationPhoneOrderSummary(orderId, "UMJ-20261009-000001", "PENDING_PAYMENT", 1000, Instant.now(), null)),
+            )
+            request("POST", "/api/operation/orders/phone-orders")
+
+            aspect.recordSuccessfulChanges(joinPoint)
+
+            recorded.captured.resourceType shouldBe "ORDER"
+            recorded.captured.resourceId shouldBe orderId
+        }
+
+        it("수기 세금계산서 발행 기록은 주문 공개 ID를 감사 대상으로 사용한다") {
+            val orderId = UUID.randomUUID()
+            val joinPoint = mockk<ProceedingJoinPoint>()
+            every { joinPoint.proceed() } returns "ok"
+            request(
+                "POST", "/api/operation/orders/tax-invoices/{orderId}/manual-issue",
+                mapOf("orderId" to orderId.toString()),
+            )
+
+            aspect.recordSuccessfulChanges(joinPoint)
+
+            recorded.captured.resourceType shouldBe "ORDER"
+            recorded.captured.resourceId shouldBe orderId
         }
 
         it("관리자 재고 조정은 SKU를 감사 대상으로 기록한다") {

@@ -27,6 +27,25 @@ class OperationAuditMySqlIntegrationTest {
     private lateinit var audit: OperationAuditService
 
     @Test
+    fun `mysql persists order resource audit events and supports order filtering`() {
+        val actorId = UUID.randomUUID()
+        val orderId = UUID.randomUUID()
+        val occurredAt = Instant.now()
+        audit.record(
+            OperationAuditEvent(
+                actorId, "POST /api/operation/orders/phone-orders", "ORDER", orderId, "mysql-order-audit", occurredAt,
+            ),
+        )
+
+        val result = audit.search(OperationAuditQuery(actorId, "ORDER", occurredAt.minusSeconds(1), occurredAt.plusSeconds(1), 0, 10))
+
+        assertThat(result.totalElements).isEqualTo(1)
+        assertThat(result.items.single().resourceId).isEqualTo(orderId)
+        assertThat(result.items.single().action).isEqualTo("POST /api/operation/orders/phone-orders")
+        assertThat(result.items.single().requestTraceId).isEqualTo("mysql-order-audit")
+    }
+
+    @Test
     fun `flyway creates audit schema and mysql supports record search and retention deletion`() {
         val flywayV11Count = jdbc.queryForObject(
             "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '11' AND success = TRUE",
@@ -80,6 +99,7 @@ class OperationAuditMySqlIntegrationTest {
         val resourceId = UUID.randomUUID()
         val now = Instant.now()
         audit.record(OperationAuditEvent(actorId, "PRODUCT_UPDATED", "PRODUCT", resourceId, "mysql-integration", now.minusSeconds(60)))
+        audit.record(OperationAuditEvent(actorId, "POST /api/operation/orders/phone-orders", "ORDER", resourceId, "mysql-order-integration", now.minusSeconds(45)))
         audit.record(OperationAuditEvent(actorId, "STOCK_UPDATED", "INVENTORY", resourceId, "mysql-integration", now.minusSeconds(30)))
         audit.record(OperationAuditEvent(actorId, "OLD_EVENT", "PRODUCT", null, "mysql-integration-expired", now.minus(Duration.ofDays(731))))
 
@@ -88,6 +108,12 @@ class OperationAuditMySqlIntegrationTest {
         assertThat(results.items.single().actorId).isEqualTo(actorId)
         assertThat(results.items.single().resourceId).isEqualTo(resourceId)
         assertThat(results.items.single().requestTraceId).isEqualTo("mysql-integration")
+
+        val orderAudit = audit.search(OperationAuditQuery(actorId, "ORDER", now.minusSeconds(120), now, 0, 10))
+        assertThat(orderAudit.totalElements).isEqualTo(1)
+        assertThat(orderAudit.items.single().action).isEqualTo("POST /api/operation/orders/phone-orders")
+        assertThat(orderAudit.items.single().resourceId).isEqualTo(resourceId)
+        assertThat(orderAudit.items.single().requestTraceId).isEqualTo("mysql-order-integration")
 
         val deleted = audit.purgeExpired(now.minus(Duration.ofDays(730)), 10_000)
         assertThat(deleted).isGreaterThanOrEqualTo(1)
@@ -102,6 +128,6 @@ class OperationAuditMySqlIntegrationTest {
             ),
         )
         assertThat(deletedEvent.totalElements).isZero()
-        assertThat(audit.search(OperationAuditQuery(actorId, null, null, null, 0, 10)).totalElements).isEqualTo(2)
+        assertThat(audit.search(OperationAuditQuery(actorId, null, null, null, 0, 10)).totalElements).isEqualTo(3)
     }
 }
