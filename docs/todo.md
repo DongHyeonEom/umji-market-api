@@ -399,6 +399,8 @@
 - [x] 발행 요청 주문 중 `READY_FOR_ISSUANCE` 상태만 허용. 홈택스 발행일·작성일·공급일은 각각 실제 값으로 입력 가능
 - [x] 홈택스 승인번호 필수, 발행 완료 기록 불변. 정정·취소·재발행은 이번 범위 제외
 - [x] 수기 발행 승인번호를 unique로 보존해 향후 발행 API 도입 시 중복 확인 기준으로 사용
+- [x] 수기 세금계산서 발행 완료 시 주문자에게 `TAX_INVOICE_ISSUED` 정보성 push outbox 이벤트 기록
+- [ ] 자동 전자세금계산서 발행 연동 완료 callback에서 `TAX_INVOICE_ISSUED` 이벤트 기록 및 자동 발행 알림 테스트 실행
 - [x] 기존 `ORDER_WRITE` permission 사용. `ADMIN`·`SUPER_ADMIN`·`ORDER_MANAGER` 권한 mapping 재사용
 
 ### 서비스 자동화 테스트 개발 및 테스트

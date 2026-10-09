@@ -1,5 +1,7 @@
 package com.buyeong.umji.api.operation.order.service
 
+import com.buyeong.umji.api.notification.model.NotificationEventType
+import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.persistence.jpa.order.service.OperationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.operation.order.model.TaxInvoiceQueueData
 import com.buyeong.umji.api.operation.order.model.TaxInvoiceQueueItem
@@ -10,7 +12,10 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
-class OperationTaxInvoiceService(private val invoices: OperationTaxInvoiceJpaEntityService) {
+class OperationTaxInvoiceService(
+    private val invoices: OperationTaxInvoiceJpaEntityService,
+    private val notifications: NotificationEventService,
+) {
     fun queue(page: Int, size: Int): TaxInvoiceQueueData = invoices.queue(page, size)
 
     @Transactional
@@ -25,8 +30,12 @@ class OperationTaxInvoiceService(private val invoices: OperationTaxInvoiceJpaEnt
         taxAmount: Long,
         totalAmount: Long,
         reason: String?,
-    ): TaxInvoiceQueueItem = invoices.recordManualIssue(
-        orderId, actorId, approvalNumber.trim(), issuedAt, writtenDate, supplyDate,
-        supplyAmount, taxAmount, totalAmount, reason,
-    )
+    ): TaxInvoiceQueueItem {
+        val issued = invoices.recordManualIssue(
+            orderId, actorId, approvalNumber.trim(), issuedAt, writtenDate, supplyDate,
+            supplyAmount, taxAmount, totalAmount, reason,
+        )
+        notifications.record(NotificationEventType.TAX_INVOICE_ISSUED, orderId)
+        return issued
+    }
 }

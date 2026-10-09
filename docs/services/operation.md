@@ -399,10 +399,11 @@ flowchart TD
     VALIDATE -->|오류| REJECT
     VALIDATE -->|통과| SAVE[수기 발행 결과·처리자·감사 이력 저장]
     SAVE --> ISSUED[주문 세금계산서 발행 완료 표시]
-    ISSUED --> RESPONSE[현재 상태와 기록 결과 반환]
+    ISSUED --> OUTBOX[세금계산서 발행 완료 outbox 이벤트 기록]
+    OUTBOX --> RESPONSE[현재 상태와 기록 결과 반환]
 ```
 
-승인번호 unique 제약으로 동일 세금계산서의 중복 기록을 차단. 정정·취소·재발행은 현재 기능 범위에서 처리하지 않음.<br>
+승인번호 unique 제약으로 동일 세금계산서의 중복 기록을 차단. 발행 완료 상태 변경과 `TAX_INVOICE_ISSUED` outbox 기록은 같은 트랜잭션에서 처리하며, 발송 대상은 주문을 생성한 계정의 활성 기기. 자동 전자세금계산서 발행 연동은 미구현이며, 도입 시 성공 완료 callback에서 같은 이벤트를 기록해야 함. 정정·취소·재발행은 현재 기능 범위에서 처리하지 않음.<br>
 
 ## 계정
 
