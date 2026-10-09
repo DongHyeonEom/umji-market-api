@@ -37,6 +37,22 @@
 
 - [x] `ApiCallException` 생성, 전역 오류 처리 및 사업자 상태 조회 외부 실패 응답 테스트 개발·실행
 
+## Task 17 — MVP 전 미사용 스키마·코드 정리
+
+실운용 전 현재 구현에서 사용하지 않는 레거시 스키마와 서비스 코드를 참조 분석 후 제거. MVP 전체 데이터 초기화는 정해진 테스트 전·후 시점에 각각 별도 수행.<br>
+
+### 서비스 개발
+
+- [x] 현재 Flyway schema와 Kotlin 엔티티·저장소·서비스 참조를 대조해 미사용 후보 확인
+- [x] Organization 프로필로 데이터 이관이 완료된 레거시 `business_profile` 테이블을 신규 migration으로 제거하고 DB 문서 갱신
+- [x] 활성 Service·JpaEntityService 정의와 주입 참조를 확인. 제거 가능한 미사용 서비스 코드 없음
+- [ ] MVP 테스트 직전 애플리케이션 데이터 전체 초기화 수행
+- [ ] MVP 테스트 완료 후 애플리케이션 데이터 전체 초기화 수행
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [x] 레거시 `business_profile` 제거 migration 및 전체 migration 통합 검증
+
 ## 개발 도구 정비
 
 - [x] ktlint Gradle 실행기와 Kotlin 플러그인 호환 버전 정리
