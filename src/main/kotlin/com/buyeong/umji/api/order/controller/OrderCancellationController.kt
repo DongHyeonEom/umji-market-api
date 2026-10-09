@@ -75,8 +75,10 @@ data class CancellationResolutionRequest(
 data class CancellationChangeResponse(
     @field:Schema(description = "주문 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = true)
     val orderId: UUID,
+
     @field:Schema(description = "현재 주문 상태 코드", example = "CANCELLED", type = "string", required = true)
     val orderStatus: String,
+
     @field:Schema(description = "취소 요청 처리 상태 코드", example = "APPROVED", type = "string", required = true)
     val requestStatus: String,
 )
@@ -85,10 +87,13 @@ data class CancellationChangeResponse(
 data class CancellationQueueItemResponse(
     @field:Schema(description = "주문 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = true)
     val orderId: UUID,
+
     @field:Schema(description = "사용자에게 표시하는 주문 번호", example = "UM-20261004-0001", type = "string", required = true)
     val orderNumber: String,
+
     @field:Schema(description = "주문자 계정 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", format = "uuid", type = "string", required = true)
     val accountId: UUID,
+
     @field:Schema(description = "취소 요청 시각(ISO-8601)", example = "2026-10-04T09:00:00Z", format = "date-time", type = "string", required = true)
     val requestedAt: Instant,
 )
@@ -99,12 +104,16 @@ data class CancellationQueueResponse(
         schema = Schema(implementation = CancellationQueueItemResponse::class),
     ) @field:Schema(description = "현재 페이지의 취소 요청 목록", example = "[]", type = "array", required = true)
     val items: List<CancellationQueueItemResponse>,
+
     @field:Schema(description = "페이지 번호(0부터 시작)", example = "0", format = "int32", type = "integer", required = true, implementation = Int::class)
     val page: Int,
+
     @field:Schema(description = "페이지당 항목 수", example = "20", format = "int32", type = "integer", required = true, implementation = Int::class)
     val size: Int,
+
     @field:Schema(description = "전체 검색 결과 수", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class)
     val totalElements: Long,
+
     @field:Schema(description = "전체 페이지 수", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class)
     val totalPages: Int,
 )

@@ -99,12 +99,16 @@ class SalesCommissionController(
 data class SalesCommissionPageResponse(
     @field:Schema(description = "현재 페이지의 주문 인센티브 목록", example = "[]", type = "array", required = true)
     val items: List<SalesCommissionItemResponse>,
+
     @field:Schema(description = "페이지 번호(0부터 시작)", example = "0", type = "integer", required = true)
     val page: Int,
+
     @field:Schema(description = "페이지당 항목 수", example = "20", type = "integer", required = true)
     val size: Int,
+
     @field:Schema(description = "전체 인센티브 건수", example = "1", type = "integer", required = true)
     val totalElements: Long,
+
     @field:Schema(description = "전체 페이지 수", example = "1", type = "integer", required = true)
     val totalPages: Int,
 )
@@ -113,24 +117,34 @@ data class SalesCommissionPageResponse(
 data class SalesCommissionItemResponse(
     @field:Schema(description = "인센티브 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000001", type = "string", format = "uuid", required = true)
     val id: UUID,
+
     @field:Schema(description = "대상 주문 공개 식별자(UUID)", example = "00000000-0000-0000-0000-000000000002", type = "string", format = "uuid", required = true)
     val orderId: UUID,
+
     @field:Schema(description = "담당 영업 계정 공개 식별자(UUID). 담당자 없으면 null", example = "00000000-0000-0000-0000-000000000003", type = "string", format = "uuid", nullable = true, required = false)
     val salesAccountId: UUID?,
+
     @field:Schema(description = "주문 시점 인센티브율(basis points). 미설정이면 null", example = "30", type = "integer", nullable = true, required = false)
     val rateBps: Int?,
+
     @field:Schema(description = "세금·배송비 제외 상품 순판매 기준액(KRW)", example = "100000", type = "integer", format = "int64", required = true)
     val basisAmount: Long,
+
     @field:Schema(description = "정수 원화 HALF_UP 계산 인센티브(KRW)", example = "300", type = "integer", format = "int64", required = true)
     val commissionAmount: Long,
+
     @field:Schema(description = "정산 상태", example = "WAITING", type = "string", required = true)
     val status: String,
+
     @field:Schema(description = "월말 정산 대상 월의 첫 날짜", example = "2026-09-01", type = "string", format = "date", nullable = true, required = false)
     val settlementMonth: LocalDate?,
+
     @field:Schema(description = "배송완료와 전액 입금 중 늦은 자격 충족 시각", example = "2026-09-30T10:00:00Z", type = "string", format = "date-time", nullable = true, required = false)
     val qualifiedAt: Instant?,
+
     @field:Schema(description = "실제 지급 완료 시각", example = "2026-10-01T03:00:00Z", type = "string", format = "date-time", nullable = true, required = false)
     val paidAt: Instant?,
+
     @field:Schema(description = "인센티브 snapshot 생성 시각", example = "2026-09-01T03:00:00Z", type = "string", format = "date-time", required = true)
     val createdAt: Instant,
 )
@@ -139,8 +153,10 @@ data class SalesCommissionItemResponse(
 data class SalesCommissionSettlementResponse(
     @field:Schema(description = "정산 대상 월", example = "2026-09", type = "string", required = true)
     val month: String,
+
     @field:Schema(description = "이번 실행에서 PAYABLE로 전환한 건수", example = "12", type = "integer", required = true)
     val payableCount: Int,
+
     @field:Schema(description = "이번 실행에서 PAYABLE로 전환한 인센티브 합계(KRW)", example = "36000", type = "integer", format = "int64", required = true)
     val payableAmount: Long,
 )

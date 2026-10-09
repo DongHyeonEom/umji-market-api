@@ -13,8 +13,10 @@ import org.springframework.validation.BindingResult
 data class ErrorResponseModel(
     @field:Schema(description = "오류 또는 업무 코드", example = "EXAMPLE_CODE", type = "string", required = true)
     val code: ErrorCode,
+
     @field:Schema(description = "오류 설명", example = "요청 값이 유효하지 않습니다", type = "string", required = false)
     val reason: String? = null,
+
     @field:Schema(description = "필드별 입력 오류 목록", example = "[]", type = "array", required = false)
     @field:ArraySchema(schema = Schema(implementation = FieldError::class)) val errors: List<FieldError>? = null,
 ) {
@@ -27,8 +29,10 @@ data class ErrorResponseModel(
     data class FieldError(
         @field:Schema(description = "오류가 발생한 요청 필드명", example = "phone", type = "string", required = true)
         val field: String,
+
         @field:Schema(description = "검증에 실패한 입력값", example = "예시 값", type = "string", required = true)
         val value: String,
+
         @field:Schema(description = "오류 설명", example = "요청 값이 유효하지 않습니다", type = "string", required = false)
         val reason: String?,
     ) {
