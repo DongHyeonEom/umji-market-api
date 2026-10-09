@@ -2,11 +2,11 @@ package com.buyeong.umji.api.persistence.jpa.sales.service
 
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.payment.dto.PaymentRecordDto
-import com.buyeong.umji.api.sales.dto.SalesAssignmentSnapshotDto
-import com.buyeong.umji.api.sales.dto.SalesCommissionPageDto
-import com.buyeong.umji.api.sales.dto.SalesCommissionSettlementResultDto
-import com.buyeong.umji.api.sales.dto.SalesCommissionViewDto
+import com.buyeong.umji.api.domain.payment.dto.PaymentRecordDto
+import com.buyeong.umji.api.domain.sales.dto.SalesAssignmentSnapshotDto
+import com.buyeong.umji.api.domain.sales.dto.SalesCommissionPageDto
+import com.buyeong.umji.api.domain.sales.dto.SalesCommissionSettlementResultDto
+import com.buyeong.umji.api.domain.sales.dto.SalesCommissionViewDto
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

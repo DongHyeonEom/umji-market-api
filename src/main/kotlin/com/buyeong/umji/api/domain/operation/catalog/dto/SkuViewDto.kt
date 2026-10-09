@@ -1,0 +1,5 @@
+package com.buyeong.umji.api.domain.operation.catalog.dto
+
+import java.util.UUID
+
+data class SkuViewDto(val id: UUID, val skuCode: String, val name: String, val salePrice: Long, val listPrice: Long?, val salesStatus: String, val optionValueIds: Set<UUID>)

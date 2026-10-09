@@ -32,8 +32,8 @@ flowchart LR
 UseCase·Port를 위한 서비스 계약 인터페이스와 위임 전용 adapter/wrapper를 두지 않음.<br>
 도메인 Service는 구체 Kotlin class로 선언하고 필요한 하위 Service 또는 `JpaEntityService`를 생성자 주입함.<br>
 Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider 요구로 필요한 인터페이스는 유지 가능.<br>
-외부 HTTP 입력 모델은 `{domain}/model/<Action>Request`, 외부 HTTP 출력 모델은 `{domain}/model/<Action>Response`로 두며 client와 Controller 사이의 계약으로 사용함.<br>
-Controller 이하 내부 계층에서 전달하는 DTO는 `<Action>Dto`로 명명하고 `{domain}/dto`에 둠. 내부 DTO에는 Request/Response 접미사를 사용하지 않음.<br>
+외부 HTTP 입력 모델은 `domain/{domain}/model/<Action>Request`, 외부 HTTP 출력 모델은 `domain/{domain}/model/<Action>Response`로 두며 client와 Controller 사이의 계약으로 사용함.<br>
+Controller 이하 내부 계층에서 전달하는 DTO는 `<Action>Dto`로 명명하고 `domain/{domain}/dto`에 둠. 내부 DTO에는 Request/Response 접미사를 사용하지 않음.<br>
 각 Request·Response·DTO는 별도 파일의 최상위 `data class` 하나로 선언함. 중첩 데이터 클래스와 서로 다른 역할의 데이터 클래스를 한 파일에 함께 선언하는 방식은 사용하지 않음.<br>
 JPA Entity는 외부 응답에 직접 노출하지 않음.<br>
 
@@ -52,16 +52,18 @@ flowchart LR
 
 ## 패키지 구조
 
-도메인별 기능 구분을 유지하고 패키지 경계도 계층 책임과 일치시킴.<br>
+서비스 도메인은 `domain/<domain>/` 아래에서 기능별로 구분하고, `persistence/jpa/`는 도메인 패키지와 분리된 영속성 영역으로 유지함.<br>
 
 ```text
-{domain}/
-  controller/           # Controller
-  service/              # 도메인 Service
-  model/                # <Action>Request, <Action>Response
-  dto/                  # Controller 이하 내부 전달용 <Action>Dto
-  integration/          # 외부 연동 구체 구현과 설정
-  persistence/jpa/      # 도메인별 DB 구현
+domain/
+  <domain>/
+    controller/         # Controller
+    service/            # 도메인 Service
+    model/              # <Action>Request, <Action>Response
+    dto/                # Controller 이하 내부 전달용 <Action>Dto
+    integration/        # 외부 연동 구체 구현과 설정
+persistence/
+  jpa/
     <domain>/
       entity/           # JPA Entity
       repository/       # Spring Data Repository

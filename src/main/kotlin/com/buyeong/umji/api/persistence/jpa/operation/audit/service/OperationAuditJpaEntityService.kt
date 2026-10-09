@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.persistence.jpa.operation.audit.service
 
-import com.buyeong.umji.api.operation.audit.dto.OperationAuditEntryDto
-import com.buyeong.umji.api.operation.audit.dto.OperationAuditEventDto
-import com.buyeong.umji.api.operation.audit.dto.OperationAuditPageDto
-import com.buyeong.umji.api.operation.audit.dto.OperationAuditQueryDto
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEntryDto
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEventDto
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditPageDto
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditQueryDto
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

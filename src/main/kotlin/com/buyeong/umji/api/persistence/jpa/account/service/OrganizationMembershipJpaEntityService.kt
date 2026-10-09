@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.account.dto.OrganizationInvitationDto
-import com.buyeong.umji.api.account.dto.OrganizationRegistrationCommandDto
-import com.buyeong.umji.api.account.dto.OrganizationSearchResultDto
-import com.buyeong.umji.api.account.dto.OrganizationSummaryDto
-import com.buyeong.umji.api.account.model.OrganizationJoinRequest
+import com.buyeong.umji.api.domain.account.dto.OrganizationInvitationDto
+import com.buyeong.umji.api.domain.account.dto.OrganizationRegistrationCommandDto
+import com.buyeong.umji.api.domain.account.dto.OrganizationSearchResultDto
+import com.buyeong.umji.api.domain.account.dto.OrganizationSummaryDto
+import com.buyeong.umji.api.domain.account.model.OrganizationJoinRequest
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity

@@ -5,7 +5,7 @@ import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntit
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.repository.OrderShipmentRepository
-import com.buyeong.umji.api.shipment.dto.ShipmentTrackingCandidateDto
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant

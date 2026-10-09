@@ -2,7 +2,7 @@ package com.buyeong.umji.api.persistence.jpa.account.service
 
 import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.operation.account.dto.OrganizationProfileDataDto
+import com.buyeong.umji.api.domain.operation.account.dto.OrganizationProfileDataDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationMemberEntity

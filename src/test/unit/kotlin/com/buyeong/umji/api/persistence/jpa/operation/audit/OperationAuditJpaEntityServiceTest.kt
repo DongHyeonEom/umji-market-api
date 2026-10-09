@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.persistence.jpa.operation.audit.service
 
-import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
+import com.buyeong.umji.api.domain.operation.audit.model.OperationAuditEvent
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every

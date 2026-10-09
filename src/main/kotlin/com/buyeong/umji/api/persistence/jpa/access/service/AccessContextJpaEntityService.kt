@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.persistence.jpa.access.service
 
-import com.buyeong.umji.api.access.dto.AdminAccessSnapshotDto
-import com.buyeong.umji.api.access.dto.BuyerMembershipSnapshotDto
-import com.buyeong.umji.api.access.dto.ScreenPermissionMappingDto
+import com.buyeong.umji.api.domain.access.dto.AdminAccessSnapshotDto
+import com.buyeong.umji.api.domain.access.dto.BuyerMembershipSnapshotDto
+import com.buyeong.umji.api.domain.access.dto.ScreenPermissionMappingDto
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
