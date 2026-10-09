@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.persistence.jpa.catalog.service
 
-import com.buyeong.umji.api.operation.catalog.model.ProductCommand
+import com.buyeong.umji.api.domain.operation.catalog.model.ProductCommand
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.BrandEntity

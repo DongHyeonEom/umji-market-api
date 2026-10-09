@@ -1,0 +1,17 @@
+package com.buyeong.umji.api.domain.auth.security
+
+import com.buyeong.umji.api.domain.auth.config.AuthenticationMode
+import com.buyeong.umji.api.domain.auth.config.AuthenticationProperties
+import org.springframework.security.core.Authentication
+import org.springframework.security.oauth2.jwt.Jwt
+import org.springframework.stereotype.Component
+
+@Component("operationAuthorization")
+class OperationAuthorization(private val properties: AuthenticationProperties) {
+    fun hasPermission(authentication: Authentication?, permission: String): Boolean {
+        if (properties.mode == AuthenticationMode.BYPASS) return true
+        val jwt = authentication?.principal as? Jwt
+        if (jwt?.claims?.get("mfaRequired") == true && jwt.claims["mfaVerified"] != true) return false
+        return authentication?.authorities?.any { it.authority == permission } == true
+    }
+}

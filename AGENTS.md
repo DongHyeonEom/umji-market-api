@@ -11,7 +11,7 @@
 - UseCase·Port·Adapter 목적의 서비스 인터페이스 및 위임 wrapper를 새로 만들지 않음
 - Spring Data Repository 인터페이스와 외부 라이브러리 callback/provider interface는 유지 가능
 - JPA Entity는 영속성 처리에 사용하고, 외부 HTTP 응답에는 전용 DTO를 사용함
-- 도메인 패키지는 `controller`, `service`, `model`, `integration`으로 구분하고 영속성 구현은 `persistence/jpa`에 둠
+- 서비스 도메인 패키지는 `domain/<domain>/` 아래에 두고, 도메인별 `controller`, `service`, `model`, `dto`, `integration`으로 구분함. `persistence/jpa`는 도메인 패키지 바깥의 별도 영속성 영역으로 유지함
 - `adapter`, `application`, `port`를 계층 패키지로 새로 사용하지 않으며 세부 기준은 `docs/architecture.md`를 따름
 - 세부 패키지 경계와 전환 수용 기준은 `docs/architecture.md`를 기준으로 함
 
@@ -25,8 +25,8 @@ Flutter WebView와 React 프론트엔드가 호출하는 Kotlin/Spring Boot 통�
 - 패키지 루트: `com.buyeong.umji.api`
 - Controller는 HTTP 입출력 변환, 도메인 Service는 유스케이스 흐름과 핵심 규칙, JpaEntityService·Repository는 DB 접근 담당
 - 외부 request/response에 Entity 직접 노출 금지
-- 외부 HTTP 입력 모델은 `{domain}/model/<Action>Request`, 외부 HTTP 출력 모델은 `{domain}/model/<Action>Response`에 둠. 이 모델은 client와 Controller 사이의 계약으로 사용함
-- Controller 이하 내부 계층에서 전달하는 DTO는 `{domain}/dto/<Action>Dto`에 둠. 내부 DTO에는 Request/Response 접미사를 사용하지 않음
+- 외부 HTTP 입력 모델은 `domain/{domain}/model/<Action>Request`, 외부 HTTP 출력 모델은 `domain/{domain}/model/<Action>Response`에 둠. 이 모델은 client와 Controller 사이의 계약으로 사용함
+- Controller 이하 내부 계층에서 전달하는 DTO는 `domain/{domain}/dto/<Action>Dto`에 둠. 내부 DTO에는 Request/Response 접미사를 사용하지 않음
 - DTO·Request·Response 등 데이터 객체는 각각 별도의 최상위 `data class` 파일로 선언함. 다른 클래스 내부에 중첩 선언하지 않으며, Request와 Response처럼 역할이 다른 클래스를 한 파일에 함께 선언하지 않음
 - 한 파일에는 하나의 데이터 클래스만 선언함. 관련 필드 묶음은 별도 데이터 클래스로 분리하고, 실제로 전달 경계와 변경 이유가 같은 경우에만 한 DTO로 구성함
 - 관리자 API는 UI 노출 여부와 무관하게 서버 권한 검사 필수

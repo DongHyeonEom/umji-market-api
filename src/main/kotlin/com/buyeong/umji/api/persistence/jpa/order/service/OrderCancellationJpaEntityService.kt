@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.persistence.jpa.order.service
 
-import com.buyeong.umji.api.order.dto.CancellationOrderDto
-import com.buyeong.umji.api.order.dto.CancellationQueueItemDto
-import com.buyeong.umji.api.order.dto.CancellationQueuePageDto
+import com.buyeong.umji.api.domain.order.dto.CancellationOrderDto
+import com.buyeong.umji.api.domain.order.dto.CancellationQueueItemDto
+import com.buyeong.umji.api.domain.order.dto.CancellationQueuePageDto
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderCancellationHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderStatusHistoryEntity

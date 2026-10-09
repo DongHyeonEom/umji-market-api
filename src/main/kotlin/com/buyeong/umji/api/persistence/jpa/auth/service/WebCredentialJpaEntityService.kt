@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.auth.service
 
-import com.buyeong.umji.api.auth.dto.AccountRecordDto
-import com.buyeong.umji.api.auth.dto.WebAccountCredentialsDto
+import com.buyeong.umji.api.domain.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.domain.auth.dto.WebAccountCredentialsDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import org.springframework.beans.factory.annotation.Value

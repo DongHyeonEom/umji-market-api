@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.persistence.jpa.notification.service
 
-import com.buyeong.umji.api.notification.dto.NotificationEventDto
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventDto
 import com.buyeong.umji.api.persistence.jpa.notification.entity.NotificationOutboxEntity
 import com.buyeong.umji.api.persistence.jpa.notification.repository.NotificationOutboxRepository
 import org.springframework.stereotype.Service

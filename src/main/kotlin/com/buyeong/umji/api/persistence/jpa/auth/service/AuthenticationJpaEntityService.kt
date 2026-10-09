@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.auth.service
 
-import com.buyeong.umji.api.auth.dto.AccountRecordDto
-import com.buyeong.umji.api.auth.dto.RefreshSessionRecordDto
+import com.buyeong.umji.api.domain.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.domain.auth.dto.RefreshSessionRecordDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService

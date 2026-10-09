@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.persistence.jpa.notification.service
 
-import com.buyeong.umji.api.notification.dto.ClaimedNotificationDto
-import com.buyeong.umji.api.notification.dto.NotificationEventDto
-import com.buyeong.umji.api.notification.dto.NotificationEventType
+import com.buyeong.umji.api.domain.notification.dto.ClaimedNotificationDto
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventDto
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

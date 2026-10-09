@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.persistence.jpa.notification.service
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.notification.dto.NotificationDeviceRecipientDto
-import com.buyeong.umji.api.notification.dto.NotificationDeviceTokenRegistrationDto
-import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
+import com.buyeong.umji.api.domain.notification.dto.NotificationDeviceRecipientDto
+import com.buyeong.umji.api.domain.notification.dto.NotificationDeviceTokenRegistrationDto
+import com.buyeong.umji.api.domain.notification.model.NotificationDevicePlatform
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

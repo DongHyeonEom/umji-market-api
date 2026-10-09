@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.account.dto.OrganizationTaxInvoiceProfileCommandDto
-import com.buyeong.umji.api.account.dto.OrganizationTaxInvoiceProfileDto
+import com.buyeong.umji.api.domain.account.dto.OrganizationTaxInvoiceProfileCommandDto
+import com.buyeong.umji.api.domain.account.dto.OrganizationTaxInvoiceProfileDto
 import com.buyeong.umji.api.exception.ForbiddenOperationException
-import com.buyeong.umji.api.order.dto.TaxInvoiceSupplierDto
+import com.buyeong.umji.api.domain.order.dto.TaxInvoiceSupplierDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository

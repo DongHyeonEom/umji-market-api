@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.operation.account.dto.AccountDataDto
-import com.buyeong.umji.api.operation.account.dto.ConsentCommandDto
-import com.buyeong.umji.api.operation.account.dto.ConsentDataDto
-import com.buyeong.umji.api.operation.account.dto.ManagedRoleDto
-import com.buyeong.umji.api.operation.account.dto.NewAccountDto
-import com.buyeong.umji.api.operation.account.dto.OrganizationProfileDataDto
+import com.buyeong.umji.api.domain.operation.account.dto.AccountDataDto
+import com.buyeong.umji.api.domain.operation.account.dto.ConsentCommandDto
+import com.buyeong.umji.api.domain.operation.account.dto.ConsentDataDto
+import com.buyeong.umji.api.domain.operation.account.dto.ManagedRoleDto
+import com.buyeong.umji.api.domain.operation.account.dto.NewAccountDto
+import com.buyeong.umji.api.domain.operation.account.dto.OrganizationProfileDataDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.ConsentHistoryEntity
 import org.springframework.data.domain.PageRequest
