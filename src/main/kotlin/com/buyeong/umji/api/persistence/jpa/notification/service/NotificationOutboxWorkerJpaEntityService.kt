@@ -1,21 +1,21 @@
 package com.buyeong.umji.api.persistence.jpa.notification.service
 
-import com.buyeong.umji.api.notification.model.ClaimedNotification
-import com.buyeong.umji.api.notification.model.NotificationEvent
-import com.buyeong.umji.api.notification.model.NotificationEventType
+import com.buyeong.umji.api.notification.dto.ClaimedNotificationDto
+import com.buyeong.umji.api.notification.dto.NotificationEventDto
+import com.buyeong.umji.api.notification.dto.NotificationEventType
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class NotificationOutboxWorkerJpaEntityService(private val jdbc: JdbcTemplate) {
     @Transactional
-    fun claimBatch(now: Instant, lease: Duration, limit: Int): List<ClaimedNotification> {
+    fun claimBatch(now: Instant, lease: Duration, limit: Int): List<ClaimedNotificationDto> {
         require(!lease.isNegative && !lease.isZero)
         require(limit in 1..MAX_BATCH_SIZE)
         val rows = jdbc.query(
@@ -71,8 +71,8 @@ class NotificationOutboxWorkerJpaEntityService(private val jdbc: JdbcTemplate) {
             )
         }
         return supportedRows.map { (row, type) ->
-            ClaimedNotification(
-                NotificationEvent(
+            ClaimedNotificationDto(
+                NotificationEventDto(
                     row.eventId,
                     type,
                     row.orderId,

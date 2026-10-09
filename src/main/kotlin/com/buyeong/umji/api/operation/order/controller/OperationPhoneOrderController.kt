@@ -2,10 +2,10 @@ package com.buyeong.umji.api.operation.order.controller
 
 import com.buyeong.umji.api.auth.service.CurrentAccountService
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.operation.order.dto.OperationPhoneOrderSummaryDto
 import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderBuyerResponse
 import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderRequest
 import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderResponse
-import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderSummary
 import com.buyeong.umji.api.order.service.OrderService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -44,10 +44,13 @@ class OperationPhoneOrderController(
     fun create(@Valid @RequestBody request: OperationPhoneOrderRequest): OperationPhoneOrderResponse =
         OperationPhoneOrderResponse(
             orders.createAdminPhoneOrder(
-                currentAccounts.activeAccountPublicId(), request.buyerAccountId, request.shippingAddress(),
-                request.orderLines(), request.taxInvoiceRequested,
+                currentAccounts.activeAccountPublicId(),
+                request.buyerAccountId,
+                request.shippingAddress(),
+                request.orderLines(),
+                request.taxInvoiceRequested,
             ).map {
-                OperationPhoneOrderSummary(it.id, it.orderNumber, it.status, it.totalAmount, it.orderedAt, it.sellerOrganizationId)
+                OperationPhoneOrderSummaryDto(it.id, it.orderNumber, it.status, it.totalAmount, it.orderedAt, it.sellerOrganizationId)
             },
         )
 }

@@ -1,21 +1,21 @@
 package com.buyeong.umji.api.persistence.jpa.operation.audit.service
 
-import com.buyeong.umji.api.operation.audit.model.OperationAuditEntry
-import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
-import com.buyeong.umji.api.operation.audit.model.OperationAuditPage
-import com.buyeong.umji.api.operation.audit.model.OperationAuditQuery
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditEntryDto
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditEventDto
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditPageDto
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditQueryDto
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional
 class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
-    fun record(event: OperationAuditEvent) {
+    fun record(event: OperationAuditEventDto) {
         jdbc.update(
             """INSERT INTO operation_audit_log
                 (actor_public_id, action, resource_type, resource_public_id, request_trace_id, occurred_at)
@@ -31,7 +31,7 @@ class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
     }
 
     @Transactional(readOnly = true)
-    fun search(query: OperationAuditQuery): OperationAuditPage {
+    fun search(query: OperationAuditQueryDto): OperationAuditPageDto {
         val filters = mutableListOf<String>()
         val arguments = mutableListOf<Any>()
         query.actorId?.let {
@@ -59,7 +59,7 @@ class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
                 LIMIT ? OFFSET ?
             """.trimIndent(),
             { result, _ ->
-                OperationAuditEntry(
+                OperationAuditEntryDto(
                     result.getLong("id"),
                     result.getBytes("actor_public_id")?.toUuid(),
                     result.getString("action"),
@@ -72,7 +72,7 @@ class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
             *arguments.plus(query.size).plus(query.page.toLong() * query.size).toTypedArray(),
         )
         val totalPages = if (total == 0L) 0 else ((total + query.size - 1) / query.size).toInt()
-        return OperationAuditPage(items, query.page, query.size, total, totalPages)
+        return OperationAuditPageDto(items, query.page, query.size, total, totalPages)
     }
 
     fun purgeExpired(before: Instant, batchSize: Int): Int = jdbc.update(

@@ -1,16 +1,16 @@
 package com.buyeong.umji.api.persistence.jpa.notification.service
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.notification.dto.NotificationDeviceRecipientDto
+import com.buyeong.umji.api.notification.dto.NotificationDeviceTokenRegistrationDto
 import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
-import com.buyeong.umji.api.notification.model.NotificationDeviceRecipient
-import com.buyeong.umji.api.notification.model.NotificationDeviceTokenRegistration
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class NotificationDeviceTokenJpaEntityService(private val jdbc: JdbcTemplate) {
@@ -21,7 +21,7 @@ class NotificationDeviceTokenJpaEntityService(private val jdbc: JdbcTemplate) {
         token: String,
         tokenHash: ByteArray,
         registeredAt: Instant,
-    ): NotificationDeviceTokenRegistration {
+    ): NotificationDeviceTokenRegistrationDto {
         val timestamp = Timestamp.from(registeredAt)
         val inserted = jdbc.update(
             """INSERT INTO notification_device_token
@@ -50,7 +50,7 @@ class NotificationDeviceTokenJpaEntityService(private val jdbc: JdbcTemplate) {
                 WHERE token_hash = ?
             """.trimIndent(),
             { result, _ ->
-                NotificationDeviceTokenRegistration(
+                NotificationDeviceTokenRegistrationDto(
                     result.getBytes("public_id").toUuid(),
                     NotificationDevicePlatform.valueOf(result.getString("platform")),
                     result.getTimestamp("last_registered_at").toInstant(),
@@ -74,7 +74,7 @@ class NotificationDeviceTokenJpaEntityService(private val jdbc: JdbcTemplate) {
     }
 
     @Transactional(readOnly = true)
-    fun activeRecipientsForOrder(orderId: UUID): List<NotificationDeviceRecipient> =
+    fun activeRecipientsForOrder(orderId: UUID): List<NotificationDeviceRecipientDto> =
         jdbc.query(
             """SELECT device_token.public_id, device_token.platform, device_token.token_value
                 FROM purchase_order
@@ -83,7 +83,7 @@ class NotificationDeviceTokenJpaEntityService(private val jdbc: JdbcTemplate) {
                 ORDER BY device_token.id
             """.trimIndent(),
             { result, _ ->
-                NotificationDeviceRecipient(
+                NotificationDeviceRecipientDto(
                     result.getBytes("public_id").toUuid(),
                     NotificationDevicePlatform.valueOf(result.getString("platform")),
                     result.getString("token_value"),

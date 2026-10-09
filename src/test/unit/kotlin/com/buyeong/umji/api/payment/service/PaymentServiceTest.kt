@@ -91,7 +91,6 @@ class PaymentServiceTest : DescribeSpec({
             verify(exactly = 1) { commissions.reverseOrder(orderId, "ORDER_REFUND") }
         }
     }
-
 })
 
 private fun payment(orderId: UUID, orderStatus: String, paymentStatus: String) = OrderPaymentEntity().apply {

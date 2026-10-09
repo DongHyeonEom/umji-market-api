@@ -2,17 +2,17 @@ package com.buyeong.umji.api.sales.service
 
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.persistence.jpa.sales.service.SalesCommissionJpaEntityService
-import com.buyeong.umji.api.sales.model.SalesCommissionPage
-import com.buyeong.umji.api.sales.model.SalesCommissionSettlementResult
-import com.buyeong.umji.api.sales.model.SalesCommissionView
+import com.buyeong.umji.api.sales.dto.SalesCommissionPageDto
+import com.buyeong.umji.api.sales.dto.SalesCommissionSettlementResultDto
+import com.buyeong.umji.api.sales.dto.SalesCommissionViewDto
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class SalesCommissionService(
@@ -34,13 +34,13 @@ class SalesCommissionService(
     }
 
     @Transactional(readOnly = true)
-    fun mine(accountId: UUID, page: Int, size: Int): SalesCommissionPage = commissions.mine(accountId, page, size)
+    fun mine(accountId: UUID, page: Int, size: Int): SalesCommissionPageDto = commissions.mine(accountId, page, size)
 
     @Transactional(readOnly = true)
-    fun all(page: Int, size: Int): SalesCommissionPage = commissions.all(page, size)
+    fun all(page: Int, size: Int): SalesCommissionPageDto = commissions.all(page, size)
 
     @Transactional
-    fun settle(month: YearMonth, operatorId: UUID): SalesCommissionSettlementResult {
+    fun settle(month: YearMonth, operatorId: UUID): SalesCommissionSettlementResultDto {
         if (!month.isBefore(YearMonth.now(KST))) {
             throw InvalidRequestParameterException("마감된 월만 정산할 수 있습니다.")
         }
@@ -48,7 +48,7 @@ class SalesCommissionService(
     }
 
     @Transactional
-    fun markPaid(commissionId: UUID, operatorId: UUID): SalesCommissionView = commissions.markPaid(commissionId, operatorId)
+    fun markPaid(commissionId: UUID, operatorId: UUID): SalesCommissionViewDto = commissions.markPaid(commissionId, operatorId)
 
     @Transactional
     fun reverseOrder(orderId: UUID, reasonCode: String) = commissions.reverseOrder(orderId, reasonCode)

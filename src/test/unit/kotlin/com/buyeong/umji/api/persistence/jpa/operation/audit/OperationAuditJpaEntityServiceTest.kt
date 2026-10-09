@@ -6,11 +6,11 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.springframework.jdbc.core.JdbcTemplate
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.UUID
-import org.springframework.jdbc.core.JdbcTemplate
 
 class OperationAuditJpaEntityServiceTest : DescribeSpec({
     val jdbc = mockk<JdbcTemplate>(relaxed = true)

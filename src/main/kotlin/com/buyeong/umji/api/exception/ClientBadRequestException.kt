@@ -1,4 +1,5 @@
 package com.buyeong.umji.api.exception
+
 /**
  * 클라이언트의 잘못된 요청 시 발생하는 예외
  */

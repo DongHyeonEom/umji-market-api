@@ -1,18 +1,18 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.account.model.CustomerProfile
-import com.buyeong.umji.api.account.model.SharedAddress
-import com.buyeong.umji.api.account.model.SharedAddressCommand
+import com.buyeong.umji.api.account.dto.CustomerProfileDto
+import com.buyeong.umji.api.account.dto.SharedAddressCommandDto
+import com.buyeong.umji.api.account.dto.SharedAddressDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
+import com.buyeong.umji.api.order.dto.ShippingAddressSnapshotDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationAddressEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationAddressRepository
-import java.time.Instant
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -21,17 +21,17 @@ class CustomerAccountJpaEntityService(
     private val organizations: OrganizationJpaEntityService,
     private val addresses: OrganizationAddressRepository,
 ) {
-    fun profile(accountPublicId: UUID): CustomerProfile? = accounts.findByPublicId(accountPublicId)?.let { account ->
-        CustomerProfile(requireNotNull(account.publicId), account.name, account.phone, account.email, account.status)
+    fun profile(accountPublicId: UUID): CustomerProfileDto? = accounts.findByPublicId(accountPublicId)?.let { account ->
+        CustomerProfileDto(requireNotNull(account.publicId), account.name, account.phone, account.email, account.status)
     }
 
-    fun addresses(accountPublicId: UUID): List<SharedAddress> {
+    fun addresses(accountPublicId: UUID): List<SharedAddressDto> {
         val group = organizations.activeBuyerForAccountPublicId(accountPublicId) ?: return emptyList()
         return addresses.findAllByOrganizationId(requireNotNull(group.id)).map { it.toModel() }
     }
 
     @Transactional
-    fun createAddress(accountPublicId: UUID, command: SharedAddressCommand): SharedAddress {
+    fun createAddress(accountPublicId: UUID, command: SharedAddressCommandDto): SharedAddressDto {
         val account = accounts.findByPublicId(accountPublicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = organizations.lockActiveForAccountPublicId(accountPublicId)
         val organizationId = requireNotNull(group.id)
@@ -43,7 +43,7 @@ class CustomerAccountJpaEntityService(
     }
 
     @Transactional
-    fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommand): SharedAddress? {
+    fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommandDto): SharedAddressDto? {
         val group = organizations.lockActiveForAccountPublicId(accountPublicId)
         val organizationId = requireNotNull(group.id)
         val address = addresses.findByPublicIdAndOrganization_Id(addressPublicId, organizationId) ?: return null
@@ -58,7 +58,7 @@ class CustomerAccountJpaEntityService(
     }
 
     @Transactional
-    fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddress? {
+    fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddressDto? {
         val group = organizations.lockActiveForAccountPublicId(accountPublicId)
         val organizationId = requireNotNull(group.id)
         val address = addresses.findByPublicIdAndOrganization_Id(addressPublicId, organizationId) ?: return null
@@ -79,10 +79,10 @@ class CustomerAccountJpaEntityService(
         return true
     }
 
-    fun findForAccount(accountPublicId: UUID, addressPublicId: UUID): ShippingAddressSnapshot? {
+    fun findForAccount(accountPublicId: UUID, addressPublicId: UUID): ShippingAddressSnapshotDto? {
         val organizationId = organizations.activeBuyerForAccountPublicId(accountPublicId)?.id ?: return null
         val address = addresses.findByPublicIdAndOrganization_Id(addressPublicId, organizationId) ?: return null
-        return ShippingAddressSnapshot(
+        return ShippingAddressSnapshotDto(
             address.recipientName,
             address.recipientPhone,
             address.postalCode,
@@ -91,7 +91,7 @@ class CustomerAccountJpaEntityService(
         )
     }
 
-    private fun SharedAddressCommand.toEntity(
+    private fun SharedAddressCommandDto.toEntity(
         group: OrganizationEntity,
         account: AccountEntity,
         makeDefault: Boolean,
@@ -101,7 +101,7 @@ class CustomerAccountJpaEntityService(
         apply(this@toEntity, makeDefault)
     }
 
-    private fun OrganizationAddressEntity.apply(command: SharedAddressCommand, makeDefault: Boolean) {
+    private fun OrganizationAddressEntity.apply(command: SharedAddressCommandDto, makeDefault: Boolean) {
         recipientName = command.recipientName
         recipientPhone = command.recipientPhone
         postalCode = command.postalCode
@@ -118,7 +118,7 @@ class CustomerAccountJpaEntityService(
         }
     }
 
-    private fun OrganizationAddressEntity.toModel() = SharedAddress(
+    private fun OrganizationAddressEntity.toModel() = SharedAddressDto(
         requireNotNull(publicId),
         recipientName,
         recipientPhone,

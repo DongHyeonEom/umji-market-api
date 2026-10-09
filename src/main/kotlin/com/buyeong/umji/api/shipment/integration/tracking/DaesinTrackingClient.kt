@@ -1,14 +1,14 @@
 package com.buyeong.umji.api.shipment.integration.tracking
 
 import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Component
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Component
 class DaesinTrackingClient {
-        fun lookup(trackingNumber: String): CarrierTrackingStatus {
+    fun lookup(trackingNumber: String): CarrierTrackingStatus {
         val encodedNumber = URLEncoder.encode(trackingNumber, StandardCharsets.UTF_8)
         val html = Jsoup.connect("https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=$encodedNumber")
             .timeout(LOOKUP_TIMEOUT_MILLIS)

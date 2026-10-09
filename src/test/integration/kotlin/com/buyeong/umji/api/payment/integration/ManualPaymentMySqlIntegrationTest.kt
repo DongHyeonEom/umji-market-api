@@ -4,10 +4,6 @@ import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
 import com.buyeong.umji.api.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.payment.service.PaymentService
-import java.nio.ByteBuffer
-import java.sql.Timestamp
-import java.time.Instant
-import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -18,6 +14,10 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
+import java.nio.ByteBuffer
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")
@@ -279,7 +279,11 @@ class ManualPaymentMySqlIntegrationTest {
 
     private fun createOrder(accountId: UUID, skuId: UUID, reservationKey: UUID): UUID {
         val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, accountId.toBytes())!!
-        val organizationInternalId = jdbc.queryForObject("SELECT organization_id FROM organization_member WHERE account_id = ? AND status = 'ACTIVE'", Long::class.java, accountInternalId)!!
+        val organizationInternalId = jdbc.queryForObject(
+            "SELECT organization_id FROM organization_member WHERE account_id = ? AND status = 'ACTIVE'",
+            Long::class.java,
+            accountInternalId
+        )!!
         val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuId.toBytes())!!
         val orderId = UUID.randomUUID()
         val now = Instant.now()

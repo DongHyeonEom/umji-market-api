@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.config
 
-import java.time.format.DateTimeFormatter
 import org.springframework.context.annotation.Configuration
 import org.springframework.format.datetime.standard.DateTimeFormatterRegistrar
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+import java.time.format.DateTimeFormatter
 
 @Configuration
 class WebConfig : WebMvcConfigurer {

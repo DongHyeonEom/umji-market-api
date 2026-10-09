@@ -7,24 +7,22 @@ import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
 import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
 import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfileCommand
 import com.buyeong.umji.api.account.model.SharedAddressCommand
+import com.buyeong.umji.api.account.service.CustomerAccountService
 import com.buyeong.umji.api.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
-import com.buyeong.umji.api.account.service.CustomerAccountService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
 import com.buyeong.umji.api.operation.account.service.OperationAccountService
+import com.buyeong.umji.api.operation.order.service.OperationTaxInvoiceService
 import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.service.OrderService
-import com.buyeong.umji.api.operation.order.service.OperationTaxInvoiceService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.shipment.service.ShipmentService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
-import java.nio.ByteBuffer
-import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -37,6 +35,8 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.transaction.annotation.Transactional
+import java.nio.ByteBuffer
+import java.util.UUID
 
 @SpringBootTest(
     properties = [
@@ -115,10 +115,14 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             String::class.java,
         )
         assertThat(columns).containsExactlyInAnyOrder(
-            "purchase_order.created_by_account_id", "purchase_order.order_source",
-            "purchase_order_tax_invoice.invoice_approval_number", "purchase_order_tax_invoice.issued_at",
-            "purchase_order_tax_invoice.issued_by_account_id", "purchase_order_tax_invoice.supply_amount",
-            "purchase_order_tax_invoice.tax_amount", "purchase_order_tax_invoice.total_amount",
+            "purchase_order.created_by_account_id",
+            "purchase_order.order_source",
+            "purchase_order_tax_invoice.invoice_approval_number",
+            "purchase_order_tax_invoice.issued_at",
+            "purchase_order_tax_invoice.issued_by_account_id",
+            "purchase_order_tax_invoice.supply_amount",
+            "purchase_order_tax_invoice.tax_amount",
+            "purchase_order_tax_invoice.total_amount",
         )
         val eventTableCount = jdbc.queryForObject(
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'purchase_order_tax_invoice_event'",
@@ -148,7 +152,8 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         )
 
         val created = orders.createAdminPhoneOrder(
-            operatorId, buyerId,
+            operatorId,
+            buyerId,
             com.buyeong.umji.api.order.model.ShippingAddressSnapshot("Recipient", "01012345678", "12345", "Seoul address", null),
             listOf(
                 com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerA, 2),
@@ -164,14 +169,16 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             jdbc.queryForList(
                 "SELECT order_source FROM purchase_order WHERE public_id IN (?, ?) ORDER BY total_amount",
                 String::class.java,
-                created[0].id.toBytes(), created[1].id.toBytes(),
+                created[0].id.toBytes(),
+                created[1].id.toBytes(),
             ),
         ).containsExactly("ADMIN_PHONE", "ADMIN_PHONE")
         assertThat(
             jdbc.queryForList(
                 "SELECT created_by_account_id FROM purchase_order WHERE public_id IN (?, ?)",
                 Long::class.java,
-                created[0].id.toBytes(), created[1].id.toBytes(),
+                created[0].id.toBytes(),
+                created[1].id.toBytes(),
             ),
         ).containsOnly(jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, operatorId.toBytes()))
         assertThat(
@@ -203,14 +210,20 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
         assertThatThrownBy {
             orders.createAdminPhoneOrder(
-                operatorId, buyerId,
+                operatorId,
+                buyerId,
                 com.buyeong.umji.api.order.model.ShippingAddressSnapshot("Recipient", "01012345678", "12345", "Seoul address", null),
-                listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 2)), false,
+                listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 2)),
+                false,
             )
         }.isInstanceOf(IllegalArgumentException::class.java).hasMessage("가용 재고가 부족합니다.")
 
         assertThat(
-            jdbc.queryForObject("SELECT COUNT(*) FROM purchase_order WHERE created_by_account_id = (SELECT id FROM account WHERE public_id = ?)", Int::class.java, operatorId.toBytes()),
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM purchase_order WHERE created_by_account_id = (SELECT id FROM account WHERE public_id = ?)",
+                Int::class.java,
+                operatorId.toBytes()
+            ),
         ).isZero()
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM stock_reservation WHERE sku_id = ?", Int::class.java, skuId)).isZero()
         assertThat(

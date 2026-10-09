@@ -1,12 +1,12 @@
 package com.buyeong.umji.api.account.service
 
-import com.buyeong.umji.api.account.model.CustomerProfile
-import com.buyeong.umji.api.account.model.SharedAddress
-import com.buyeong.umji.api.account.model.SharedAddressCommand
-import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.account.dto.CustomerProfileDto
+import com.buyeong.umji.api.account.dto.SharedAddressCommandDto
+import com.buyeong.umji.api.account.dto.SharedAddressDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import org.springframework.transaction.annotation.Transactional
+import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
@@ -14,27 +14,27 @@ class CustomerAccountService(
     private val accounts: CustomerAccountJpaEntityService,
 ) {
     @Transactional(readOnly = true)
-    fun profile(accountPublicId: UUID): CustomerProfile =
+    fun profile(accountPublicId: UUID): CustomerProfileDto =
         accounts.profile(accountPublicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
 
     @Transactional(readOnly = true)
-    fun addresses(accountPublicId: UUID): List<SharedAddress> = accounts.addresses(accountPublicId)
+    fun addresses(accountPublicId: UUID): List<SharedAddressDto> = accounts.addresses(accountPublicId)
 
     @Transactional
-    fun createAddress(accountPublicId: UUID, command: SharedAddressCommand): SharedAddress {
+    fun createAddress(accountPublicId: UUID, command: SharedAddressCommandDto): SharedAddressDto {
         validate(command)
         return accounts.createAddress(accountPublicId, command)
     }
 
     @Transactional
-    fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommand): SharedAddress {
+    fun updateAddress(accountPublicId: UUID, addressPublicId: UUID, command: SharedAddressCommandDto): SharedAddressDto {
         validate(command)
         return accounts.updateAddress(accountPublicId, addressPublicId, command)
             ?: throw ItemNotFoundException("Organization 배송지를 찾을 수 없습니다.")
     }
 
     @Transactional
-    fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddress =
+    fun setDefaultAddress(accountPublicId: UUID, addressPublicId: UUID): SharedAddressDto =
         accounts.setDefaultAddress(accountPublicId, addressPublicId)
             ?: throw ItemNotFoundException("Organization 배송지를 찾을 수 없습니다.")
 
@@ -45,7 +45,7 @@ class CustomerAccountService(
         }
     }
 
-    private fun validate(command: SharedAddressCommand) {
+    private fun validate(command: SharedAddressCommandDto) {
         require(command.recipientName.isNotBlank()) { "수령인 이름은 필수입니다." }
         require(command.recipientPhone.isNotBlank()) { "수령인 연락처는 필수입니다." }
         require(command.postalCode.isNotBlank()) { "우편번호는 필수입니다." }

@@ -10,10 +10,6 @@ import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
 import com.buyeong.umji.api.shipment.service.ShipmentService
-import java.nio.ByteBuffer
-import java.sql.Timestamp
-import java.time.Instant
-import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -23,6 +19,10 @@ import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
+import java.nio.ByteBuffer
+import java.sql.Timestamp
+import java.time.Instant
+import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")
@@ -309,7 +309,11 @@ class OrderShipmentMySqlIntegrationTest {
 
     private fun createOrder(customerId: UUID, skuId: UUID, reservationKey: UUID): UUID {
         val accountInternalId = jdbc.queryForObject("SELECT id FROM account WHERE public_id = ?", Long::class.java, customerId.toBytes())!!
-        val organizationInternalId = jdbc.queryForObject("SELECT organization_id FROM organization_member WHERE account_id = ? AND status = 'ACTIVE'", Long::class.java, accountInternalId)!!
+        val organizationInternalId = jdbc.queryForObject(
+            "SELECT organization_id FROM organization_member WHERE account_id = ? AND status = 'ACTIVE'",
+            Long::class.java,
+            accountInternalId
+        )!!
         val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuId.toBytes())!!
         val offerInternalId = jdbc.queryForObject(
             "SELECT id FROM sales_offer WHERE product_sku_id = ?",

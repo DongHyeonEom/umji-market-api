@@ -66,7 +66,8 @@ class FileStorageMySqlIntegrationTest {
         val contentColumns = jdbc.queryForObject(
             """SELECT COUNT(*) FROM information_schema.columns
                 WHERE table_schema = DATABASE() AND table_name = 'file_asset'
-                AND data_type IN ('tinyblob', 'blob', 'mediumblob', 'longblob')""".trimIndent(),
+                AND data_type IN ('tinyblob', 'blob', 'mediumblob', 'longblob')
+            """.trimIndent(),
             Int::class.java,
         )
         assertThat(contentColumns).isZero()

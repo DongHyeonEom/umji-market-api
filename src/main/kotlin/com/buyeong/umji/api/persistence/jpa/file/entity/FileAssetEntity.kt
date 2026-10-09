@@ -43,5 +43,4 @@ class FileAssetEntity : DomainPublicEntity() {
 
     @Column(name = "uploaded_at")
     var uploadedAt: Instant? = null
-
 }

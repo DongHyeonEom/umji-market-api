@@ -1,19 +1,19 @@
 package com.buyeong.umji.api.persistence.jpa.auth.service
 
-import com.buyeong.umji.api.auth.model.AccountRecord
-import com.buyeong.umji.api.auth.model.WebAccountCredentials
+import com.buyeong.umji.api.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.auth.dto.WebAccountCredentialsDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class WebCredentialJpaEntityService(
@@ -22,10 +22,10 @@ class WebCredentialJpaEntityService(
     @Value("\${umji.auth.totp-encryption-key:}") private val encryptionKeyBase64: String,
 ) {
     @Transactional(readOnly = true)
-    fun findByNormalizedPhone(phone: String): WebAccountCredentials? = accounts.findByPhoneNormalized(phone)?.toCredentials()
+    fun findByNormalizedPhone(phone: String): WebAccountCredentialsDto? = accounts.findByPhoneNormalized(phone)?.toCredentials()
 
     @Transactional(readOnly = true)
-    fun findById(id: UUID): WebAccountCredentials? = accounts.findByPublicId(id)?.toCredentials()
+    fun findById(id: UUID): WebAccountCredentialsDto? = accounts.findByPublicId(id)?.toCredentials()
 
     @Transactional
     fun savePassword(id: UUID, passwordHash: String) {
@@ -67,7 +67,7 @@ class WebCredentialJpaEntityService(
         )
     }
 
-    private fun AccountEntity.toCredentials(): WebAccountCredentials {
+    private fun AccountEntity.toCredentials(): WebAccountCredentialsDto {
         val internalId = requireNotNull(id)
         val permissions = jdbc.queryForList(
             """SELECT DISTINCT p.code FROM account_role ar
@@ -82,8 +82,8 @@ class WebCredentialJpaEntityService(
             String::class.java,
             internalId,
         ).toSet()
-        val account = AccountRecord(requireNotNull(publicId), name, status, tokenVersion, permissions)
-        return WebAccountCredentials(account, passwordHash, roles, adminTotpSecretEncrypted?.let(::decrypt), adminTotpEnabled)
+        val account = AccountRecordDto(requireNotNull(publicId), name, status, tokenVersion, permissions)
+        return WebAccountCredentialsDto(account, passwordHash, roles, adminTotpSecretEncrypted?.let(::decrypt), adminTotpEnabled)
     }
 
     private fun encrypt(value: String): ByteArray {

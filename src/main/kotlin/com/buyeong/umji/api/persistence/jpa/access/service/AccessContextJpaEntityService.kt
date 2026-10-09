@@ -1,23 +1,27 @@
 package com.buyeong.umji.api.persistence.jpa.access.service
 
-import java.nio.ByteBuffer
-import java.util.UUID
+import com.buyeong.umji.api.access.dto.AdminAccessSnapshotDto
+import com.buyeong.umji.api.access.dto.BuyerMembershipSnapshotDto
+import com.buyeong.umji.api.access.dto.ScreenPermissionMappingDto
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.nio.ByteBuffer
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
 class AccessContextJpaEntityService(
     private val jdbc: JdbcTemplate,
 ) {
-    fun findAdminAccess(accountPublicId: UUID): AdminAccessSnapshot {
+    fun findAdminAccess(accountPublicId: UUID): AdminAccessSnapshotDto {
         val accountId = accountPublicId.toBytes()
         val roles = jdbc.queryForList(
             """SELECT role.code FROM account
                 JOIN account_role ON account_role.account_id = account.id
                 JOIN role ON role.id = account_role.role_id
-                WHERE account.public_id = ?""".trimIndent(),
+                WHERE account.public_id = ?
+            """.trimIndent(),
             String::class.java,
             accountId,
         ).toSet()
@@ -26,14 +30,15 @@ class AccessContextJpaEntityService(
                 JOIN account_role ON account_role.account_id = account.id
                 JOIN role_permission ON role_permission.role_id = account_role.role_id
                 JOIN permission ON permission.id = role_permission.permission_id
-                WHERE account.public_id = ?""".trimIndent(),
+                WHERE account.public_id = ?
+            """.trimIndent(),
             String::class.java,
             accountId,
         ).toSet()
-        return AdminAccessSnapshot(roles, permissions)
+        return AdminAccessSnapshotDto(roles, permissions)
     }
 
-    fun findBuyerMembership(accountPublicId: UUID): BuyerMembershipSnapshot? =
+    fun findBuyerMembership(accountPublicId: UUID): BuyerMembershipSnapshotDto? =
         jdbc.query(
             """SELECT organization.public_id, organization.representative_account_id = account.id AS is_representative
                 FROM account
@@ -41,9 +46,10 @@ class AccessContextJpaEntityService(
                 JOIN organization ON organization.id = organization_member.organization_id AND organization.status = 'ACTIVE'
                 JOIN organization_capability ON organization_capability.organization_id = organization.id
                     AND organization_capability.capability_code = 'BUYER'
-                WHERE account.public_id = ?""".trimIndent(),
+                WHERE account.public_id = ?
+            """.trimIndent(),
             { result, _ ->
-                BuyerMembershipSnapshot(
+                BuyerMembershipSnapshotDto(
                     result.getBytes("public_id").toUuid(),
                     result.getBoolean("is_representative"),
                 )
@@ -56,21 +62,23 @@ class AccessContextJpaEntityService(
             """SELECT permission.code FROM organization_role_permission
                 JOIN permission ON permission.id = organization_role_permission.permission_id
                 WHERE organization_role_permission.membership_role = ?
-                ORDER BY permission.code""".trimIndent(),
+                ORDER BY permission.code
+            """.trimIndent(),
             String::class.java,
             membershipRole,
         ).toSet()
 
-    fun findScreens(audience: String): List<ScreenPermissionMapping> =
+    fun findScreens(audience: String): List<ScreenPermissionMappingDto> =
         jdbc.query(
             """SELECT ui_screen.screen_code, ui_screen.route_key, ui_screen.permission_match_mode, permission.code AS permission_code
                 FROM ui_screen
                 LEFT JOIN ui_screen_permission ON ui_screen_permission.ui_screen_id = ui_screen.id
                 LEFT JOIN permission ON permission.id = ui_screen_permission.permission_id
                 WHERE ui_screen.audience = ? AND ui_screen.active = TRUE
-                ORDER BY ui_screen.display_order, ui_screen.screen_code, permission.code""".trimIndent(),
+                ORDER BY ui_screen.display_order, ui_screen.screen_code, permission.code
+            """.trimIndent(),
             { result, _ ->
-                ScreenPermissionMapping(
+                ScreenPermissionMappingDto(
                     result.getString("screen_code"),
                     result.getString("route_key"),
                     result.getString("permission_match_mode"),
@@ -82,7 +90,7 @@ class AccessContextJpaEntityService(
             .values
             .map { rows ->
                 val first = rows.first()
-                ScreenPermissionMapping(
+                ScreenPermissionMappingDto(
                     first.screenCode,
                     first.routeKey,
                     first.permissionMatchMode,
@@ -101,21 +109,3 @@ class AccessContextJpaEntityService(
         return UUID(buffer.long, buffer.long)
     }
 }
-
-data class AdminAccessSnapshot(
-    val roles: Set<String>,
-    val permissions: Set<String>,
-)
-
-data class BuyerMembershipSnapshot(
-    val organizationId: UUID,
-    val isRepresentative: Boolean,
-)
-
-data class ScreenPermissionMapping(
-    val screenCode: String,
-    val routeKey: String,
-    val permissionMatchMode: String,
-    val permissionCode: String?,
-    val requiredPermissions: Set<String> = emptySet(),
-)

@@ -2,7 +2,7 @@ package com.buyeong.umji.api.persistence.jpa.account.service
 
 import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
+import com.buyeong.umji.api.operation.account.dto.OrganizationProfileDataDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationMemberEntity
@@ -10,9 +10,9 @@ import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusin
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationCapabilityRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -56,7 +56,7 @@ class OrganizationJpaEntityService(
     }
 
     @Transactional
-    fun updateBusinessProfileForAccount(accountPublicId: UUID, source: OrganizationProfileData) {
+    fun updateBusinessProfileForAccount(accountPublicId: UUID, source: OrganizationProfileDataDto) {
         val organization = ensureForAccount(accountPublicId)
         val profile = organizationProfiles.findByOrganization_Id(requireNotNull(organization.id))
             ?: OrganizationBusinessProfileEntity().apply {
@@ -96,7 +96,7 @@ class OrganizationJpaEntityService(
     fun ensureForAccount(
         accountPublicId: UUID,
         capability: String = BUYER,
-        profileData: OrganizationProfileData? = null,
+        profileData: OrganizationProfileDataDto? = null,
     ): OrganizationEntity {
         require(capability in setOf(BUYER, SELLER, OPERATOR)) { "Organization capability가 올바르지 않습니다." }
         val account = accounts.findByPublicId(accountPublicId)
@@ -128,10 +128,12 @@ class OrganizationJpaEntityService(
             members.saveAndFlush(targetMembership)
         }
         profileData?.let { saveBusinessProfile(group, it) }
-        capabilities.save(com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity().apply {
-            organization = group
-            capabilityCode = capability
-        })
+        capabilities.save(
+            com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity().apply {
+                organization = group
+                capabilityCode = capability
+            }
+        )
         return group
     }
 
@@ -139,8 +141,13 @@ class OrganizationJpaEntityService(
     fun assignAccountToOrganization(accountPublicId: UUID, organizationPublicId: UUID) {
         val account = accounts.findByPublicId(accountPublicId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = groups.findByPublicId(organizationPublicId) ?: throw ItemNotFoundException("구매자 그룹을 찾을 수 없습니다.")
-        require(group.status == ACTIVE && (capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER)
-            || capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER))) {
+        require(
+            group.status == ACTIVE &&
+                (
+                    capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER) ||
+                        capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER)
+                    )
+        ) {
             "활성 구매 또는 판매 Organization만 지정할 수 있습니다."
         }
         val lockedGroup = groups.findLockedById(requireNotNull(group.id))
@@ -185,7 +192,7 @@ class OrganizationJpaEntityService(
         lockedGroup.representativeAccount = account
     }
 
-    private fun saveBusinessProfile(group: OrganizationEntity, profile: OrganizationProfileData) {
+    private fun saveBusinessProfile(group: OrganizationEntity, profile: OrganizationProfileDataDto) {
         val existing = organizationProfiles.findByOrganization_Id(requireNotNull(group.id))
         val target = existing ?: OrganizationBusinessProfileEntity().apply { organization = group }
         target.businessName = profile.businessName

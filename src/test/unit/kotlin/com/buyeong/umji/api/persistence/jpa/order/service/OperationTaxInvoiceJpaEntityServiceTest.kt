@@ -1,6 +1,5 @@
 package com.buyeong.umji.api.persistence.jpa.order.service
 
-import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainPublicEntity
@@ -29,7 +28,10 @@ class OperationTaxInvoiceJpaEntityServiceTest : DescribeSpec({
     val approvalNumber = "20261009-ABC-123"
 
     fun invoice(status: String = "READY_FOR_ISSUANCE"): PurchaseOrderTaxInvoiceEntity {
-        val account = AccountEntity().apply { name = "구매자"; this.status = "ACTIVE" }
+        val account = AccountEntity().apply {
+            name = "구매자"
+            this.status = "ACTIVE"
+        }
         val order = PurchaseOrderEntity().apply {
             orderNumber = "UMJ-20261009-000001"
             this.status = "PENDING_PAYMENT"
@@ -40,7 +42,10 @@ class OperationTaxInvoiceJpaEntityServiceTest : DescribeSpec({
         }
         val publicId = DomainPublicEntity::class.java.getDeclaredField("publicId").apply { isAccessible = true }
         publicId.set(order, orderId)
-        return PurchaseOrderTaxInvoiceEntity().apply { this.order = order; this.status = status }
+        return PurchaseOrderTaxInvoiceEntity().apply {
+            this.order = order
+            this.status = status
+        }
     }
 
     beforeTest { clearMocks(invoices, events, accounts) }

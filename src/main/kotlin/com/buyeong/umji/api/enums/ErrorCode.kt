@@ -1,4 +1,5 @@
 package com.buyeong.umji.api.enums
+
 /*
 [공통 코드] API 통신에 대한 '에러 코드'를 Enum 형태로 관리를 한다.
 Global Error CodeList : 전역으로 발생하는 에러코드를 관리한다.

@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.persistence.jpa.catalog.entity
 
-import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainSoftDeletableEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
+import com.buyeong.umji.api.persistence.jpa.entity.backbone.DomainSoftDeletableEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType

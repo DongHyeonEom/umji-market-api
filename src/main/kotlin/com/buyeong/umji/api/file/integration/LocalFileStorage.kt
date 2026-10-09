@@ -1,13 +1,13 @@
 package com.buyeong.umji.api.file.integration
 
 import com.buyeong.umji.api.exception.ClientBadRequestException
+import org.springframework.stereotype.Component
 import java.io.InputStream
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
-import org.springframework.stereotype.Component
 
 @Component
 class LocalFileStorage(

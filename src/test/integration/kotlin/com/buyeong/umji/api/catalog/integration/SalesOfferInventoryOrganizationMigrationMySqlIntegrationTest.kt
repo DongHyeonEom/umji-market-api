@@ -1,6 +1,5 @@
 package com.buyeong.umji.api.catalog.integration
 
-import java.sql.DriverManager
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
@@ -10,6 +9,7 @@ import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
+import java.sql.DriverManager
 
 @Testcontainers(disabledWithoutDocker = true)
 class SalesOfferInventoryOrganizationMigrationMySqlIntegrationTest {

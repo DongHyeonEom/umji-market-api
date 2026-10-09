@@ -2,11 +2,11 @@ package com.buyeong.umji.api.shipment.integration
 
 import com.buyeong.umji.api.order.service.ShippingHolidayService
 import com.buyeong.umji.api.shipment.service.ShipmentService
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
-import org.springframework.scheduling.annotation.Scheduled
-import org.springframework.stereotype.Component
 
 @Component
 class ShipmentPreparationJob(

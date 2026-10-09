@@ -1,13 +1,13 @@
 package com.buyeong.umji.api.notification.service
 
+import com.buyeong.umji.api.notification.dto.NotificationDeviceTokenRegistrationDto
 import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
-import com.buyeong.umji.api.notification.model.NotificationDeviceTokenRegistration
 import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.security.MessageDigest
 import java.time.Clock
 import java.util.UUID
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional
@@ -19,7 +19,7 @@ class NotificationDeviceTokenService(
         accountId: UUID,
         platform: NotificationDevicePlatform,
         token: String,
-    ): NotificationDeviceTokenRegistration {
+    ): NotificationDeviceTokenRegistrationDto {
         require(token.isNotBlank() && token == token.trim() && token.length <= MAX_TOKEN_LENGTH) {
             "푸시 token은 1~4096자이며 앞뒤 공백을 포함할 수 없습니다."
         }

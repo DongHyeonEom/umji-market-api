@@ -5,9 +5,9 @@ import com.buyeong.umji.api.persistence.jpa.account.repository.AccountRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductImageRepository
 import com.buyeong.umji.api.persistence.jpa.file.entity.FileAssetEntity
 import com.buyeong.umji.api.persistence.jpa.file.repository.FileAssetRepository
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)

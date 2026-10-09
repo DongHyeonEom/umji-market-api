@@ -1,24 +1,22 @@
 package com.buyeong.umji.api.shipment.service
 
-import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
-
-import com.buyeong.umji.api.shipment.integration.tracking.KyoungdongTrackingClient
-import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
-import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate
-import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
-import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.inventory.service.InventoryService
+import com.buyeong.umji.api.notification.service.NotificationEventService
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
+import com.buyeong.umji.api.shipment.dto.ShipmentTrackingCandidateDto
+import com.buyeong.umji.api.shipment.integration.tracking.KyoungdongTrackingClient
+import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import io.mockk.every
 import io.mockk.mockk
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class ShipmentServiceKyoungdongTrackingTest {
     @Test
     fun `customer order refresh marks a Kyoungdong shipment delivered from latest carrier scan`() {
-        val candidate = ShipmentTrackingCandidate(
+        val candidate = ShipmentTrackingCandidateDto(
             orderId = UUID.randomUUID(),
             status = "IN_TRANSIT",
             carrierCode = "KDEXP",

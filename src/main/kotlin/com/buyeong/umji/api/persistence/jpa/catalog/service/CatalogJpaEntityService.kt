@@ -17,13 +17,13 @@ import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductOptionValu
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.ProductSkuRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
-import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -38,7 +38,10 @@ class CatalogJpaEntityService(
     private val listings: ChannelProductListingRepository,
     private val offers: SalesOfferRepository,
 ) {
-    fun displayedCategories(channelCode: String, status: String): List<CategoryEntity> = categories.findAllBySalesChannel_CodeAndDisplayStatusAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(channelCode, status)
+    fun displayedCategories(
+        channelCode: String,
+        status: String,
+    ): List<CategoryEntity> = categories.findAllBySalesChannel_CodeAndDisplayStatusAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(channelCode, status)
     fun categories(channelCode: String): List<CategoryEntity> = categories.findAllBySalesChannel_CodeAndDeletedAtIsNullOrderByDisplayOrderAscNameAsc(channelCode)
     fun category(id: UUID): CategoryEntity? = categories.findByPublicIdAndDeletedAtIsNull(id)
     fun brands(pageable: Pageable): Page<BrandEntity> = brands.findAllByDeletedAtIsNull(pageable)

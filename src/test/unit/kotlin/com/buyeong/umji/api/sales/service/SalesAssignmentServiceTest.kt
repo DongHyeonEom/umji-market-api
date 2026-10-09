@@ -3,8 +3,8 @@ package com.buyeong.umji.api.sales.service
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.persistence.jpa.sales.service.OrganizationSalesAssignmentJpaEntityService
 import com.buyeong.umji.api.sales.model.SalesAssignmentCommand
-import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.mockk.every
 import io.mockk.mockk

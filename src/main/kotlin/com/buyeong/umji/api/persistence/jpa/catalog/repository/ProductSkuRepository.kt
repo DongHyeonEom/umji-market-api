@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.persistence.jpa.catalog.repository
 
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
-import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
 
 interface ProductSkuRepository : JpaRepository<ProductSkuEntity, Long> {
     fun findAllByProductIdAndSalesStatusOrderBySalePriceAsc(productId: Long, salesStatus: String): List<ProductSkuEntity>

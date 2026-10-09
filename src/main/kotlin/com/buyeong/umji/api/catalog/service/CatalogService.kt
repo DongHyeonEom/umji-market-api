@@ -1,30 +1,30 @@
 package com.buyeong.umji.api.catalog.service
 
-import com.buyeong.umji.api.catalog.model.CategoryView
-import com.buyeong.umji.api.catalog.model.ProductDetailView
-import com.buyeong.umji.api.catalog.model.ProductPageView
-import com.buyeong.umji.api.catalog.model.ProductSkuView
-import com.buyeong.umji.api.catalog.model.ProductSummaryView
+import com.buyeong.umji.api.catalog.dto.CategoryViewDto
+import com.buyeong.umji.api.catalog.dto.ProductDetailViewDto
+import com.buyeong.umji.api.catalog.dto.ProductPageViewDto
+import com.buyeong.umji.api.catalog.dto.ProductSkuViewDto
+import com.buyeong.umji.api.catalog.dto.ProductSummaryViewDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class CatalogService(private val catalog: CatalogJpaEntityService) {
     @Transactional(readOnly = true)
-    fun categories(channelCode: String): List<CategoryView> = catalog.channelCategories(channel(channelCode), DISPLAYED).map {
-        CategoryView(requireNotNull(it.publicId), it.name, it.path, it.depth, channelCode)
+    fun categories(channelCode: String): List<CategoryViewDto> = catalog.channelCategories(channel(channelCode), DISPLAYED).map {
+        CategoryViewDto(requireNotNull(it.publicId), it.name, it.path, it.depth, channelCode)
     }
 
     @Transactional(readOnly = true)
-    fun products(page: Int, size: Int, channelCode: String): ProductPageView {
+    fun products(page: Int, size: Int, channelCode: String): ProductPageViewDto {
         val result = catalog.publicListings(channel(channelCode), DISPLAYED, ON_SALE, page, size)
-        return ProductPageView(
+        return ProductPageViewDto(
             result.content.map { listing ->
                 val offers = catalog.activeSalesOffers(channelCode, ON_SALE, requireNotNull(listing.product.id))
-                ProductSummaryView(
+                ProductSummaryViewDto(
                     requireNotNull(listing.product.publicId),
                     listing.product.name,
                     listing.product.brand?.name,
@@ -41,19 +41,19 @@ class CatalogService(private val catalog: CatalogJpaEntityService) {
     }
 
     @Transactional(readOnly = true)
-    fun product(productId: UUID, channelCode: String): ProductDetailView {
+    fun product(productId: UUID, channelCode: String): ProductDetailViewDto {
         val channel = channel(channelCode)
         val listing = catalog.publicListing(channel, productId, DISPLAYED, ON_SALE)
             ?: throw ItemNotFoundException("상품을 찾을 수 없습니다.")
         val offers = catalog.activeSalesOffers(channel, ON_SALE, requireNotNull(listing.product.id))
-        return ProductDetailView(
+        return ProductDetailViewDto(
             id = requireNotNull(listing.product.publicId),
             name = listing.product.name,
             description = listing.product.description,
             categoryName = listing.category.name,
             brandName = listing.product.brand?.name,
             skus = offers.map { offer ->
-                ProductSkuView(
+                ProductSkuViewDto(
                     requireNotNull(offer.productSku.publicId),
                     offer.productSku.skuCode,
                     offer.productSku.name,

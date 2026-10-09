@@ -1,17 +1,17 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfile
-import com.buyeong.umji.api.account.model.OrganizationTaxInvoiceProfileCommand
-import com.buyeong.umji.api.order.model.TaxInvoiceSupplier
+import com.buyeong.umji.api.account.dto.OrganizationTaxInvoiceProfileCommandDto
+import com.buyeong.umji.api.account.dto.OrganizationTaxInvoiceProfileDto
 import com.buyeong.umji.api.exception.ForbiddenOperationException
+import com.buyeong.umji.api.order.dto.TaxInvoiceSupplierDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
-import java.time.Instant
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -20,10 +20,10 @@ class OrganizationTaxInvoiceJpaEntityService(
     private val groups: OrganizationRepository,
     private val profiles: OrganizationBusinessProfileRepository,
 ) {
-    fun forAccount(accountPublicId: UUID): OrganizationTaxInvoiceProfile? =
+    fun forAccount(accountPublicId: UUID): OrganizationTaxInvoiceProfileDto? =
         organizations.activeBuyerForAccountPublicId(accountPublicId)?.toProfile()
 
-    fun forCurrentAccount(accountPublicId: UUID): OrganizationTaxInvoiceProfile? =
+    fun forCurrentAccount(accountPublicId: UUID): OrganizationTaxInvoiceProfileDto? =
         organizations.activeForAccountPublicId(accountPublicId)
             ?.takeIf { organization ->
                 val id = requireNotNull(organization.publicId)
@@ -33,8 +33,8 @@ class OrganizationTaxInvoiceJpaEntityService(
     @Transactional
     fun updateForAccount(
         accountPublicId: UUID,
-        command: OrganizationTaxInvoiceProfileCommand,
-    ): OrganizationTaxInvoiceProfile? {
+        command: OrganizationTaxInvoiceProfileCommandDto,
+    ): OrganizationTaxInvoiceProfileDto? {
         val active = organizations.activeForAccountPublicId(accountPublicId) ?: return null
         val activePublicId = requireNotNull(active.publicId)
         require(organizations.hasCapability(activePublicId, BUYER) || organizations.hasCapability(activePublicId, SELLER)) {
@@ -62,17 +62,22 @@ class OrganizationTaxInvoiceJpaEntityService(
         return profile.toModel(group)
     }
 
-    fun forGroup(groupPublicId: UUID): OrganizationTaxInvoiceProfile? =
+    fun forGroup(groupPublicId: UUID): OrganizationTaxInvoiceProfileDto? =
         groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE && hasBusinessCapability(groupPublicId) }?.toProfile()
 
-    fun supplierForOrganization(organizationPublicId: UUID): TaxInvoiceSupplier? {
+    fun supplierForOrganization(organizationPublicId: UUID): TaxInvoiceSupplierDto? {
         val organization = groups.findByPublicId(organizationPublicId)
             ?.takeIf { it.status == ACTIVE && organizations.hasCapability(organizationPublicId, SELLER) }
             ?: return null
         val profile = profiles.findByOrganization_Id(requireNotNull(organization.id)) ?: return null
         val email = profile.taxInvoiceEmail?.trim()?.takeIf(String::isNotEmpty) ?: return null
-        if (!profile.isComplete() || profile.businessRegistrationVerificationStatus !in setOf("ACTIVE", "TEMPORARILY_CLOSED") || profile.businessRegistrationConfirmedAt == null) return null
-        return TaxInvoiceSupplier(
+        if (!profile.isComplete() ||
+            profile.businessRegistrationVerificationStatus !in setOf("ACTIVE", "TEMPORARILY_CLOSED") ||
+            profile.businessRegistrationConfirmedAt == null
+        ) {
+            return null
+        }
+        return TaxInvoiceSupplierDto(
             requireNotNull(profile.businessRegistrationNumber),
             profile.businessName,
             requireNotNull(profile.representativeName),
@@ -94,15 +99,15 @@ class OrganizationTaxInvoiceJpaEntityService(
     @Transactional
     fun updateForGroup(
         groupPublicId: UUID,
-        command: OrganizationTaxInvoiceProfileCommand,
-    ): OrganizationTaxInvoiceProfile? {
+        command: OrganizationTaxInvoiceProfileCommandDto,
+    ): OrganizationTaxInvoiceProfileDto? {
         val group = groups.findByPublicId(groupPublicId)?.takeIf { it.status == ACTIVE && hasBusinessCapability(groupPublicId) } ?: return null
         val lockedGroup = groups.findLockedById(requireNotNull(group.id))?.takeIf { it.status == ACTIVE } ?: return null
         if (lockedGroup.organizationType != BUSINESS) throw IllegalArgumentException("사업자 그룹만 세금계산서 정보를 관리할 수 있습니다.")
         return save(lockedGroup, command).toModel(lockedGroup)
     }
 
-    private fun save(group: OrganizationEntity, command: OrganizationTaxInvoiceProfileCommand): OrganizationBusinessProfileEntity {
+    private fun save(group: OrganizationEntity, command: OrganizationTaxInvoiceProfileCommandDto): OrganizationBusinessProfileEntity {
         val organizationId = requireNotNull(group.id)
         val profile = profiles.findByOrganization_Id(organizationId) ?: OrganizationBusinessProfileEntity().apply {
             organization = group
@@ -129,13 +134,13 @@ class OrganizationTaxInvoiceJpaEntityService(
         return profile
     }
 
-    private fun OrganizationEntity.toProfile(): OrganizationTaxInvoiceProfile {
+    private fun OrganizationEntity.toProfile(): OrganizationTaxInvoiceProfileDto {
         val profile = id?.let(profiles::findByOrganization_Id)
-        val complete = organizationType == BUSINESS
-            && profile.isComplete()
-            && profile?.businessRegistrationVerificationStatus in setOf("ACTIVE", "TEMPORARILY_CLOSED")
-            && profile?.businessRegistrationConfirmedAt != null
-        return OrganizationTaxInvoiceProfile(
+        val complete = organizationType == BUSINESS &&
+            profile.isComplete() &&
+            profile?.businessRegistrationVerificationStatus in setOf("ACTIVE", "TEMPORARILY_CLOSED") &&
+            profile?.businessRegistrationConfirmedAt != null
+        return OrganizationTaxInvoiceProfileDto(
             organizationId = requireNotNull(publicId),
             organizationType = organizationType,
             businessRegistrationNumber = profile?.businessRegistrationNumber,
@@ -154,17 +159,18 @@ class OrganizationTaxInvoiceJpaEntityService(
         )
     }
 
-    private fun OrganizationBusinessProfileEntity?.isComplete(): Boolean = this != null && listOf(
-        businessRegistrationNumber,
-        businessName,
-        representativeName,
-        postalCode,
-        address1,
-        businessIndustry,
-        businessItem,
-    ).all { !it.isNullOrBlank() }
+    private fun OrganizationBusinessProfileEntity?.isComplete(): Boolean = this != null &&
+        listOf(
+            businessRegistrationNumber,
+            businessName,
+            representativeName,
+            postalCode,
+            address1,
+            businessIndustry,
+            businessItem,
+        ).all { !it.isNullOrBlank() }
 
-    private fun OrganizationBusinessProfileEntity.toModel(group: OrganizationEntity) = OrganizationTaxInvoiceProfile(
+    private fun OrganizationBusinessProfileEntity.toModel(group: OrganizationEntity) = OrganizationTaxInvoiceProfileDto(
         organizationId = requireNotNull(group.publicId),
         organizationType = group.organizationType,
         businessRegistrationNumber = businessRegistrationNumber,
@@ -176,10 +182,10 @@ class OrganizationTaxInvoiceJpaEntityService(
         businessIndustry = businessIndustry,
         businessItem = businessItem,
         email = taxInvoiceEmail,
-        complete = group.organizationType == BUSINESS
-            && isComplete()
-            && businessRegistrationVerificationStatus in setOf("ACTIVE", "TEMPORARILY_CLOSED")
-            && businessRegistrationConfirmedAt != null,
+        complete = group.organizationType == BUSINESS &&
+            isComplete() &&
+            businessRegistrationVerificationStatus in setOf("ACTIVE", "TEMPORARILY_CLOSED") &&
+            businessRegistrationConfirmedAt != null,
         businessRegistrationVerificationStatus = businessRegistrationVerificationStatus,
         businessRegistrationVerifiedAt = businessRegistrationVerifiedAt,
         businessRegistrationConfirmedAt = businessRegistrationConfirmedAt,

@@ -2,12 +2,12 @@ package com.buyeong.umji.api.file.controller
 
 import com.buyeong.umji.api.auth.security.OperationAuthorization
 import com.buyeong.umji.api.exception.ForbiddenOperationException
+import com.buyeong.umji.api.file.dto.FileDownloadDto
 import com.buyeong.umji.api.file.model.CreateFileUploadRequest
 import com.buyeong.umji.api.file.model.FileUploadResponse
 import com.buyeong.umji.api.file.service.FileService
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
-import java.nio.file.Files
-import java.util.UUID
 import org.springframework.core.io.InputStreamResource
 import org.springframework.http.CacheControl
 import org.springframework.http.ContentDisposition
@@ -25,7 +25,8 @@ import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import jakarta.servlet.http.HttpServletRequest
+import java.nio.file.Files
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/files")
@@ -67,7 +68,7 @@ class FileController(
         @RequestParam ownerAccountId: UUID,
     ): ResponseEntity<InputStreamResource> = response(files.privateDownload(fileId, ownerAccountId), false)
 
-    private fun response(file: FileService.FileDownload, publiclyCacheable: Boolean): ResponseEntity<InputStreamResource> {
+    private fun response(file: FileDownloadDto, publiclyCacheable: Boolean): ResponseEntity<InputStreamResource> {
         val resource = InputStreamResource(Files.newInputStream(file.path))
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(file.contentType))

@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.order.service
 
-import com.buyeong.umji.api.order.model.OrderPage
+import com.buyeong.umji.api.order.dto.OrderPageDto
 import com.buyeong.umji.api.shipment.service.ShipmentService
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class CustomerOrderListingService(
@@ -12,7 +12,7 @@ class CustomerOrderListingService(
     private val shipments: ShipmentService,
 ) {
     @Transactional(readOnly = true)
-    fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage {
+    fun list(accountPublicId: UUID, page: Int, size: Int): OrderPageDto {
         shipments.refreshForCustomer(accountPublicId)
         return orders.list(accountPublicId, page, size)
     }

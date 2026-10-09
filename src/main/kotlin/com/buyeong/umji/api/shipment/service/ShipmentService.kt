@@ -1,18 +1,19 @@
 package com.buyeong.umji.api.shipment.service
 
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.notification.model.NotificationEventType
-import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.inventory.service.InventoryService
+import com.buyeong.umji.api.notification.dto.NotificationEventType
+import com.buyeong.umji.api.notification.service.NotificationEventService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
-import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
-import com.buyeong.umji.api.shipment.model.ShipmentChange
-import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate
+import com.buyeong.umji.api.shipment.dto.ShipmentChangeDto
+import com.buyeong.umji.api.shipment.dto.ShipmentRecordDto
+import com.buyeong.umji.api.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.shipment.integration.tracking.OfficialCarrierTrackingGateway
-import java.util.UUID
+import com.buyeong.umji.api.shipment.model.CarrierTrackingStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 @Transactional
@@ -22,7 +23,7 @@ class ShipmentService(
     private val tracking: OfficialCarrierTrackingGateway,
     private val notifications: NotificationEventService,
 ) {
-    fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChange {
+    fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChangeDto {
         val carrier = carrierCode.trim()
         val tracking = trackingNumber.trim()
         require(carrier.isNotEmpty() && carrier.length <= MAX_CARRIER_LENGTH) { "택배사 코드는 1~80자여야 합니다." }
@@ -38,7 +39,7 @@ class ShipmentService(
         return changed.toChange(true)
     }
 
-    fun markDelivered(orderId: UUID, operatorId: UUID): ShipmentChange {
+    fun markDelivered(orderId: UUID, operatorId: UUID): ShipmentChangeDto {
         val current = shipments.findForUpdate(orderId)?.toRecord() ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
         if (current.status == DELIVERED) return current.toChange(false)
         require(current.status == IN_TRANSIT) { "배송 중인 주문만 배송 완료 처리할 수 있습니다." }
@@ -52,7 +53,7 @@ class ShipmentService(
         synchronize(candidate).changed
     }
 
-    private fun synchronize(candidate: ShipmentTrackingCandidate): ShipmentChange {
+    private fun synchronize(candidate: ShipmentTrackingCandidateDto): ShipmentChangeDto {
         if (candidate.status != IN_TRANSIT) return candidate.toChange(false)
         val lookup = tracking.lookup(candidate.carrierCode, candidate.trackingNumber)
         if (lookup == CarrierTrackingStatus.DELIVERED && shipments.markDeliveredIfCurrent(candidate)) {
@@ -70,7 +71,7 @@ class ShipmentService(
         return prepared
     }
 
-    fun prepareOrder(orderId: UUID): ShipmentChange {
+    fun prepareOrder(orderId: UUID): ShipmentChangeDto {
         val entity = shipments.findForUpdate(orderId) ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
         val current = entity.toRecord()
         if (current.status == PREPARING) return current.toChange(false)
@@ -81,7 +82,7 @@ class ShipmentService(
         return preparing.toChange(true)
     }
 
-    private fun OrderShipmentEntity.toRecord() = com.buyeong.umji.api.shipment.model.ShipmentRecord(
+    private fun OrderShipmentEntity.toRecord() = com.buyeong.umji.api.shipment.dto.ShipmentRecordDto(
         orderId = requireNotNull(order.publicId),
         status = status,
         carrierCode = carrierCode,
@@ -89,13 +90,13 @@ class ShipmentService(
         reservationKeys = order.items.map { it.reservationKey },
     )
 
-    private fun com.buyeong.umji.api.shipment.model.ShipmentRecord.toChange(changed: Boolean) =
-        ShipmentChange(orderId, status, carrierCode, trackingNumber, changed)
+    private fun com.buyeong.umji.api.shipment.dto.ShipmentRecordDto.toChange(changed: Boolean) =
+        ShipmentChangeDto(orderId, status, carrierCode, trackingNumber, changed)
 
-    private fun ShipmentTrackingCandidate.toChange(
+    private fun ShipmentTrackingCandidateDto.toChange(
         changed: Boolean,
         status: String = this.status,
-    ) = ShipmentChange(orderId, status, carrierCode, trackingNumber, changed)
+    ) = ShipmentChangeDto(orderId, status, carrierCode, trackingNumber, changed)
 
     private companion object {
         const val READY_TO_SHIP = "READY_TO_SHIP"

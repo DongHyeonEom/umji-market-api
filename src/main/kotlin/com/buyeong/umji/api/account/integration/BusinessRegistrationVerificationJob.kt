@@ -3,10 +3,10 @@ package com.buyeong.umji.api.account.integration
 import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
 import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
-import java.time.Instant
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Component
 class BusinessRegistrationVerificationJob(

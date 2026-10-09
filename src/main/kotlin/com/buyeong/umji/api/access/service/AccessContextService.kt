@@ -59,7 +59,7 @@ class AccessContextService(
         )
     }
 
-    private fun com.buyeong.umji.api.persistence.jpa.access.service.ScreenPermissionMapping.isAllowed(permissions: Set<String>): Boolean =
+    private fun com.buyeong.umji.api.access.dto.ScreenPermissionMappingDto.isAllowed(permissions: Set<String>): Boolean =
         when (permissionMatchMode) {
             MATCH_ALL -> requiredPermissions.isNotEmpty() && permissions.containsAll(requiredPermissions)
             MATCH_ANY -> requiredPermissions.any(permissions::contains)
