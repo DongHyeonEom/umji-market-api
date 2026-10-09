@@ -58,6 +58,7 @@
 - [x] ktlint Gradle 실행기와 Kotlin 플러그인 호환 버전 정리
 - [x] `.editorconfig` 빈 설정값 수정 및 전체 Kotlin 소스 ktlint 포맷 적용
 - [x] `ktlintCheck` 전체 source set 통과 확인
+- [x] `@field:Schema` 뒤 생성자 프로퍼티 줄바꿈 규칙 적용 및 기존 Kotlin 소스 정리
 
 ## Task 1 — 관리자 권한 경계
 

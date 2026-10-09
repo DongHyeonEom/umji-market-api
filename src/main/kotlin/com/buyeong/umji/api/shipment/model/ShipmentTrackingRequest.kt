@@ -8,8 +8,10 @@ import jakarta.validation.constraints.Size
 data class ShipmentTrackingRequest(
     @field:NotBlank
     @field:Size(max = 80)
-    @field:Schema(description = "택배사 코드", example = "예시 값", type = "string", required = true) val carrierCode: String,
+    @field:Schema(description = "택배사 코드", example = "예시 값", type = "string", required = true)
+    val carrierCode: String,
     @field:NotBlank
     @field:Size(max = 100)
-    @field:Schema(description = "택배 송장 번호", example = "예시 값", type = "string", required = true) val trackingNumber: String,
+    @field:Schema(description = "택배 송장 번호", example = "예시 값", type = "string", required = true)
+    val trackingNumber: String,
 )

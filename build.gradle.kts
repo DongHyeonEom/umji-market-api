@@ -39,6 +39,41 @@ ktlint {
     version.set("1.5.0")
 }
 
+val formatSchemaProperties by tasks.registering {
+    group = "formatting"
+    description = "Moves Kotlin @field:Schema annotations and constructor properties onto separate lines."
+    doLast {
+        val schemaProperty = Regex("(?m)^(.*@field:Schema\\(.*\\))[ \\t]+((?:val|var)\\s+.*)$")
+        fileTree("src") { include("**/*.kt") }.forEach { sourceFile ->
+            val original = sourceFile.readText()
+            val lineEnding = if ("\r\n" in original) "\r\n" else "\n"
+            val formatted = schemaProperty.replace(original) { match ->
+                "${match.groupValues[1]}$lineEnding${match.groupValues[1].takeWhile { it == ' ' || it == '\t' }}${match.groupValues[2]}"
+            }
+            if (formatted != original) sourceFile.writeText(formatted)
+        }
+    }
+}
+
+val checkSchemaProperties by tasks.registering {
+    group = "verification"
+    description = "Checks that Kotlin @field:Schema annotations and constructor properties use separate lines."
+    doLast {
+        val inlineSchemaProperty = Regex("@field:Schema\\(.*\\)\\s+(?:val|var)\\s+")
+        val violations = fileTree("src") { include("**/*.kt") }.flatMap { sourceFile ->
+            sourceFile.readLines().mapIndexedNotNull { index, line ->
+                if (inlineSchemaProperty.containsMatchIn(line)) "${sourceFile}:${index + 1}" else null
+            }
+        }
+        check(violations.isEmpty()) {
+            "Move constructor properties after @field:Schema onto a new line:\n${violations.joinToString("\n")}"
+        }
+    }
+}
+
+tasks.named("ktlintCheck") { dependsOn(checkSchemaProperties) }
+tasks.named("ktlintFormat") { dependsOn(formatSchemaProperties) }
+
 // Version constants
 val azureApplicationinsightsVersion = "3.7.6"
 val springCloudAzureVersion = "5.21.0"
