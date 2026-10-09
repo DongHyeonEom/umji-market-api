@@ -6,12 +6,11 @@ import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.model.ErrorResponseModel
+import com.buyeong.umji.api.model.ErrorResponse
 import com.buyeong.umji.api.util.logger
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonProcessingException
 import jakarta.validation.ConstraintViolationException
-import java.io.IOException
 import org.springframework.boot.json.JsonParseException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -26,6 +25,7 @@ import org.springframework.web.client.HttpClientErrorException.BadRequest
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.servlet.NoHandlerFoundException
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import java.io.IOException
 
 @RestControllerAdvice
 class GlobalExceptionHandler(
@@ -36,31 +36,31 @@ class GlobalExceptionHandler(
     // ================================
 
     @ExceptionHandler(ItemNotFoundException::class)
-    protected fun handleItemNotFoundException(ex: ItemNotFoundException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleItemNotFoundException(ex: ItemNotFoundException): ResponseEntity<ErrorResponse> {
         logger.error("ItemNotFoundException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_NOT_FOUND)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_NOT_FOUND)
     }
 
     @ExceptionHandler(ForbiddenOperationException::class)
-    protected fun handleForbiddenOperationException(ex: ForbiddenOperationException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleForbiddenOperationException(ex: ForbiddenOperationException): ResponseEntity<ErrorResponse> {
         logger.error("ForbiddenOperationException", ex)
-        val response = ErrorResponseModel.of(ErrorCode.FORBIDDEN_ERROR, ex.message)
+        val response = ErrorResponse.of(ErrorCode.FORBIDDEN_ERROR, ex.message)
         return ResponseEntity(response, HttpStatus.FORBIDDEN)
     }
 
     @ExceptionHandler(ClientBadRequestException::class)
-    protected fun handleClientBadRequestException(ex: ClientBadRequestException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleClientBadRequestException(ex: ClientBadRequestException): ResponseEntity<ErrorResponse> {
         logger.error("ClientBadRequestException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.BAD_REQUEST_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.BAD_REQUEST_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     @ExceptionHandler(ApiCallException::class)
-    protected fun handleApiCallException(ex: ApiCallException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleApiCallException(ex: ApiCallException): ResponseEntity<ErrorResponse> {
         logger.error("ApiCallException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ex.errorCode, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HttpStatus.valueOf(ex.errorCode.status))
+        val response: ErrorResponse = ErrorResponse.of(ex.errorCode, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HttpStatus.valueOf(ex.errorCode.status))
     }
 
     // ================================
@@ -69,16 +69,16 @@ class GlobalExceptionHandler(
 
     // API 호출 시 '객체' 혹은 '파라미터' 데이터 값이 유효하지 않은 경우
     @ExceptionHandler(ConstraintViolationException::class)
-    protected fun handleConstraintViolationException(ex: ConstraintViolationException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleConstraintViolationException(ex: ConstraintViolationException): ResponseEntity<ErrorResponse> {
         logger.error("handleConstraintViolationException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_VALID_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_VALID_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // API 호출 시 '객체' 혹은 '파라미터' 데이터 값이 유효하지 않은 경우
     // @JsonProperty 어노테이션이 있는 경우 해당 이름으로 필드명 변환
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    protected fun handleMethodArgumentNotValidException(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleMethodArgumentNotValidException(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
         logger.error("handleMethodArgumentNotValidException", ex)
 
         val targetClass: Class<*>? = ex.bindingResult.target?.javaClass
@@ -93,40 +93,40 @@ class GlobalExceptionHandler(
                 }.distinct()
                 .joinToString(", ")
 
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_VALID_ERROR, errorMessage)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_VALID_ERROR, errorMessage)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // API 호출 시 '객체' 혹은 '파라미터' 데이터 값이 유효하지 않은 경우
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
-    protected fun handleMethodArgumentTypeMismatchException(ex: MethodArgumentTypeMismatchException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleMethodArgumentTypeMismatchException(ex: MethodArgumentTypeMismatchException): ResponseEntity<ErrorResponse> {
         logger.error("handleMethodArgumentTypeMismatchException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_VALID_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_VALID_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // API 호출 시 'Header' 내에 데이터 값이 유효하지 않은 경우
     @ExceptionHandler(MissingRequestHeaderException::class)
-    protected fun handleMissingRequestHeaderException(ex: MissingRequestHeaderException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleMissingRequestHeaderException(ex: MissingRequestHeaderException): ResponseEntity<ErrorResponse> {
         logger.error("MissingRequestHeaderException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.REQUEST_BODY_MISSING_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.REQUEST_BODY_MISSING_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // 클라이언트에서 Body로 '객체' 데이터가 넘어오지 않았을 경우
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    protected fun handleHttpMessageNotReadableException(ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleHttpMessageNotReadableException(ex: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
         logger.error("HttpMessageNotReadableException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.REQUEST_BODY_MISSING_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.REQUEST_BODY_MISSING_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // 클라이언트에서 request로 '파라미터로' 데이터가 넘어오지 않았을 경우
     @ExceptionHandler(MissingServletRequestParameterException::class)
-    protected fun handleMissingRequestHeaderExceptionException(ex: MissingServletRequestParameterException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleMissingRequestHeaderExceptionException(ex: MissingServletRequestParameterException): ResponseEntity<ErrorResponse> {
         logger.error("handleMissingServletRequestParameterException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.MISSING_REQUEST_PARAMETER_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.MISSING_REQUEST_PARAMETER_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // ================================
@@ -135,26 +135,26 @@ class GlobalExceptionHandler(
 
     // 잘못된 서버 요청일 경우 발생한 경우
     @ExceptionHandler(BadRequest::class)
-    protected fun handleBadRequestException(ex: HttpClientErrorException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleBadRequestException(ex: HttpClientErrorException): ResponseEntity<ErrorResponse> {
         logger.error("HttpClientErrorException.BadRequest", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.BAD_REQUEST_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.BAD_REQUEST_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // 잘못된 주소로 요청 한 경우
     @ExceptionHandler(NoHandlerFoundException::class)
-    protected fun handleNoHandlerFoundExceptionException(ex: NoHandlerFoundException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleNoHandlerFoundExceptionException(ex: NoHandlerFoundException): ResponseEntity<ErrorResponse> {
         logger.error("handleNoHandlerFoundExceptionException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_NOT_FOUND)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_NOT_FOUND)
     }
 
     // 잘못된 주소로 요청 한 경우
     @ExceptionHandler(NoResourceFoundException::class)
-    protected fun handleNoResourceFoundException(ex: NoResourceFoundException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleNoResourceFoundException(ex: NoResourceFoundException): ResponseEntity<ErrorResponse> {
         logger.error("handleNoHandlerFoundExceptionException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_NOT_FOUND)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_NOT_FOUND)
     }
 
     // ================================
@@ -163,52 +163,52 @@ class GlobalExceptionHandler(
 
     // NULL 값이 발생한 경우
     @ExceptionHandler(NullPointerException::class)
-    protected fun handleNullPointerException(ex: NullPointerException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleNullPointerException(ex: NullPointerException): ResponseEntity<ErrorResponse> {
         logger.error("handleNullPointerException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NULL_POINT_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_INTERNAL_SERVER_ERROR)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NULL_POINT_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_INTERNAL_SERVER_ERROR)
     }
 
     @ExceptionHandler(NoSuchElementException::class)
-    protected fun handleNoSuchElementException(ex: NoSuchElementException): ResponseEntity<ErrorResponseModel> {
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_NOT_FOUND)
+    protected fun handleNoSuchElementException(ex: NoSuchElementException): ResponseEntity<ErrorResponse> {
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_FOUND_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_NOT_FOUND)
     }
 
     @ExceptionHandler(IOException::class)
-    protected fun handleIOException(ex: IOException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleIOException(ex: IOException): ResponseEntity<ErrorResponse> {
         logger.error("handleIOException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.IO_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_INTERNAL_SERVER_ERROR)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.IO_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_INTERNAL_SERVER_ERROR)
     }
 
     @ExceptionHandler(JsonParseException::class)
-    protected fun handleJsonParseExceptionException(ex: JsonParseException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleJsonParseExceptionException(ex: JsonParseException): ResponseEntity<ErrorResponse> {
         logger.error("handleJsonParseExceptionException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.JSON_PARSE_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.JSON_PARSE_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     // com.fasterxml.jackson.core 내에 Exception 발생하는 경우
     @ExceptionHandler(JsonProcessingException::class)
-    protected fun handleJsonProcessingException(ex: JsonProcessingException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleJsonProcessingException(ex: JsonProcessingException): ResponseEntity<ErrorResponse> {
         logger.error("handleJsonProcessingException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.REQUEST_BODY_MISSING_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.REQUEST_BODY_MISSING_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     @ExceptionHandler(IllegalArgumentException::class)
-    protected fun handleIllegalArgumentException(ex: IllegalArgumentException): ResponseEntity<ErrorResponseModel> {
+    protected fun handleIllegalArgumentException(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> {
         logger.error("handleIllegalArgumentException", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.NOT_VALID_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_BAD_REQUEST)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.NOT_VALID_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_BAD_REQUEST)
     }
 
     @ExceptionHandler(Exception::class)
-    protected fun handleAllExceptions(ex: Exception): ResponseEntity<ErrorResponseModel> {
+    protected fun handleAllExceptions(ex: Exception): ResponseEntity<ErrorResponse> {
         logger.error("Exception", ex)
-        val response: ErrorResponseModel = ErrorResponseModel.of(ErrorCode.INTERNAL_SERVER_ERROR, ex.message)
-        return ResponseEntity<ErrorResponseModel>(response, HTTP_STATUS_INTERNAL_SERVER_ERROR)
+        val response: ErrorResponse = ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR, ex.message)
+        return ResponseEntity<ErrorResponse>(response, HTTP_STATUS_INTERNAL_SERVER_ERROR)
     }
 
     // ================================

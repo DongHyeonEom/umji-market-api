@@ -1,12 +1,12 @@
 package com.buyeong.umji.api.cart.service
 
-import com.buyeong.umji.api.cart.model.AddCartItemCommand
-import com.buyeong.umji.api.cart.model.CartItemState
-import com.buyeong.umji.api.cart.model.CartItemView
-import com.buyeong.umji.api.cart.model.CartState
-import com.buyeong.umji.api.cart.model.CartView
-import com.buyeong.umji.api.cart.model.SellableSku
-import com.buyeong.umji.api.cart.model.UpdateCartItemCommand
+import com.buyeong.umji.api.cart.dto.AddCartItemCommandDto
+import com.buyeong.umji.api.cart.dto.CartItemStateDto
+import com.buyeong.umji.api.cart.dto.CartItemViewDto
+import com.buyeong.umji.api.cart.dto.CartStateDto
+import com.buyeong.umji.api.cart.dto.CartViewDto
+import com.buyeong.umji.api.cart.dto.SellableSkuDto
+import com.buyeong.umji.api.cart.dto.UpdateCartItemCommandDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.cart.entity.CartEntity
@@ -14,9 +14,9 @@ import com.buyeong.umji.api.persistence.jpa.cart.entity.CartItemEntity
 import com.buyeong.umji.api.persistence.jpa.cart.service.CartJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class CartService(
@@ -25,10 +25,10 @@ class CartService(
     private val catalog: CatalogJpaEntityService,
 ) {
     @Transactional(readOnly = true)
-    fun cart(accountId: UUID): CartView = load(accountId, lock = false)?.toView() ?: CartView(emptyList())
+    fun cart(accountId: UUID): CartViewDto = load(accountId, lock = false)?.toView() ?: CartViewDto(emptyList())
 
     @Transactional
-    fun add(accountId: UUID, command: AddCartItemCommand): CartView {
+    fun add(accountId: UUID, command: AddCartItemCommandDto): CartViewDto {
         require((command.skuId != null) xor (command.salesOfferId != null)) { "SKU ID 또는 판매 오퍼 ID 중 하나만 지정해야 합니다." }
         val offer = command.salesOfferId?.let(catalog::salesOffer)
             ?: command.skuId?.let { catalog.salesOffer(command.channelCode.uppercase(), it) }
@@ -36,13 +36,13 @@ class CartService(
         val sku = offer.toSellable()
         require(sku.channelCode == command.channelCode.uppercase()) { "선택한 오퍼가 요청한 판매 채널과 일치하지 않습니다." }
         require(sku.salesStatus == ON_SALE) { "판매 중인 오퍼만 장바구니에 담을 수 있습니다." }
-        val current = load(accountId, lock = true) ?: CartState(accountId, emptyList())
+        val current = load(accountId, lock = true) ?: CartStateDto(accountId, emptyList())
         require(current.items.isEmpty() || current.items.all { it.sku.channelCode == sku.channelCode }) {
             "장바구니에는 한 판매 채널의 상품만 담을 수 있습니다. 현재 상품을 주문하거나 비워 주세요."
         }
         val matching = current.items.firstOrNull { it.sku.salesOfferId == sku.salesOfferId }
         val updated = if (matching == null) {
-            current.copy(items = current.items + CartItemState(null, sku, command.quantity))
+            current.copy(items = current.items + CartItemStateDto(null, sku, command.quantity))
         } else {
             current.copy(items = current.items.map { if (it === matching) it.copy(quantity = Math.addExact(it.quantity, command.quantity)) else it })
         }
@@ -50,7 +50,7 @@ class CartService(
     }
 
     @Transactional
-    fun update(accountId: UUID, itemId: UUID, command: UpdateCartItemCommand): CartView {
+    fun update(accountId: UUID, itemId: UUID, command: UpdateCartItemCommandDto): CartViewDto {
         val cart = load(accountId, lock = true) ?: throw ItemNotFoundException("장바구니를 찾을 수 없습니다.")
         requireItem(cart, itemId)
         return save(cart.copy(items = cart.items.map { if (it.id == itemId) it.copy(quantity = command.quantity) else it })).toView()
@@ -69,12 +69,12 @@ class CartService(
         save(cart.copy(items = emptyList()))
     }
 
-    private fun requireItem(cart: CartState, itemId: UUID) =
+    private fun requireItem(cart: CartStateDto, itemId: UUID) =
         cart.items.firstOrNull { it.id == itemId } ?: throw ItemNotFoundException("장바구니 항목을 찾을 수 없습니다.")
 
-    private fun CartState.toView() = CartView(
+    private fun CartStateDto.toView() = CartViewDto(
         items.map {
-            CartItemView(
+            CartItemViewDto(
                 requireNotNull(it.id),
                 it.sku.id,
                 it.sku.code,
@@ -91,13 +91,13 @@ class CartService(
         },
     )
 
-    private fun load(accountId: UUID, lock: Boolean): CartState? {
+    private fun load(accountId: UUID, lock: Boolean): CartStateDto? {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val cart = if (lock) carts.findLocked(requireNotNull(account.id)) else carts.findWithItems(requireNotNull(account.id))
         return cart?.toState(accountId)
     }
 
-    private fun save(state: CartState): CartState {
+    private fun save(state: CartStateDto): CartStateDto {
         val account = accounts.findByPublicId(state.accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val cart = carts.findLocked(requireNotNull(account.id)) ?: carts.create(account)
         val retainedIds = state.items.mapNotNull { it.id }.toSet()
@@ -116,15 +116,15 @@ class CartService(
         return carts.saveAndFlush(cart).toState(state.accountId)
     }
 
-    private fun CartEntity.toState(accountId: UUID) = CartState(accountId, items.map { it.toState() })
+    private fun CartEntity.toState(accountId: UUID) = CartStateDto(accountId, items.map { it.toState() })
 
-    private fun CartItemEntity.toState() = CartItemState(
+    private fun CartItemEntity.toState() = CartItemStateDto(
         id = publicId,
         sku = salesOffer.toSellable(),
         quantity = quantity,
     )
 
-    private fun com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity.toSellable() = SellableSku(
+    private fun com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity.toSellable() = SellableSkuDto(
         requireNotNull(productSku.publicId),
         requireNotNull(publicId),
         salesChannel.code,

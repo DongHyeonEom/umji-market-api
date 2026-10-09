@@ -1,11 +1,9 @@
 package com.buyeong.umji.api.sales.integration
 
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
-import com.buyeong.umji.api.sales.model.SalesAssignmentCommand
 import com.buyeong.umji.api.persistence.jpa.sales.service.OrganizationSalesAssignmentJpaEntityService
+import com.buyeong.umji.api.sales.model.SalesAssignmentCommand
 import com.buyeong.umji.api.sales.service.SalesAssignmentService
-import java.nio.ByteBuffer
-import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -16,6 +14,8 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
+import java.nio.ByteBuffer
+import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")
@@ -48,10 +48,19 @@ class SalesAssignmentMySqlIntegrationTest {
         operatorId = insertAccount("sales-assignment-operator", operatorPublicId)
         insertAccount("sales-assignment-non-sales", nonSalesPublicId)
         val salesRoleId = jdbc.queryForObject("SELECT id FROM role WHERE code = 'SALES_MANAGER'", Long::class.java)!!
-        jdbc.update("INSERT INTO account_role (account_id, role_id, granted_by) VALUES (?, ?, ?), (?, ?, ?)", firstSalesId, salesRoleId, operatorId, secondSalesId, salesRoleId, operatorId)
+        jdbc.update(
+            "INSERT INTO account_role (account_id, role_id, granted_by) VALUES (?, ?, ?), (?, ?, ?)",
+            firstSalesId,
+            salesRoleId,
+            operatorId,
+            secondSalesId,
+            salesRoleId,
+            operatorId
+        )
         jdbc.update(
             """INSERT INTO organization (public_id, organization_type, display_name, status)
-                VALUES (?, 'BUSINESS', 'Sales Assignment Test', 'ACTIVE')""".trimIndent(),
+                VALUES (?, 'BUSINESS', 'Sales Assignment Test', 'ACTIVE')
+            """.trimIndent(),
             organizationPublicId.toBytes(),
         )
         organizationId = jdbc.queryForObject(
@@ -85,16 +94,20 @@ class SalesAssignmentMySqlIntegrationTest {
         assertThat(history[1].commissionRateBps).isEqualTo(30)
         assertThat(history[1].validUntil).isNotNull()
         assertThat(history[0].validFrom).isAfterOrEqualTo(history[1].validUntil)
-        assertThat(jdbc.queryForObject(
-            """SELECT COUNT(*) FROM permission WHERE code = 'SALES_GROUP_ASSIGN'""",
-            Int::class.java,
-        )).isEqualTo(1)
-        assertThat(jdbc.queryForObject(
-            """SELECT COUNT(*) FROM role_permission rp
+        assertThat(
+            jdbc.queryForObject(
+                """SELECT COUNT(*) FROM permission WHERE code = 'SALES_GROUP_ASSIGN'""",
+                Int::class.java,
+            )
+        ).isEqualTo(1)
+        assertThat(
+            jdbc.queryForObject(
+                """SELECT COUNT(*) FROM role_permission rp
                 JOIN role ON role.id = rp.role_id JOIN permission ON permission.id = rp.permission_id
                 WHERE role.code IN ('ADMIN', 'SUPER_ADMIN') AND permission.code = 'SALES_GROUP_ASSIGN'""",
-            Int::class.java,
-        )).isEqualTo(2)
+                Int::class.java,
+            )
+        ).isEqualTo(2)
     }
 
     @Test
@@ -128,7 +141,8 @@ class SalesAssignmentMySqlIntegrationTest {
     private fun insertAccount(loginId: String, publicId: UUID): Long {
         jdbc.update(
             """INSERT INTO account (public_id, login_id, password_hash, name, status)
-                VALUES (?, ?, 'test-hash', ?, 'ACTIVE')""".trimIndent(),
+                VALUES (?, ?, 'test-hash', ?, 'ACTIVE')
+            """.trimIndent(),
             publicId.toBytes(),
             loginId,
             loginId,

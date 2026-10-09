@@ -2,20 +2,20 @@ package com.buyeong.umji.api.operation.account.controller
 
 import com.buyeong.umji.api.auth.service.CurrentAccountService
 import com.buyeong.umji.api.auth.service.WebAuthenticationService
-import com.buyeong.umji.api.operation.account.model.AccountData
-import com.buyeong.umji.api.operation.account.model.OrganizationProfileData
-import com.buyeong.umji.api.operation.account.model.ConsentCommand
-import com.buyeong.umji.api.operation.account.model.ManagedRole
-import com.buyeong.umji.api.operation.account.model.NewAccount
+import com.buyeong.umji.api.operation.account.dto.AccountDataDto
+import com.buyeong.umji.api.operation.account.dto.ConsentCommandDto
+import com.buyeong.umji.api.operation.account.dto.ManagedRoleDto
+import com.buyeong.umji.api.operation.account.dto.NewAccountDto
+import com.buyeong.umji.api.operation.account.dto.OrganizationProfileDataDto
 import com.buyeong.umji.api.operation.account.service.OperationAccountService
 import com.buyeong.umji.api.operation.model.AssignOrganizationRequest
-import com.buyeong.umji.api.operation.model.OrganizationProfileRequest
 import com.buyeong.umji.api.operation.model.CreateConsentRequest
 import com.buyeong.umji.api.operation.model.CreateOperationAccountRequest
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
-import com.buyeong.umji.api.operation.model.OperationOrganizationProfileResponse
 import com.buyeong.umji.api.operation.model.OperationConsentResponse
+import com.buyeong.umji.api.operation.model.OperationOrganizationProfileResponse
 import com.buyeong.umji.api.operation.model.OperationRoleResponse
+import com.buyeong.umji.api.operation.model.OrganizationProfileRequest
 import com.buyeong.umji.api.operation.model.UpdateAccountStatusRequest
 import com.buyeong.umji.api.util.PhoneNumberHelper
 import io.swagger.v3.oas.annotations.Operation
@@ -24,7 +24,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -39,6 +38,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/operation/accounts")
@@ -76,7 +76,7 @@ class OperationAccountController(
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@Valid @RequestBody request: CreateOperationAccountRequest) = useCase.create(
-        NewAccount(
+        NewAccountDto(
             request.name.trim(),
             request.phone.trim(),
             PhoneNumberHelper.normalizeMobilePhoneNumber(request.phone),
@@ -131,7 +131,7 @@ class OperationAccountController(
         @Valid @RequestBody request: CreateConsentRequest,
     ) = useCase.consent(
         id,
-        ConsentCommand(
+        ConsentCommandDto(
             request.consentType,
             request.documentVersion,
             request.consentMethod,
@@ -153,7 +153,7 @@ class OperationAccountController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun resetAdminTotp(@Parameter(description = "리소스 공개 식별자(UUID)") @PathVariable id: UUID) = webAuthentication.resetTotp(id)
 
-    private fun OrganizationProfileRequest.toData() = OrganizationProfileData(
+    private fun OrganizationProfileRequest.toData() = OrganizationProfileDataDto(
         businessName.trim(),
         businessRegistrationNumber.clean(),
         representativeName.clean(),
@@ -162,7 +162,7 @@ class OperationAccountController(
         address1.clean(),
         address2.clean(),
     )
-    private fun OrganizationProfileData.toResponse() = OperationOrganizationProfileResponse(
+    private fun OrganizationProfileDataDto.toResponse() = OperationOrganizationProfileResponse(
         businessName,
         businessRegistrationNumber,
         representativeName,
@@ -172,8 +172,8 @@ class OperationAccountController(
         address2,
         status,
     )
-    private fun ManagedRole.toResponse() = OperationRoleResponse(code, name)
-    private fun AccountData.toResponse() = OperationAccountResponse(
+    private fun ManagedRoleDto.toResponse() = OperationRoleResponse(code, name)
+    private fun AccountDataDto.toResponse() = OperationAccountResponse(
         id,
         name,
         phone,

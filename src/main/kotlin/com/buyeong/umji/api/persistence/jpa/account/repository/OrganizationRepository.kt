@@ -1,18 +1,18 @@
 package com.buyeong.umji.api.persistence.jpa.account.repository
 
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationAddressEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationInvitationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationJoinRequestEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationMemberEntity
 import jakarta.persistence.LockModeType
-import java.util.UUID
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.util.UUID
 
 interface OrganizationRepository : JpaRepository<OrganizationEntity, Long> {
     fun findByPublicId(publicId: UUID): OrganizationEntity?

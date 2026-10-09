@@ -1,25 +1,25 @@
 package com.buyeong.umji.api.auth.service
 
-import com.buyeong.umji.api.auth.model.AccountRecord
-import com.buyeong.umji.api.auth.model.AuthenticatedAccount
-import com.buyeong.umji.api.auth.model.AuthenticationStatus
-import com.buyeong.umji.api.auth.model.IssuedTokens
-import com.buyeong.umji.api.auth.model.LoginResult
-import com.buyeong.umji.api.auth.model.PhoneLoginCommand
-import com.buyeong.umji.api.auth.model.RefreshSessionRecord
-import com.buyeong.umji.api.auth.model.RefreshTokenCommand
-import com.buyeong.umji.api.auth.model.RevokeRefreshTokenCommand
+import com.buyeong.umji.api.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.auth.dto.AuthenticatedAccountDto
+import com.buyeong.umji.api.auth.dto.AuthenticationStatus
+import com.buyeong.umji.api.auth.dto.IssuedTokensDto
+import com.buyeong.umji.api.auth.dto.LoginResultDto
+import com.buyeong.umji.api.auth.dto.PhoneLoginCommandDto
+import com.buyeong.umji.api.auth.dto.RefreshSessionRecordDto
+import com.buyeong.umji.api.auth.dto.RefreshTokenCommandDto
+import com.buyeong.umji.api.auth.dto.RevokeRefreshTokenCommandDto
 import com.buyeong.umji.api.auth.integration.security.JwtAccessTokenIssuer
-import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.util.PhoneNumberHelper
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
 import java.util.Base64
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional
@@ -28,16 +28,16 @@ class AuthenticationService(
     private val refreshSessions: AuthenticationJpaEntityService,
     private val accessTokens: JwtAccessTokenIssuer,
 ) {
-    fun login(command: PhoneLoginCommand): LoginResult {
+    fun login(command: PhoneLoginCommandDto): LoginResultDto {
         val phone = PhoneNumberHelper.normalizeMobilePhoneNumber(command.phone)
         val account = accounts.findByNormalizedPhone(phone)
-            ?: return LoginResult(AuthenticationStatus.PHONE_VERIFICATION_REQUIRED)
-        if (account.status != ACTIVE) return LoginResult(AuthenticationStatus.PHONE_VERIFICATION_REQUIRED, accountResponse(account))
+            ?: return LoginResultDto(AuthenticationStatus.PHONE_VERIFICATION_REQUIRED)
+        if (account.status != ACTIVE) return LoginResultDto(AuthenticationStatus.PHONE_VERIFICATION_REQUIRED, accountResponse(account))
         accounts.recordLogin(account.id, Instant.now())
-        return LoginResult(AuthenticationStatus.AUTHENTICATED, accountResponse(account), createTokenPair(account, command.deviceId))
+        return LoginResultDto(AuthenticationStatus.AUTHENTICATED, accountResponse(account), createTokenPair(account, command.deviceId))
     }
 
-    fun refresh(command: RefreshTokenCommand): IssuedTokens {
+    fun refresh(command: RefreshTokenCommandDto): IssuedTokensDto {
         val session = refreshSessions.findLockedByHash(hash(command.refreshToken))
             ?: throw ClientBadRequestException("유효하지 않은 Refresh Token입니다.")
         val now = Instant.now()
@@ -51,25 +51,25 @@ class AuthenticationService(
         return createTokenPair(session.account.copy(mfaVerified = session.mfaVerified), command.deviceId ?: session.deviceId)
     }
 
-    fun revoke(command: RevokeRefreshTokenCommand) {
+    fun revoke(command: RevokeRefreshTokenCommandDto) {
         refreshSessions.findLockedByHash(hash(command.refreshToken))?.let { session ->
             if (session.revokedAt == null) refreshSessions.save(session.copy(revokedAt = Instant.now()))
         }
     }
 
-    private fun createTokenPair(account: AccountRecord, deviceId: String?): IssuedTokens {
+    private fun createTokenPair(account: AccountRecordDto, deviceId: String?): IssuedTokensDto {
         val now = Instant.now()
         val accessExpiresAt = now.plus(ACCESS_TOKEN_TTL)
         val accessToken = accessTokens.issue(account, now, accessExpiresAt)
         val refreshToken = newOpaqueToken()
         val refreshExpiresAt = now.plus(REFRESH_TOKEN_TTL)
         refreshSessions.save(
-            RefreshSessionRecord(hash(refreshToken), account, deviceId?.trim()?.ifBlank { null }, null, null, refreshExpiresAt, account.mfaVerified),
+            RefreshSessionRecordDto(hash(refreshToken), account, deviceId?.trim()?.ifBlank { null }, null, null, refreshExpiresAt, account.mfaVerified),
         )
-        return IssuedTokens(accessToken, accessExpiresAt, refreshToken)
+        return IssuedTokensDto(accessToken, accessExpiresAt, refreshToken)
     }
 
-    private fun accountResponse(account: AccountRecord) = AuthenticatedAccount(account.id, account.name, account.status)
+    private fun accountResponse(account: AccountRecordDto) = AuthenticatedAccountDto(account.id, account.name, account.status)
     private fun newOpaqueToken(): String = ByteArray(REFRESH_TOKEN_BYTES).also(random::nextBytes).let(base64UrlEncoder::encodeToString)
     private fun hash(value: String): ByteArray = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
 

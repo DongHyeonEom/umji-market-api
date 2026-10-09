@@ -1,14 +1,13 @@
 package com.buyeong.umji.api.order.controller
 
 import com.buyeong.umji.api.auth.service.CurrentAccountService
+import com.buyeong.umji.api.order.model.ShippingHolidayRequest
+import com.buyeong.umji.api.order.model.ShippingHolidayResponse
 import com.buyeong.umji.api.order.service.ShippingHolidayService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Size
-import java.time.LocalDate
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -18,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDate
 
 @RestController
 @RequestMapping("/api/operation/shipping-holidays")
@@ -42,22 +42,3 @@ class OperationShippingHolidayController(private val currentAccounts: CurrentAcc
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
     fun remove(@Parameter(description = "배송 휴무 날짜(YYYY-MM-DD)") @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate) = holidays.remove(date)
 }
-
-@Schema(description = "배송 휴무일 등록 요청")
-data class ShippingHolidayRequest(
-    @field:Schema(description = "배송 휴무 날짜", example = "2026-10-04", format = "date", type = "string", required = true)
-    val date: LocalDate,
-
-    @field:Size(max = 200,)
-    @field:Schema(description = "선택적 휴무일 설명", example = "추석 연휴", type = "string", required = false)
-    val description: String? = null,
-)
-
-@Schema(description = "배송 휴무일 응답")
-data class ShippingHolidayResponse(
-    @field:Schema(description = "배송 휴무 날짜", example = "2026-10-04", format = "date", type = "string", required = true)
-    val date: LocalDate,
-
-    @field:Schema(description = "휴무일 설명", example = "추석 연휴", type = "string", required = true)
-    val description: String?,
-)

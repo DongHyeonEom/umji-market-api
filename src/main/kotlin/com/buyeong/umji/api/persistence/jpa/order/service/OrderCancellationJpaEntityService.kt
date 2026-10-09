@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.persistence.jpa.order.service
 
-import com.buyeong.umji.api.order.model.CancellationOrder
-import com.buyeong.umji.api.order.model.CancellationQueueItem
-import com.buyeong.umji.api.order.model.CancellationQueuePage
+import com.buyeong.umji.api.order.dto.CancellationOrderDto
+import com.buyeong.umji.api.order.dto.CancellationQueueItemDto
+import com.buyeong.umji.api.order.dto.CancellationQueuePageDto
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderCancellationHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderStatusHistoryEntity
@@ -10,12 +10,12 @@ import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.repository.OrderCancellationHistoryRepository
 import com.buyeong.umji.api.persistence.jpa.order.repository.OrderStatusHistoryRepository
 import com.buyeong.umji.api.persistence.jpa.order.repository.PurchaseOrderRepository
-import java.time.Instant
-import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -27,7 +27,7 @@ class OrderCancellationJpaEntityService(
     private val accounts: AccountJpaEntityService,
 ) {
     @Transactional
-    fun lock(orderId: UUID): CancellationOrder? = orders.findForCancellation(orderId)?.toCancellationOrder()
+    fun lock(orderId: UUID): CancellationOrderDto? = orders.findForCancellation(orderId)?.toCancellationOrder()
 
     fun hasPendingRequest(orderId: UUID): Boolean = cancellations.existsByOrderPublicIdAndStatus(orderId, PENDING)
 
@@ -48,7 +48,7 @@ class OrderCancellationJpaEntityService(
     }
 
     @Transactional
-    fun cancel(order: CancellationOrder, processorId: UUID?) {
+    fun cancel(order: CancellationOrderDto, processorId: UUID?) {
         val entity = requireNotNull(orders.findForCancellation(order.id))
         check(entity.status != CANCELLED) { "이미 취소된 주문입니다." }
         val now = Instant.now()
@@ -79,11 +79,11 @@ class OrderCancellationJpaEntityService(
         cancellations.saveAndFlush(history)
     }
 
-    fun queue(page: Int, size: Int): CancellationQueuePage {
+    fun queue(page: Int, size: Int): CancellationQueuePageDto {
         val result = cancellations.findQueue(PENDING, PageRequest.of(page, size, Sort.by("requestedAt").ascending()))
-        return CancellationQueuePage(
+        return CancellationQueuePageDto(
             result.content.map {
-                CancellationQueueItem(requireNotNull(it.order.publicId), it.order.orderNumber, requireNotNull(it.requester.publicId), it.requestedAt)
+                CancellationQueueItemDto(requireNotNull(it.order.publicId), it.order.orderNumber, requireNotNull(it.requester.publicId), it.requestedAt)
             },
             result.number,
             result.size,
@@ -92,7 +92,7 @@ class OrderCancellationJpaEntityService(
         )
     }
 
-    private fun PurchaseOrderEntity.toCancellationOrder() = CancellationOrder(
+    private fun PurchaseOrderEntity.toCancellationOrder() = CancellationOrderDto(
         id = requireNotNull(publicId),
         accountId = requireNotNull(account.publicId),
         orderNumber = orderNumber,

@@ -3,23 +3,23 @@ package com.buyeong.umji.api.file.service
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ForbiddenOperationException
 import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.file.dto.FileDownloadDto
 import com.buyeong.umji.api.file.integration.LocalFileStorage
 import com.buyeong.umji.api.file.integration.LocalFileStorageProperties
 import com.buyeong.umji.api.file.model.CreateFileUploadRequest
 import com.buyeong.umji.api.file.model.FileUploadResponse
 import com.buyeong.umji.api.persistence.jpa.file.entity.FileAssetEntity
 import com.buyeong.umji.api.persistence.jpa.file.service.FileAssetJpaEntityService
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.io.InputStream
 import java.io.PushbackInputStream
-import java.nio.file.Path
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Base64
 import java.util.UUID
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 class FileService(
@@ -35,8 +35,9 @@ class FileService(
         val maxBytes = maxBytes(fileType)
         require(contentType in allowedContentTypes(fileType)) { "허용하지 않는 파일 형식입니다." }
         require(request.byteSize in 1..maxBytes) { "파일 크기 제한을 초과했거나 올바르지 않습니다." }
-        require((fileType == PRODUCT_IMAGE && request.ownerAccountId == null) ||
-            (fileType == BUSINESS_EVIDENCE && request.ownerAccountId != null)
+        require(
+            (fileType == PRODUCT_IMAGE && request.ownerAccountId == null) ||
+                (fileType == BUSINESS_EVIDENCE && request.ownerAccountId != null)
         ) { "파일 분류와 소유 계정이 일치하지 않습니다." }
 
         val token = newToken()
@@ -76,7 +77,7 @@ class FileService(
     }
 
     @Transactional(readOnly = true)
-    fun publicDownload(fileId: UUID): FileDownload {
+    fun publicDownload(fileId: UUID): FileDownloadDto {
         val file = uploaded(fileId)
         if (file.fileType != PRODUCT_IMAGE || !files.existsUploadedProductImage(file.storageKey)) {
             throw ItemNotFoundException("공개된 상품 이미지 파일을 찾을 수 없습니다.")
@@ -85,7 +86,7 @@ class FileService(
     }
 
     @Transactional(readOnly = true)
-    fun privateDownload(fileId: UUID, ownerAccountId: UUID): FileDownload {
+    fun privateDownload(fileId: UUID, ownerAccountId: UUID): FileDownloadDto {
         val file = uploaded(fileId)
         if (file.fileType != BUSINESS_EVIDENCE || file.ownerAccount?.publicId != ownerAccountId) {
             throw ForbiddenOperationException("요청 계정의 사업자 증빙 파일에 접근할 수 없습니다.")
@@ -151,16 +152,14 @@ class FileService(
         contentType = contentType,
         byteSize = byteSize,
         uploaded = status == UPLOADED,
-        uploadUrl = if (token == null) null else "/api/files/${publicId}/content",
+        uploadUrl = if (token == null) null else "/api/files/$publicId/content",
         uploadToken = token,
         uploadExpiresAt = uploadExpiresAt,
-        publicUrl = if (fileType == PRODUCT_IMAGE && status == UPLOADED) "/api/files/public/${publicId}" else null,
+        publicUrl = if (fileType == PRODUCT_IMAGE && status == UPLOADED) "/api/files/public/$publicId" else null,
     )
 
     private fun FileAssetEntity.toDownload(storage: LocalFileStorage) =
-        FileDownload(storage.read(fileType, storageKey), contentType, byteSize, originalFileName)
-
-    data class FileDownload(val path: Path, val contentType: String, val byteSize: Long, val fileName: String)
+        FileDownloadDto(storage.read(fileType, storageKey), contentType, byteSize, originalFileName)
 
     private companion object {
         const val PRODUCT_IMAGE = "PRODUCT_IMAGE"

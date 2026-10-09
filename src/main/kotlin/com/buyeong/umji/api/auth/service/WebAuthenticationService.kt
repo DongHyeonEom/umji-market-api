@@ -1,20 +1,22 @@
 package com.buyeong.umji.api.auth.service
 
-import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.transaction.annotation.Transactional
-import com.buyeong.umji.api.auth.model.AuthenticatedAccount
-import com.buyeong.umji.api.auth.model.IssuedTokens
-import com.buyeong.umji.api.auth.model.TotpSetupResult
-import com.buyeong.umji.api.auth.model.WebLoginCommand
-import com.buyeong.umji.api.auth.model.WebLoginResult
-import com.buyeong.umji.api.auth.model.WebPasswordCommand
-import com.buyeong.umji.api.persistence.jpa.auth.service.WebLoginAttemptJpaEntityService
+import com.buyeong.umji.api.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.auth.dto.AuthenticatedAccountDto
+import com.buyeong.umji.api.auth.dto.IssuedTokensDto
+import com.buyeong.umji.api.auth.dto.RefreshSessionRecordDto
+import com.buyeong.umji.api.auth.dto.TotpSetupResultDto
+import com.buyeong.umji.api.auth.dto.WebLoginCommandDto
+import com.buyeong.umji.api.auth.dto.WebLoginResultDto
+import com.buyeong.umji.api.auth.dto.WebPasswordCommandDto
 import com.buyeong.umji.api.auth.integration.security.JwtAccessTokenIssuer
 import com.buyeong.umji.api.auth.integration.security.Rfc6238TotpService
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.auth.service.WebCredentialJpaEntityService
-import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.persistence.jpa.auth.service.WebLoginAttemptJpaEntityService
 import com.buyeong.umji.api.util.PhoneNumberHelper
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.transaction.annotation.Transactional
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Duration
@@ -32,14 +34,14 @@ class WebAuthenticationService(
     private val accessTokens: JwtAccessTokenIssuer,
     private val loginAttempts: WebLoginAttemptJpaEntityService,
 ) {
-    fun setPassword(command: WebPasswordCommand) {
+    fun setPassword(command: WebPasswordCommandDto) {
         validatePassword(command.password)
         val account = credentials.findById(command.accountId) ?: invalid()
         if (account.account.status != ACTIVE) invalid()
         credentials.savePassword(command.accountId, encoder.encode(command.password))
     }
 
-    fun login(command: WebLoginCommand): WebLoginResult {
+    fun login(command: WebLoginCommandDto): WebLoginResultDto {
         val phone = PhoneNumberHelper.normalizeMobilePhoneNumber(command.phone)
         if (loginAttempts.isBlocked(phone, command.remoteAddress)) invalid()
         val found = credentials.findByNormalizedPhone(phone) ?: failed(phone, command.remoteAddress)
@@ -52,21 +54,21 @@ class WebAuthenticationService(
         loginAttempts.clear(phone)
         val authenticatedAccount = found.account.copy(mfaVerified = found.roles.any(PRIVILEGED_ROLES::contains))
         val now = Instant.now()
-        val pair = IssuedTokens(
+        val pair = IssuedTokensDto(
             accessTokens.issue(authenticatedAccount, now, now.plus(ACCESS_TOKEN_TTL)),
             now.plus(ACCESS_TOKEN_TTL),
             newRefreshToken(authenticatedAccount, command.deviceId),
         )
-        return WebLoginResult(pair, AuthenticatedAccount(found.account.id, found.account.name, found.account.status))
+        return WebLoginResultDto(pair, AuthenticatedAccountDto(found.account.id, found.account.name, found.account.status))
     }
 
-    fun setupTotp(accountId: UUID): TotpSetupResult {
+    fun setupTotp(accountId: UUID): TotpSetupResultDto {
         val account = credentials.findById(accountId) ?: invalid()
         if (account.account.status != ACTIVE || account.roles.none(PRIVILEGED_ROLES::contains)) invalid()
         if (account.totpEnabled) invalid()
         val secret = totp.newSecret()
         credentials.saveTotpSecret(accountId, secret, false)
-        return TotpSetupResult(secret, totp.provisioningUri(account.account.name, secret))
+        return TotpSetupResultDto(secret, totp.provisioningUri(account.account.name, secret))
     }
 
     fun confirmTotp(accountId: UUID, code: String) {
@@ -83,10 +85,10 @@ class WebAuthenticationService(
         credentials.resetTotp(accountId)
     }
 
-    private fun newRefreshToken(account: com.buyeong.umji.api.auth.model.AccountRecord, deviceId: String?): String {
+    private fun newRefreshToken(account: com.buyeong.umji.api.auth.dto.AccountRecordDto, deviceId: String?): String {
         val value = ByteArray(32).also(random::nextBytes).let(Base64.getUrlEncoder().withoutPadding()::encodeToString)
         refreshSessions.save(
-            com.buyeong.umji.api.auth.model.RefreshSessionRecord(
+            com.buyeong.umji.api.auth.dto.RefreshSessionRecordDto(
                 MessageDigest.getInstance("SHA-256").digest(value.toByteArray()),
                 account,
                 deviceId?.trim()?.ifBlank { null },

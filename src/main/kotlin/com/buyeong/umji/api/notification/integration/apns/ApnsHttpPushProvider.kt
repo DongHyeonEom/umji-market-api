@@ -1,8 +1,12 @@
 package com.buyeong.umji.api.notification.integration.apns
 
-import com.buyeong.umji.api.notification.model.NotificationDeviceRecipient
-import com.buyeong.umji.api.notification.model.NotificationMessage
-import com.buyeong.umji.api.notification.model.NotificationProviderResult
+import com.buyeong.umji.api.notification.dto.NotificationDeviceRecipientDto
+import com.buyeong.umji.api.notification.dto.NotificationMessageDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderAcceptedDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderInvalidTokenDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderPermanentFailureDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderResultDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderRetryableFailureDto
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.nimbusds.jose.JOSEObjectType
 import com.nimbusds.jose.JWSAlgorithm
@@ -10,6 +14,7 @@ import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.ECDSASigner
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import org.springframework.http.HttpHeaders
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -25,7 +30,6 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Base64
 import java.util.Date
-import org.springframework.http.HttpHeaders
 
 class ApnsHttpPushProvider(
     teamId: String,
@@ -35,7 +39,7 @@ class ApnsHttpPushProvider(
     environment: String,
     private val objectMapper: ObjectMapper,
     private val clock: Clock = Clock.systemUTC(),
- ) {
+) {
     private val teamId = teamId.also { require(it.isNotBlank()) { "APNs team ID is required." } }
     private val keyId = keyId.also { require(it.isNotBlank()) { "APNs key ID is required." } }
     private val topic = topic.also { require(it.isNotBlank()) { "APNs topic is required." } }
@@ -56,27 +60,27 @@ class ApnsHttpPushProvider(
     @Volatile
     private var providerTokenCreatedAt: Instant = Instant.EPOCH
 
-    fun send(recipient: NotificationDeviceRecipient, message: NotificationMessage): NotificationProviderResult {
+    fun send(recipient: NotificationDeviceRecipientDto, message: NotificationMessageDto): NotificationProviderResultDto {
         val response = try {
             sendRequest(recipient.token, message, authorizationToken())
         } catch (_: Exception) {
-            return NotificationProviderResult.RetryableFailure("APNS_TRANSPORT_ERROR")
+            return NotificationProviderRetryableFailureDto("APNS_TRANSPORT_ERROR")
         }
         val reason = responseReason(response)
         if (response.statusCode() == 403 && reason == "ExpiredProviderToken") {
             val refreshed = refreshTokenIfAllowed()
-                ?: return NotificationProviderResult.RetryableFailure("APNS_PROVIDER_TOKEN_EXPIRED")
+                ?: return NotificationProviderRetryableFailureDto("APNS_PROVIDER_TOKEN_EXPIRED")
             val retry = try {
                 sendRequest(recipient.token, message, refreshed)
             } catch (_: Exception) {
-                return NotificationProviderResult.RetryableFailure("APNS_TRANSPORT_ERROR")
+                return NotificationProviderRetryableFailureDto("APNS_TRANSPORT_ERROR")
             }
             return classify(retry)
         }
         return classify(response)
     }
 
-    private fun sendRequest(deviceToken: String, message: NotificationMessage, providerToken: String): HttpResponse<String> {
+    private fun sendRequest(deviceToken: String, message: NotificationMessageDto, providerToken: String): HttpResponse<String> {
         val payload = linkedMapOf<String, Any>(
             "aps" to mapOf("alert" to mapOf("title" to message.title, "body" to message.body), "sound" to "default"),
         ).apply { putAll(message.data) }
@@ -92,15 +96,15 @@ class ApnsHttpPushProvider(
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
     }
 
-    private fun classify(response: HttpResponse<String>): NotificationProviderResult {
+    private fun classify(response: HttpResponse<String>): NotificationProviderResultDto {
         val reason = responseReason(response)
         return when {
-            response.statusCode() in 200..299 -> NotificationProviderResult.Accepted
+            response.statusCode() in 200..299 -> NotificationProviderAcceptedDto
             response.statusCode() == 410 || reason == "Unregistered" || reason == "BadDeviceToken" ->
-                NotificationProviderResult.InvalidToken
+                NotificationProviderInvalidTokenDto
             response.statusCode() == 429 || response.statusCode() >= 500 ->
-                NotificationProviderResult.RetryableFailure("APNS_HTTP_${response.statusCode()}")
-            else -> NotificationProviderResult.PermanentFailure("APNS_${reason.uppercase().replace(UNSAFE_CODE_CHARS, "_").take(60)}")
+                NotificationProviderRetryableFailureDto("APNS_HTTP_${response.statusCode()}")
+            else -> NotificationProviderPermanentFailureDto("APNS_${reason.uppercase().replace(UNSAFE_CODE_CHARS, "_").take(60)}")
         }
     }
 

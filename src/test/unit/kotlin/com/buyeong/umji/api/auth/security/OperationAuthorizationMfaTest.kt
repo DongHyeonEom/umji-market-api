@@ -4,10 +4,10 @@ import com.buyeong.umji.api.auth.config.AuthenticationMode
 import com.buyeong.umji.api.auth.config.AuthenticationProperties
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
-import java.time.Instant
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.jwt.Jwt
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import java.time.Instant
 
 class OperationAuthorizationMfaTest : DescribeSpec({
     val authorization = OperationAuthorization(AuthenticationProperties(AuthenticationMode.REQUIRED))

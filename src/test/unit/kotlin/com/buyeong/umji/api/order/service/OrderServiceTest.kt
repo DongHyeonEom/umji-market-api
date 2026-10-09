@@ -13,16 +13,16 @@ import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
 import com.buyeong.umji.api.order.model.TaxInvoiceSupplier
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
-import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
+import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesChannelEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import com.buyeong.umji.api.sales.service.SalesCommissionService
 import io.kotest.assertions.throwables.shouldThrow
@@ -47,7 +47,8 @@ class OrderServiceTest : DescribeSpec({
     val accounts = mockk<AccountJpaEntityService>(relaxed = true)
     val catalog = mockk<CatalogJpaEntityService>(relaxed = true)
     val organizations = mockk<OrganizationJpaEntityService>(relaxed = true)
-    val service = OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, salesCommissions, accounts, catalog, organizations)
+    val service =
+        OrderService(carts, inventory, orders, shippingAddresses, bankAccounts, notifications, taxInvoiceSuppliers, taxInvoiceBuyers, salesCommissions, accounts, catalog, organizations)
     val accountId = UUID.randomUUID()
     val addressId = UUID.randomUUID()
     val skuId = UUID.randomUUID()
@@ -65,7 +66,10 @@ class OrderServiceTest : DescribeSpec({
                 UUID.randomUUID(), "BUSINESS", null, "구매자", null, null, null, null,
                 null, null, null, false, "NOT_REQUIRED", null, null,
             )
-            val buyerAccount = AccountEntity().apply { status = "ACTIVE"; phoneNormalized = "01012345678" }
+            val buyerAccount = AccountEntity().apply {
+                status = "ACTIVE"
+                phoneNormalized = "01012345678"
+            }
             val creator = AccountEntity().apply { status = "ACTIVE" }
             val channel = mockk<SalesChannelEntity> { every { code } returns "WHOLESALE" }
             val product = mockk<ProductEntity> {
@@ -101,15 +105,27 @@ class OrderServiceTest : DescribeSpec({
                 draft.items.single().unitPrice shouldBe 1250L
                 draft.items.single().lineAmount shouldBe 2500L
                 OrderView(
-                    UUID.randomUUID(), "UMJ-20261009-000001", draft.status, draft.subtotalAmount, draft.totalAmount, draft.orderedAt,
-                    draft.items.map { OrderItemView(UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
-                        it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale) },
+                    UUID.randomUUID(),
+                    "UMJ-20261009-000001",
+                    draft.status,
+                    draft.subtotalAmount,
+                    draft.totalAmount,
+                    draft.orderedAt,
+                    draft.items.map {
+                        OrderItemView(
+                            UUID.randomUUID(), it.skuId, it.reservationKey, it.productName, it.skuName, it.skuCode,
+                            it.unitPrice, it.quantity, it.lineAmount, it.status, it.salesOfferId, it.unitsPerSale
+                        )
+                    },
                 )
             }
 
             val result = service.createAdminPhoneOrder(
-                creatorId, buyerId, ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
-                listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 2)), false,
+                creatorId,
+                buyerId,
+                ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
+                listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 2)),
+                false,
             )
 
             result.single().totalAmount shouldBe 2500L
@@ -119,13 +135,19 @@ class OrderServiceTest : DescribeSpec({
 
         it("활성 구매자 Organization이 없으면 관리자 전화 주문을 생성하지 않는다") {
             val buyerId = UUID.randomUUID()
-            every { accounts.findByPublicId(buyerId) } returns AccountEntity().apply { status = "ACTIVE"; phoneNormalized = "01012345678" }
+            every { accounts.findByPublicId(buyerId) } returns AccountEntity().apply {
+                status = "ACTIVE"
+                phoneNormalized = "01012345678"
+            }
             every { taxInvoiceBuyers.forAccount(buyerId) } returns null
 
             shouldThrow<IllegalArgumentException> {
                 service.createAdminPhoneOrder(
-                    UUID.randomUUID(), buyerId, ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
-                    listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 1)), false,
+                    UUID.randomUUID(),
+                    buyerId,
+                    ShippingAddressSnapshot("수령인", "01012345678", "12345", "서울 주소", null),
+                    listOf(com.buyeong.umji.api.order.model.AdminPhoneOrderLine(offerId, 1)),
+                    false,
                 )
             }
 

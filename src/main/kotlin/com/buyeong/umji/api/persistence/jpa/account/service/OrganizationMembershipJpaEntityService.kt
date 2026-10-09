@@ -1,28 +1,28 @@
 package com.buyeong.umji.api.persistence.jpa.account.service
 
-import com.buyeong.umji.api.account.model.OrganizationInvitation
+import com.buyeong.umji.api.account.dto.OrganizationInvitationDto
+import com.buyeong.umji.api.account.dto.OrganizationRegistrationCommandDto
+import com.buyeong.umji.api.account.dto.OrganizationSearchResultDto
+import com.buyeong.umji.api.account.dto.OrganizationSummaryDto
 import com.buyeong.umji.api.account.model.OrganizationJoinRequest
-import com.buyeong.umji.api.account.model.OrganizationRegistrationCommand
-import com.buyeong.umji.api.account.model.OrganizationSearchResult
-import com.buyeong.umji.api.account.model.OrganizationSummary
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationInvitationEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationJoinRequestEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationMemberEntity
-import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationCapabilityEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationCapabilityRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationInvitationRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationJoinRequestRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
-import java.time.Instant
-import java.util.UUID
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -36,7 +36,7 @@ class OrganizationMembershipJpaEntityService(
     private val organizationProfiles: OrganizationBusinessProfileRepository,
     private val capabilities: OrganizationCapabilityRepository,
 ) {
-    fun current(accountId: UUID): OrganizationSummary? {
+    fun current(accountId: UUID): OrganizationSummaryDto? {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val membership = members.findFirstByAccount_IdAndStatusOrderByJoinedAtDesc(requireNotNull(account.id), ACTIVE) ?: return null
         val group = membership.organization.takeIf { it.status == ACTIVE } ?: return null
@@ -44,7 +44,7 @@ class OrganizationMembershipJpaEntityService(
     }
 
     @Transactional
-    fun createIndividualGroup(accountId: UUID, name: String): OrganizationSummary {
+    fun createIndividualGroup(accountId: UUID, name: String): OrganizationSummaryDto {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         require(members.findFirstByAccount_IdAndStatus(requireNotNull(account.id), ACTIVE) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
         val group = groups.saveAndFlush(
@@ -62,12 +62,17 @@ class OrganizationMembershipJpaEntityService(
                 status = ACTIVE
             },
         )
-        capabilities.save(OrganizationCapabilityEntity().apply { organization = group; capabilityCode = BUYER })
+        capabilities.save(
+            OrganizationCapabilityEntity().apply {
+                organization = group
+                capabilityCode = BUYER
+            }
+        )
         return group.toSummary(account)
     }
 
     @Transactional
-    fun register(accountId: UUID, command: OrganizationRegistrationCommand): OrganizationSummary {
+    fun register(accountId: UUID, command: OrganizationRegistrationCommandDto): OrganizationSummaryDto {
         val account = accounts.lockByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val accountInternalId = requireNotNull(account.id)
         require(members.findFirstByAccount_IdAndStatus(accountInternalId, ACTIVE) == null) { "이미 활성 구매자 그룹에 소속되어 있습니다." }
@@ -99,10 +104,12 @@ class OrganizationMembershipJpaEntityService(
                 status = ACTIVE
             },
         )
-        capabilities.save(OrganizationCapabilityEntity().apply {
-            organization = group
-            capabilityCode = command.capability
-        })
+        capabilities.save(
+            OrganizationCapabilityEntity().apply {
+                organization = group
+                capabilityCode = command.capability
+            }
+        )
         if (business != null) {
             organizationProfiles.save(
                 OrganizationBusinessProfileEntity().apply {
@@ -126,11 +133,11 @@ class OrganizationMembershipJpaEntityService(
         return group.toSummary(account)
     }
 
-    fun search(phoneNormalized: String, capability: String): List<OrganizationSearchResult> =
+    fun search(phoneNormalized: String, capability: String): List<OrganizationSearchResultDto> =
         groups.searchByPhone(phoneNormalized).filter { organization ->
             capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(organization.id), capability)
         }.map { organization ->
-            OrganizationSearchResult(
+            OrganizationSearchResultDto(
                 requireNotNull(organization.publicId),
                 organization.organizationType,
                 organization.displayName,
@@ -139,10 +146,13 @@ class OrganizationMembershipJpaEntityService(
         }
 
     @Transactional
-    fun invite(accountId: UUID, phoneNormalized: String): OrganizationInvitation {
+    fun invite(accountId: UUID, phoneNormalized: String): OrganizationInvitationDto {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = representativeGroup(account) ?: throw ItemNotFoundException("대표자 권한이 있는 활성 그룹을 찾을 수 없습니다.")
-        require(capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER) || capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER)) {
+        require(
+            capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER) ||
+                capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER)
+        ) {
             "구성원을 초대할 수 있는 Organization이 아닙니다."
         }
         lockGroup(requireNotNull(group.id))
@@ -163,7 +173,7 @@ class OrganizationMembershipJpaEntityService(
         return invitation.toModel()
     }
 
-    fun invitations(accountId: UUID): List<OrganizationInvitation> {
+    fun invitations(accountId: UUID): List<OrganizationInvitationDto> {
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val phone = account.phoneNormalized ?: return emptyList()
         return invitations.findAllByPhoneNormalizedAndStatus(phone, PENDING)
@@ -194,7 +204,10 @@ class OrganizationMembershipJpaEntityService(
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val group = groups.findByPublicId(organizationId)?.takeIf { it.status == ACTIVE }
             ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
-        require(capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER) || capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER)) {
+        require(
+            capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), BUYER) ||
+                capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(group.id), SELLER)
+        ) {
             "구성원 가입을 허용하지 않는 Organization입니다."
         }
         lockGroup(requireNotNull(group.id))
@@ -278,12 +291,15 @@ class OrganizationMembershipJpaEntityService(
             ?: throw ItemNotFoundException("활성 구매자 그룹을 찾을 수 없습니다.")
 
     private fun OrganizationEntity.toSummary(account: AccountEntity) =
-        OrganizationSummary(
-            requireNotNull(publicId), organizationType, displayName, representativeAccount?.id == account.id,
+        OrganizationSummaryDto(
+            requireNotNull(publicId),
+            organizationType,
+            displayName,
+            representativeAccount?.id == account.id,
             capabilities.findAllByOrganization_Id(requireNotNull(id)).mapTo(linkedSetOf()) { it.capabilityCode },
         )
 
-    private fun OrganizationInvitationEntity.toModel() = OrganizationInvitation(
+    private fun OrganizationInvitationEntity.toModel() = OrganizationInvitationDto(
         requireNotNull(publicId),
         requireNotNull(organization.publicId),
         organization.displayName,

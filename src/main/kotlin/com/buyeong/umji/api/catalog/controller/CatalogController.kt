@@ -1,10 +1,10 @@
 package com.buyeong.umji.api.catalog.controller
 
+import com.buyeong.umji.api.catalog.dto.ProductDetailViewDto
+import com.buyeong.umji.api.catalog.dto.ProductPageViewDto
 import com.buyeong.umji.api.catalog.model.CategoryResponse
 import com.buyeong.umji.api.catalog.model.ProductDetailResponse
-import com.buyeong.umji.api.catalog.model.ProductDetailView
 import com.buyeong.umji.api.catalog.model.ProductPageResponse
-import com.buyeong.umji.api.catalog.model.ProductPageView
 import com.buyeong.umji.api.catalog.model.ProductSkuResponse
 import com.buyeong.umji.api.catalog.model.ProductSummaryResponse
 import com.buyeong.umji.api.catalog.service.CatalogService
@@ -13,13 +13,13 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.util.UUID
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api")
@@ -49,7 +49,7 @@ class CatalogController(
         @Parameter(description = "판매 채널 코드. 누락 시 WHOLESALE") @RequestParam(defaultValue = "WHOLESALE") channel: String,
     ): ProductDetailResponse = catalogService.product(productId, channel).toResponse()
 
-    private fun ProductPageView.toResponse() = ProductPageResponse(
+    private fun ProductPageViewDto.toResponse() = ProductPageResponse(
         items.map { ProductSummaryResponse(it.id, it.name, it.brandName, it.channelCode, it.startingPrice, it.startingUnitsPerSale) },
         page,
         size,
@@ -57,7 +57,7 @@ class CatalogController(
         totalPages,
     )
 
-    private fun ProductDetailView.toResponse() = ProductDetailResponse(
+    private fun ProductDetailViewDto.toResponse() = ProductDetailResponse(
         id,
         name,
         description,

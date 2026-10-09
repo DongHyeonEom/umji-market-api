@@ -6,10 +6,10 @@ import com.buyeong.umji.api.notification.integration.fcm.FirebaseMessagingPushPr
 import com.buyeong.umji.api.notification.service.NotificationOutboxWorker
 import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationOutboxWorkerJpaEntityService
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.beans.factory.ObjectProvider
 import java.time.Clock
 
 @Configuration

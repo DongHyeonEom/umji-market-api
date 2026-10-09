@@ -2,13 +2,11 @@ package com.buyeong.umji.api.operation.audit.controller
 
 import com.buyeong.umji.api.constant.Constant
 import com.buyeong.umji.api.inventory.model.InventoryStockResponse
-import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditEventDto
 import com.buyeong.umji.api.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.operation.model.OperationCatalogResourceResponse
 import com.buyeong.umji.api.operation.order.model.OperationPhoneOrderResponse
-import java.time.Instant
-import java.util.UUID
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
@@ -22,6 +20,8 @@ import org.springframework.transaction.support.TransactionTemplate
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.servlet.HandlerMapping
+import java.time.Instant
+import java.util.UUID
 
 @Aspect
 @Component
@@ -45,7 +45,7 @@ class OperationAuditAspect(
         }
     }
 
-    private fun jakarta.servlet.http.HttpServletRequest.toAuditEvent(response: Any?): OperationAuditEvent {
+    private fun jakarta.servlet.http.HttpServletRequest.toAuditEvent(response: Any?): OperationAuditEventDto {
         val route = getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)?.toString() ?: requestURI
         val variables = getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE) as? Map<*, *> ?: emptyMap<Any, Any>()
         val resourceType = route.removePrefix("/api/operation/").substringBefore('/').let { segment ->
@@ -78,7 +78,7 @@ class OperationAuditAspect(
         }
         val actorId = (SecurityContextHolder.getContext().authentication?.principal as? Jwt)?.subject?.let(::uuidOrNull)
         val traceId = MDC.get(Constant.KEY_TRACE_ID)?.takeIf { it.length <= 64 && TRACE_ID_PATTERN.matches(it) }
-        return OperationAuditEvent(actorId, action, resourceType, routeId ?: resultId, traceId, Instant.now())
+        return OperationAuditEventDto(actorId, action, resourceType, routeId ?: resultId, traceId, Instant.now())
     }
 
     private fun uuidOrNull(value: String): UUID? = runCatching { UUID.fromString(value) }.getOrNull()

@@ -49,7 +49,8 @@ class AccessContextMySqlIntegrationTest {
         jdbc.update(
             """INSERT INTO organization
                 (public_id, organization_type, display_name, status, representative_account_id)
-                VALUES (?, 'BUSINESS', 'Access Context Test', 'ACTIVE', ?)""".trimIndent(),
+                VALUES (?, 'BUSINESS', 'Access Context Test', 'ACTIVE', ?)
+            """.trimIndent(),
             organizationId.toBytes(),
             representativeAccountId,
         )
@@ -93,7 +94,8 @@ class AccessContextMySqlIntegrationTest {
             """SELECT COUNT(*) FROM role_permission
                 JOIN role ON role.id = role_permission.role_id
                 JOIN permission ON permission.id = role_permission.permission_id
-                WHERE role.code = 'SHIPPING_MANAGER' AND permission.code = 'SHIPMENT_READ'""".trimIndent(),
+                WHERE role.code = 'SHIPPING_MANAGER' AND permission.code = 'SHIPMENT_READ'
+            """.trimIndent(),
             Int::class.java,
         )
         assertThat(shippingReadPermissionCount).isEqualTo(1)
@@ -129,7 +131,8 @@ class AccessContextMySqlIntegrationTest {
     private fun insertAccount(loginId: String, publicId: UUID): Long {
         jdbc.update(
             """INSERT INTO account (public_id, login_id, password_hash, name, status)
-                VALUES (?, ?, 'test-hash', ?, 'ACTIVE')""".trimIndent(),
+                VALUES (?, ?, 'test-hash', ?, 'ACTIVE')
+            """.trimIndent(),
             publicId.toBytes(),
             loginId,
             loginId,

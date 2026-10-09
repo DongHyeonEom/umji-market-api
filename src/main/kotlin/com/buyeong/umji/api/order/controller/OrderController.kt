@@ -1,17 +1,18 @@
 package com.buyeong.umji.api.order.controller
 
 import com.buyeong.umji.api.auth.service.CurrentAccountService
+import com.buyeong.umji.api.order.dto.BankAccountInstructionsDto
+import com.buyeong.umji.api.order.dto.OrderCheckoutOptionsDto
+import com.buyeong.umji.api.order.dto.OrderItemViewDto
+import com.buyeong.umji.api.order.dto.OrderPageDto
+import com.buyeong.umji.api.order.dto.OrderViewDto
 import com.buyeong.umji.api.order.model.BankAccountInstructionsResponse
 import com.buyeong.umji.api.order.model.CreateOrderRequest
-import com.buyeong.umji.api.order.model.OrderCheckoutOptions
 import com.buyeong.umji.api.order.model.OrderCheckoutOptionsResponse
+import com.buyeong.umji.api.order.model.OrderCheckoutResponse
 import com.buyeong.umji.api.order.model.OrderItemResponse
-import com.buyeong.umji.api.order.model.OrderItemView
-import com.buyeong.umji.api.order.model.OrderPage
 import com.buyeong.umji.api.order.model.OrderPageResponse
 import com.buyeong.umji.api.order.model.OrderResponse
-import com.buyeong.umji.api.order.model.OrderCheckoutResponse
-import com.buyeong.umji.api.order.model.OrderView
 import com.buyeong.umji.api.order.model.TaxInvoiceItemResponse
 import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotResponse
 import com.buyeong.umji.api.order.service.CustomerOrderListingService
@@ -21,7 +22,6 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/orders")
@@ -50,12 +51,14 @@ class OrderController(
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@RequestBody request: CreateOrderRequest): OrderCheckoutResponse =
-        OrderCheckoutResponse(orders.create(
-            currentAccounts.activeAccountPublicId(),
-            request.shippingAddressId,
-            request.taxInvoiceRequested,
-            request.updateDefaultTaxInvoicePreference,
-        ).map { it.toResponse() })
+        OrderCheckoutResponse(
+            orders.create(
+                currentAccounts.activeAccountPublicId(),
+                request.shippingAddressId,
+                request.taxInvoiceRequested,
+                request.updateDefaultTaxInvoicePreference,
+            ).map { it.toResponse() }
+        )
 
     @Operation(summary = "주문 목록 조회", description = "주문 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping
@@ -73,9 +76,9 @@ class OrderController(
         @Parameter(description = "대상 주문 공개 식별자(UUID)") @PathVariable orderId: UUID,
     ): OrderResponse = orders.detail(currentAccounts.activeAccountPublicId(), orderId).toResponse()
 
-    private fun OrderPage.toResponse() = OrderPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
+    private fun OrderPageDto.toResponse() = OrderPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
 
-    private fun OrderView.toResponse() = OrderResponse(
+    private fun OrderViewDto.toResponse() = OrderResponse(
         id,
         orderNumber,
         status,
@@ -134,17 +137,17 @@ class OrderController(
         sellerOrganizationId,
     )
 
-    private fun OrderCheckoutOptions.toResponse() = OrderCheckoutOptionsResponse(
+    private fun OrderCheckoutOptionsDto.toResponse() = OrderCheckoutOptionsResponse(
         defaultTaxInvoiceRequested,
         taxInvoiceAvailable,
         standardBankAccount.toResponse(),
         taxInvoiceBankAccount.toResponse(),
     )
 
-    private fun com.buyeong.umji.api.order.model.BankAccountInstructions.toResponse() =
+    private fun com.buyeong.umji.api.order.dto.BankAccountInstructionsDto.toResponse() =
         BankAccountInstructionsResponse(bankName, accountNumber, accountHolder)
 
-    private fun OrderItemView.toResponse() = OrderItemResponse(
+    private fun OrderItemViewDto.toResponse() = OrderItemResponse(
         id, skuId, productName, skuName, skuCode, unitPrice, quantity, lineAmount, status, salesOfferId, unitsPerSale,
     )
 }

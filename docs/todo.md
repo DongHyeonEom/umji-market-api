@@ -60,6 +60,21 @@
 - [x] `ktlintCheck` 전체 source set 통과 확인
 - [x] 전용 ktlint 룰셋에서 `@field:Schema` 배치, 필드 사이 빈 줄, 어노테이션 합산 50자 기준, 숫자형 `@field:Size` 한 줄 표기 검사
 
+## Task 18 — Request·Response·내부 DTO 구조 정리
+
+외부 HTTP 계약과 내부 데이터 전달 객체의 이름·파일·패키지 경계를 일관되게 정리.<br>
+
+### 서비스 개발
+
+- [x] 외부 요청·응답 모델을 도메인 `model` 패키지에 두고 각각 `<Action>Request`, `<Action>Response`로 분리
+- [x] Controller 이하 내부 전달 객체를 각각 `<Action>Dto`로 명명하고 도메인 `dto` 패키지에 배치
+- [x] 데이터 클래스 중첩 선언 제거 및 데이터 클래스별 독립 파일 구성
+- [x] Controller 패키지에 선언된 HTTP 요청·응답 모델과 요청·응답이 한 파일에 혼재된 구조 제거
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [ ] 전체 자동화 테스트 실행으로 API 계약과 내부 DTO 분리 후 회귀 검증
+
 ## Task 1 — 관리자 권한 경계
 
 ### 서비스 개발

@@ -1,17 +1,17 @@
 package com.buyeong.umji.api.persistence.jpa.auth.service
 
-import com.buyeong.umji.api.auth.model.AccountRecord
-import com.buyeong.umji.api.auth.model.RefreshSessionRecord
+import com.buyeong.umji.api.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.auth.dto.RefreshSessionRecordDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.auth.entity.RefreshTokenEntity
-import java.nio.ByteBuffer
-import java.time.Instant
-import java.util.UUID
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.nio.ByteBuffer
+import java.time.Instant
+import java.util.UUID
 
 @Service
 class AuthenticationJpaEntityService(
@@ -20,10 +20,10 @@ class AuthenticationJpaEntityService(
     private val jdbc: JdbcTemplate,
 ) {
     @Transactional(readOnly = true)
-    fun findByPublicId(id: java.util.UUID): AccountRecord? = accounts.findByPublicId(id)?.toRecord()
+    fun findByPublicId(id: java.util.UUID): AccountRecordDto? = accounts.findByPublicId(id)?.toRecord()
 
     @Transactional(readOnly = true)
-    fun findByNormalizedPhone(phone: String): AccountRecord? = accounts.findByPhoneNormalized(phone)?.toRecord()
+    fun findByNormalizedPhone(phone: String): AccountRecordDto? = accounts.findByPhoneNormalized(phone)?.toRecord()
 
     @Transactional(readOnly = true)
     fun isTokenCurrent(id: UUID, tokenVersion: Long): Boolean =
@@ -41,11 +41,11 @@ class AuthenticationJpaEntityService(
     }
 
     @Transactional
-    fun findLockedByHash(tokenHash: ByteArray): RefreshSessionRecord? =
+    fun findLockedByHash(tokenHash: ByteArray): RefreshSessionRecordDto? =
         refreshTokens.findLockedByTokenHash(tokenHash)?.toRecord()
 
     @Transactional
-    fun save(session: RefreshSessionRecord) {
+    fun save(session: RefreshSessionRecordDto) {
         val account = accounts.findByPublicId(session.account.id) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         val entity = refreshTokens.findLockedByTokenHash(session.tokenHash) ?: RefreshTokenEntity()
         entity.account = account
@@ -58,7 +58,7 @@ class AuthenticationJpaEntityService(
         refreshTokens.save(entity)
     }
 
-    private fun AccountEntity.toRecord(): AccountRecord {
+    private fun AccountEntity.toRecord(): AccountRecordDto {
         val accountPublicId = requireNotNull(publicId)
         val permissions = jdbc.queryForList(
             """SELECT DISTINCT p.code
@@ -75,9 +75,9 @@ class AuthenticationJpaEntityService(
             String::class.java,
             requireNotNull(id),
         ).toSet()
-        return AccountRecord(accountPublicId, name, status, tokenVersion, permissions, roles)
+        return AccountRecordDto(accountPublicId, name, status, tokenVersion, permissions, roles)
     }
-    private fun RefreshTokenEntity.toRecord() = RefreshSessionRecord(
+    private fun RefreshTokenEntity.toRecord() = RefreshSessionRecordDto(
         tokenHash,
         account.toRecord(),
         deviceId,

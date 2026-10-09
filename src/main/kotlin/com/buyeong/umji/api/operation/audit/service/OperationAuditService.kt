@@ -1,20 +1,20 @@
 package com.buyeong.umji.api.operation.audit.service
 
-import com.buyeong.umji.api.operation.audit.model.OperationAuditEvent
-import com.buyeong.umji.api.operation.audit.model.OperationAuditPage
-import com.buyeong.umji.api.operation.audit.model.OperationAuditQuery
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditEventDto
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditPageDto
+import com.buyeong.umji.api.operation.audit.dto.OperationAuditQueryDto
 import com.buyeong.umji.api.persistence.jpa.operation.audit.service.OperationAuditJpaEntityService
-import java.time.Instant
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Service
 @Transactional
 class OperationAuditService(private val audit: OperationAuditJpaEntityService) {
-    fun record(event: OperationAuditEvent) = audit.record(event)
+    fun record(event: OperationAuditEventDto) = audit.record(event)
 
     @Transactional(readOnly = true)
-    fun search(query: OperationAuditQuery): OperationAuditPage {
+    fun search(query: OperationAuditQueryDto): OperationAuditPageDto {
         require(query.page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
         require(query.size in 1..100) { "페이지 크기는 1~100이어야 합니다." }
         require(query.from == null || query.until == null || query.from <= query.until) { "조회 시작 시각은 종료 시각보다 늦을 수 없습니다." }

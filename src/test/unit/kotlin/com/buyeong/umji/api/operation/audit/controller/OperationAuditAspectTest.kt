@@ -18,8 +18,6 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
-import java.time.Instant
-import java.util.UUID
 import org.aspectj.lang.ProceedingJoinPoint
 import org.slf4j.MDC
 import org.springframework.mock.web.MockHttpServletRequest
@@ -32,6 +30,8 @@ import org.springframework.transaction.support.SimpleTransactionStatus
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.servlet.HandlerMapping
+import java.time.Instant
+import java.util.UUID
 
 class OperationAuditAspectTest : DescribeSpec({
     val audit = mockk<OperationAuditService>(relaxed = true)
@@ -129,7 +129,8 @@ class OperationAuditAspectTest : DescribeSpec({
             val joinPoint = mockk<ProceedingJoinPoint>()
             every { joinPoint.proceed() } returns "ok"
             request(
-                "POST", "/api/operation/orders/tax-invoices/{orderId}/manual-issue",
+                "POST",
+                "/api/operation/orders/tax-invoices/{orderId}/manual-issue",
                 mapOf("orderId" to orderId.toString()),
             )
 

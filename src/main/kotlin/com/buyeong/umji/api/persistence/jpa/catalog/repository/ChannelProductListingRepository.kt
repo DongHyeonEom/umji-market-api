@@ -2,14 +2,13 @@ package com.buyeong.umji.api.persistence.jpa.catalog.repository
 
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.CategoryEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ChannelProductListingEntity
-import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
-import java.util.UUID
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.util.UUID
 
 interface ChannelProductListingRepository : JpaRepository<ChannelProductListingEntity, Long> {
     @Query("select c from CategoryEntity c where c.salesChannel.code = :channel and c.displayStatus = :status and c.deletedAt is null order by c.displayOrder, c.name")

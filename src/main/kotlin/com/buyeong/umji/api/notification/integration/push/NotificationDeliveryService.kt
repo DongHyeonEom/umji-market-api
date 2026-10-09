@@ -1,22 +1,28 @@
 package com.buyeong.umji.api.notification.integration.push
 
-import com.buyeong.umji.api.notification.model.NotificationEvent
-import com.buyeong.umji.api.notification.model.toMessage
-import com.buyeong.umji.api.notification.model.NotificationDeliveryResult
-import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
-import com.buyeong.umji.api.notification.model.NotificationProviderResult
-import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
+import com.buyeong.umji.api.notification.dto.NotificationDeliveryResultDto
+import com.buyeong.umji.api.notification.dto.NotificationEventDto
+import com.buyeong.umji.api.notification.dto.NotificationPermanentFailureDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderAcceptedDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderInvalidTokenDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderPermanentFailureDto
+import com.buyeong.umji.api.notification.dto.NotificationProviderRetryableFailureDto
+import com.buyeong.umji.api.notification.dto.NotificationRetryableFailureDto
+import com.buyeong.umji.api.notification.dto.NotificationSentDto
+import com.buyeong.umji.api.notification.dto.toMessage
 import com.buyeong.umji.api.notification.integration.apns.ApnsHttpPushProvider
 import com.buyeong.umji.api.notification.integration.fcm.FirebaseMessagingPushProvider
+import com.buyeong.umji.api.notification.model.NotificationDevicePlatform
+import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationDeviceTokenJpaEntityService
 
 class NotificationDeliveryService(
     private val deviceTokens: NotificationDeviceTokenJpaEntityService,
     private val fcm: FirebaseMessagingPushProvider?,
     private val apns: ApnsHttpPushProvider?,
 ) {
-    fun deliver(event: NotificationEvent): NotificationDeliveryResult {
+    fun deliver(event: NotificationEventDto): NotificationDeliveryResultDto {
         val recipients = deviceTokens.activeRecipientsForOrder(event.orderId)
-        if (recipients.isEmpty()) return NotificationDeliveryResult.Sent
+        if (recipients.isEmpty()) return NotificationSentDto
 
         var retryableFailure: String? = null
         var permanentFailure: String? = null
@@ -25,23 +31,23 @@ class NotificationDeliveryService(
             val result = runCatching {
                 when (recipient.platform) {
                     NotificationDevicePlatform.ANDROID_FCM ->
-                        fcm?.send(recipient, message) ?: NotificationProviderResult.PermanentFailure("PROVIDER_NOT_CONFIGURED")
+                        fcm?.send(recipient, message) ?: NotificationProviderPermanentFailureDto("PROVIDER_NOT_CONFIGURED")
                     NotificationDevicePlatform.IOS_APNS ->
-                        apns?.send(recipient, message) ?: NotificationProviderResult.PermanentFailure("PROVIDER_NOT_CONFIGURED")
+                        apns?.send(recipient, message) ?: NotificationProviderPermanentFailureDto("PROVIDER_NOT_CONFIGURED")
                 }
-            }.getOrElse { NotificationProviderResult.RetryableFailure("PROVIDER_CALL_FAILED") }
+            }.getOrElse { NotificationProviderRetryableFailureDto("PROVIDER_CALL_FAILED") }
             when (result) {
-                NotificationProviderResult.Accepted -> Unit
-                NotificationProviderResult.InvalidToken -> deviceTokens.deactivate(recipient.id)
-                is NotificationProviderResult.RetryableFailure -> retryableFailure = result.code
-                is NotificationProviderResult.PermanentFailure -> permanentFailure = result.code
+                NotificationProviderAcceptedDto -> Unit
+                NotificationProviderInvalidTokenDto -> deviceTokens.deactivate(recipient.id)
+                is NotificationProviderRetryableFailureDto -> retryableFailure = result.code
+                is NotificationProviderPermanentFailureDto -> permanentFailure = result.code
             }
         }
 
         return when {
-            retryableFailure != null -> NotificationDeliveryResult.RetryableFailure(retryableFailure!!)
-            permanentFailure != null -> NotificationDeliveryResult.PermanentFailure(permanentFailure!!)
-            else -> NotificationDeliveryResult.Sent
+            retryableFailure != null -> NotificationRetryableFailureDto(retryableFailure!!)
+            permanentFailure != null -> NotificationPermanentFailureDto(permanentFailure!!)
+            else -> NotificationSentDto
         }
     }
 }

@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.persistence.jpa.catalog.repository
 
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
-import java.util.UUID
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
+import java.util.UUID
 
 interface SalesOfferRepository : JpaRepository<SalesOfferEntity, Long> {
     @EntityGraph(attributePaths = ["productSku", "productSku.product", "salesChannel"])

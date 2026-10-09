@@ -28,30 +28,30 @@ import com.buyeong.umji.api.operation.audit.model.OperationAuditPage
 import com.buyeong.umji.api.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.operation.catalog.controller.OperationCatalogController
 import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
+import com.buyeong.umji.api.operation.order.controller.OperationPhoneOrderController
+import com.buyeong.umji.api.operation.order.controller.OperationTaxInvoiceController
+import com.buyeong.umji.api.operation.order.model.TaxInvoiceQueueData
+import com.buyeong.umji.api.operation.order.service.OperationTaxInvoiceService
 import com.buyeong.umji.api.operation.payment.controller.OperationPaymentController
 import com.buyeong.umji.api.operation.shipment.controller.OperationShipmentController
 import com.buyeong.umji.api.order.controller.OperationShippingHolidayController
-import com.buyeong.umji.api.operation.order.controller.OperationPhoneOrderController
-import com.buyeong.umji.api.operation.order.controller.OperationTaxInvoiceController
-import com.buyeong.umji.api.order.service.AdminPhoneOrderBuyer
-import com.buyeong.umji.api.operation.order.service.OperationTaxInvoiceService
-import com.buyeong.umji.api.operation.order.model.TaxInvoiceQueueData
-import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.order.controller.OrderCancellationController
-import com.buyeong.umji.api.order.service.OrderCancellationService
 import com.buyeong.umji.api.order.model.CancellationQueuePage
+import com.buyeong.umji.api.order.service.AdminPhoneOrderBuyer
+import com.buyeong.umji.api.order.service.OrderCancellationService
+import com.buyeong.umji.api.order.service.OrderService
 import com.buyeong.umji.api.order.service.ShippingHolidayService
 import com.buyeong.umji.api.payment.model.PaymentQueuePage
 import com.buyeong.umji.api.payment.service.PaymentService
 import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
-import com.buyeong.umji.api.shipment.model.ShipmentChange
-import com.buyeong.umji.api.shipment.service.ShipmentService
 import com.buyeong.umji.api.sales.model.SalesAssignmentCommand
-import com.buyeong.umji.api.sales.service.SalesAssignmentService
 import com.buyeong.umji.api.sales.model.SalesCommissionPage
 import com.buyeong.umji.api.sales.model.SalesCommissionSettlementResult
 import com.buyeong.umji.api.sales.model.SalesCommissionView
+import com.buyeong.umji.api.sales.service.SalesAssignmentService
 import com.buyeong.umji.api.sales.service.SalesCommissionService
+import com.buyeong.umji.api.shipment.model.ShipmentChange
+import com.buyeong.umji.api.shipment.service.ShipmentService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -421,7 +421,13 @@ class OperationEndpointAuthorizationTest(
         Mockito.`when`(salesCommissions.settle(java.time.YearMonth.parse("2026-09"), operatorId))
             .thenReturn(SalesCommissionSettlementResult(java.time.YearMonth.parse("2026-09"), 0, 0))
         Mockito.`when`(salesCommissions.markPaid(commissionId, operatorId)).thenReturn(
-            SalesCommissionView(commissionId, UUID.randomUUID(), UUID.randomUUID(), 30, 100_000, 300, "PAID", java.time.LocalDate.parse("2026-09-01"), null, null, java.time.Instant.now()),
+            SalesCommissionView(
+                commissionId, UUID.randomUUID(), UUID.randomUUID(), 30, 100_000, 300, "PAID",
+                java.time.LocalDate.parse(
+                    "2026-09-01"
+                ),
+                null, null, java.time.Instant.now()
+            ),
         )
 
         mockMvc.perform(get("/api/operation/sales-commissions/me").with(authorities("SALES_GROUP_READ")))

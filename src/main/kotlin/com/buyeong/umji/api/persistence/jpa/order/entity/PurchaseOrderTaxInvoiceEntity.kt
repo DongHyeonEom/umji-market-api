@@ -1,16 +1,16 @@
 package com.buyeong.umji.api.persistence.jpa.order.entity
 
+import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.MapsId
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import java.time.LocalDate
-import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
-import jakarta.persistence.ManyToOne
 
 @Entity
 @Table(name = "purchase_order_tax_invoice")

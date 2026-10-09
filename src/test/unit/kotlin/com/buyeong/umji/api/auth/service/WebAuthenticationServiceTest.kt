@@ -18,8 +18,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import java.util.UUID
 import org.springframework.security.crypto.password.PasswordEncoder
+import java.util.UUID
 
 class WebAuthenticationServiceTest : DescribeSpec({
     val credentials = mockk<com.buyeong.umji.api.persistence.jpa.auth.service.WebCredentialJpaEntityService>(relaxed = true)

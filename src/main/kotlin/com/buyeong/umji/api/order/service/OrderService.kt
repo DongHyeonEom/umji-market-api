@@ -4,24 +4,26 @@ import com.buyeong.umji.api.cart.service.CartService
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.inventory.service.InventoryService
+import com.buyeong.umji.api.notification.dto.NotificationEventType
 import com.buyeong.umji.api.notification.service.NotificationEventService
-import com.buyeong.umji.api.notification.model.NotificationEventType
-import com.buyeong.umji.api.order.model.OrderCheckoutOptions
-import com.buyeong.umji.api.order.model.OrderDraft
-import com.buyeong.umji.api.order.model.OrderItemDraft
-import com.buyeong.umji.api.order.model.OrderPage
-import com.buyeong.umji.api.order.model.OrderView
-import com.buyeong.umji.api.order.model.CheckoutLine
-import com.buyeong.umji.api.order.model.AdminPhoneOrderLine
-import com.buyeong.umji.api.order.model.ShippingAddressSnapshot
-import com.buyeong.umji.api.order.model.TaxInvoiceSnapshotDraft
+import com.buyeong.umji.api.order.dto.AdminPhoneOrderBuyerDto
+import com.buyeong.umji.api.order.dto.AdminPhoneOrderLineDto
+import com.buyeong.umji.api.order.dto.CheckoutLineDto
+import com.buyeong.umji.api.order.dto.OrderCheckoutOptionsDto
+import com.buyeong.umji.api.order.dto.OrderDraftDto
+import com.buyeong.umji.api.order.dto.OrderItemDraftDto
+import com.buyeong.umji.api.order.dto.OrderPageDto
+import com.buyeong.umji.api.order.dto.OrderViewDto
+import com.buyeong.umji.api.order.dto.ShippingAddressSnapshotDto
+import com.buyeong.umji.api.order.dto.TaxInvoiceBuyerDto
+import com.buyeong.umji.api.order.dto.TaxInvoiceSnapshotDraftDto
 import com.buyeong.umji.api.payment.integration.BankAccountInstructionsService
 import com.buyeong.umji.api.payment.integration.TaxInvoiceSupplierService
-import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.CustomerAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationTaxInvoiceJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderCheckoutJpaEntityService
 import com.buyeong.umji.api.sales.service.SalesCommissionService
 import com.buyeong.umji.api.util.PhoneNumberHelper
@@ -46,9 +48,9 @@ class OrderService(
     private val catalog: CatalogJpaEntityService,
     private val organizations: OrganizationJpaEntityService,
 ) {
-    fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptions {
+    fun checkoutOptions(accountPublicId: UUID): OrderCheckoutOptionsDto {
         val buyer = taxInvoiceBuyers.forAccount(accountPublicId)?.let {
-            com.buyeong.umji.api.order.model.TaxInvoiceBuyer(
+            com.buyeong.umji.api.order.dto.TaxInvoiceBuyerDto(
                 organizationId = it.organizationId,
                 businessRegistrationNumber = it.businessRegistrationNumber,
                 businessName = it.businessName,
@@ -63,11 +65,14 @@ class OrderService(
             )
         }
         val sellers = checkoutCart.cart(accountPublicId).items.map { item ->
-            if (item.sellerOrganizationId == null) taxInvoiceSuppliers.supplier()
-            else taxInvoiceBuyers.supplierForOrganization(item.sellerOrganizationId)
+            if (item.sellerOrganizationId == null) {
+                taxInvoiceSuppliers.supplier()
+            } else {
+                taxInvoiceBuyers.supplierForOrganization(item.sellerOrganizationId)
+            }
         }
         val available = sellers.isNotEmpty() && sellers.all { it != null } && buyer?.complete == true
-        return OrderCheckoutOptions(
+        return OrderCheckoutOptionsDto(
             defaultTaxInvoiceRequested = orders.defaultTaxInvoiceRequested(accountPublicId),
             taxInvoiceAvailable = available,
             standardBankAccount = bankAccounts.standard(),
@@ -81,7 +86,7 @@ class OrderService(
         shippingAddressPublicId: UUID,
         taxInvoiceRequested: Boolean?,
         updateDefaultTaxInvoicePreference: Boolean,
-    ): List<OrderView> {
+    ): List<OrderViewDto> {
         val shippingAddress = shippingAddresses.findForAccount(accountPublicId, shippingAddressPublicId)
             ?: throw ItemNotFoundException("구매자 그룹 배송지를 찾을 수 없습니다.")
         val currentDefaultPreference = if (taxInvoiceRequested == null || updateDefaultTaxInvoicePreference) {
@@ -90,7 +95,7 @@ class OrderService(
             taxInvoiceRequested
         }
         val invoiceBuyer = taxInvoiceBuyers.forAccount(accountPublicId)?.let {
-            com.buyeong.umji.api.order.model.TaxInvoiceBuyer(
+            com.buyeong.umji.api.order.dto.TaxInvoiceBuyerDto(
                 organizationId = it.organizationId,
                 businessRegistrationNumber = it.businessRegistrationNumber,
                 businessName = it.businessName,
@@ -106,7 +111,7 @@ class OrderService(
         }
         val cart = checkoutCart.cart(accountPublicId)
         val lines = cart.items.map {
-            com.buyeong.umji.api.order.model.CheckoutLine(
+            com.buyeong.umji.api.order.dto.CheckoutLineDto(
                 it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus,
                 it.salesOfferId, it.channelCode, it.unitsPerSale, it.sellerOrganizationId,
             )
@@ -131,7 +136,7 @@ class OrderService(
         val savedOrders = lines.groupBy { it.sellerOrganizationId }.map { (organizationId, sellerLines) ->
             val items = sellerLines.map { line ->
                 val amount = Math.multiplyExact(line.unitPrice, line.quantity.toLong())
-                OrderItemDraft(
+                OrderItemDraftDto(
                     skuId = line.skuId,
                     productName = line.productName,
                     skuName = line.skuName,
@@ -147,11 +152,16 @@ class OrderService(
             }
             items.forEach { Math.multiplyExact(it.quantity, it.unitsPerSale) }
             val subtotal = items.sumOf { it.lineAmount }
-            val snapshot = if (selectedPreference) TaxInvoiceSnapshotDraft(
-                requireNotNull(supplierByOrganization[organizationId]), requireNotNull(invoiceBuyer),
-            ) else null
+            val snapshot = if (selectedPreference) {
+                TaxInvoiceSnapshotDraftDto(
+                    requireNotNull(supplierByOrganization[organizationId]),
+                    requireNotNull(invoiceBuyer),
+                )
+            } else {
+                null
+            }
             val savedOrder = orders.save(
-                OrderDraft(
+                OrderDraftDto(
                     accountPublicId, PENDING_PAYMENT, orderedAt, subtotal, subtotal,
                     selectedPreference,
                     bankAccount.bankName,
@@ -179,17 +189,17 @@ class OrderService(
         return savedOrders
     }
 
-    fun create(accountPublicId: UUID, shippingAddressPublicId: UUID): List<OrderView> =
+    fun create(accountPublicId: UUID, shippingAddressPublicId: UUID): List<OrderViewDto> =
         create(accountPublicId, shippingAddressPublicId, false, false)
 
     @Transactional
     fun createAdminPhoneOrder(
         creatorPublicId: UUID,
         buyerPublicId: UUID,
-        shippingAddress: ShippingAddressSnapshot,
-        lines: List<AdminPhoneOrderLine>,
+        shippingAddress: ShippingAddressSnapshotDto,
+        lines: List<AdminPhoneOrderLineDto>,
         taxInvoiceRequested: Boolean,
-    ): List<OrderView> {
+    ): List<OrderViewDto> {
         require(lines.isNotEmpty()) { "전화 주문 상품을 한 개 이상 입력해야 합니다." }
         accounts.findByPublicId(buyerPublicId)
             ?.takeIf { it.status == "ACTIVE" && it.phoneNormalized != null }
@@ -204,7 +214,8 @@ class OrderService(
             require(requested.quantity in 1..9999) { "상품 수량은 1개 이상 9999개 이하여야 합니다." }
             val offer = catalog.salesOffer(requested.salesOfferId)
                 ?.takeIf {
-                    it.salesStatus == ON_SALE && it.salesChannel.code == WHOLESALE &&
+                    it.salesStatus == ON_SALE &&
+                        it.salesChannel.code == WHOLESALE &&
                         it.productSku.salesStatus == ON_SALE &&
                         it.productSku.product.salesStatus == ON_SALE &&
                         it.productSku.product.displayStatus == DISPLAYED &&
@@ -212,7 +223,7 @@ class OrderService(
                 }
                 ?: throw ItemNotFoundException("판매 중인 상품 오퍼를 찾을 수 없습니다.")
             val sku = offer.productSku
-            CheckoutLine(
+            CheckoutLineDto(
                 skuId = requireNotNull(sku.publicId),
                 skuCode = sku.skuCode,
                 productName = sku.product.name,
@@ -232,7 +243,7 @@ class OrderService(
             "판매자의 확인된 사업자 Organization 프로필이 없어 주문할 수 없습니다."
         }
         val invoiceBuyer = buyerOrganization.let {
-            com.buyeong.umji.api.order.model.TaxInvoiceBuyer(
+            com.buyeong.umji.api.order.dto.TaxInvoiceBuyerDto(
                 it.organizationId, it.businessRegistrationNumber, it.businessName, it.representativeName,
                 it.postalCode, it.address1, it.address2, it.businessIndustry, it.businessItem, it.email, it.complete,
             )
@@ -249,7 +260,7 @@ class OrderService(
             val items = sellerLines.map { line ->
                 val amount = Math.multiplyExact(line.unitPrice, line.quantity.toLong())
                 Math.multiplyExact(line.quantity, line.unitsPerSale)
-                OrderItemDraft(
+                OrderItemDraftDto(
                     skuId = line.skuId, productName = line.productName, skuName = line.skuName, skuCode = line.skuCode,
                     unitPrice = line.unitPrice, quantity = line.quantity, lineAmount = amount,
                     reservationKey = UUID.randomUUID(), status = RESERVED, salesOfferId = line.salesOfferId,
@@ -257,11 +268,16 @@ class OrderService(
                 )
             }
             val total = items.sumOf { it.lineAmount }
-            val snapshot = if (taxInvoiceRequested) TaxInvoiceSnapshotDraft(
-                requireNotNull(supplierByOrganization[organizationId]), invoiceBuyer,
-            ) else null
+            val snapshot = if (taxInvoiceRequested) {
+                TaxInvoiceSnapshotDraftDto(
+                    requireNotNull(supplierByOrganization[organizationId]),
+                    invoiceBuyer,
+                )
+            } else {
+                null
+            }
             val saved = orders.save(
-                OrderDraft(
+                OrderDraftDto(
                     accountId = buyerPublicId, status = PENDING_PAYMENT, orderedAt = orderedAt,
                     subtotalAmount = total, totalAmount = total, taxInvoiceRequested = taxInvoiceRequested,
                     depositBankName = bankAccount.bankName, depositAccountNumber = bankAccount.accountNumber,
@@ -282,19 +298,22 @@ class OrderService(
         return savedOrders
     }
 
-    fun findAdminPhoneOrderBuyer(phone: String): AdminPhoneOrderBuyer? {
+    fun findAdminPhoneOrderBuyer(phone: String): AdminPhoneOrderBuyerDto? {
         val normalized = PhoneNumberHelper.normalizeMobilePhoneNumber(phone)
         val account = accounts.findByPhoneNormalized(normalized)?.takeIf { it.status == "ACTIVE" } ?: return null
         val organization = organizations.activeBuyerForAccountPublicId(requireNotNull(account.publicId)) ?: return null
-        return AdminPhoneOrderBuyer(
-            requireNotNull(account.publicId), account.name, account.phone ?: normalized,
-            requireNotNull(organization.publicId), organization.displayName,
+        return AdminPhoneOrderBuyerDto(
+            requireNotNull(account.publicId),
+            account.name,
+            account.phone ?: normalized,
+            requireNotNull(organization.publicId),
+            organization.displayName,
         )
     }
 
-    fun list(accountPublicId: UUID, page: Int, size: Int): OrderPage = orders.findAll(accountPublicId, page, size)
+    fun list(accountPublicId: UUID, page: Int, size: Int): OrderPageDto = orders.findAll(accountPublicId, page, size)
 
-    fun detail(accountPublicId: UUID, orderId: UUID): OrderView =
+    fun detail(accountPublicId: UUID, orderId: UUID): OrderViewDto =
         orders.find(accountPublicId, orderId) ?: throw ItemNotFoundException("주문을 찾을 수 없습니다.")
 
     private companion object {
@@ -305,11 +324,3 @@ class OrderService(
         const val DISPLAYED = "DISPLAYED"
     }
 }
-
-data class AdminPhoneOrderBuyer(
-    val accountId: UUID,
-    val accountName: String,
-    val phone: String,
-    val organizationId: UUID,
-    val organizationName: String,
-)

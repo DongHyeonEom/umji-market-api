@@ -1,7 +1,9 @@
 package com.buyeong.umji.api.notification.service
 
+import com.buyeong.umji.api.notification.dto.NotificationPermanentFailureDto
+import com.buyeong.umji.api.notification.dto.NotificationRetryableFailureDto
+import com.buyeong.umji.api.notification.dto.NotificationSentDto
 import com.buyeong.umji.api.notification.integration.push.NotificationDeliveryService
-import com.buyeong.umji.api.notification.model.NotificationDeliveryResult
 import com.buyeong.umji.api.persistence.jpa.notification.service.NotificationOutboxWorkerJpaEntityService
 import java.time.Clock
 import java.time.Duration
@@ -18,14 +20,14 @@ class NotificationOutboxWorker(
             val result = try {
                 delivery.deliver(item.event)
             } catch (_: Exception) {
-                NotificationDeliveryResult.RetryableFailure(UNEXPECTED_PROVIDER_ERROR)
+                NotificationRetryableFailureDto(UNEXPECTED_PROVIDER_ERROR)
             }
 
             when (result) {
-                NotificationDeliveryResult.Sent -> outbox.markSent(item.event.id, clock.instant())
-                is NotificationDeliveryResult.PermanentFailure ->
+                NotificationSentDto -> outbox.markSent(item.event.id, clock.instant())
+                is NotificationPermanentFailureDto ->
                     outbox.markFailed(item.event.id, clock.instant(), safeErrorCode(result.code))
-                is NotificationDeliveryResult.RetryableFailure -> {
+                is NotificationRetryableFailureDto -> {
                     val errorCode = safeErrorCode(result.code)
                     if (item.attemptCount >= MAX_ATTEMPTS) {
                         outbox.markFailed(item.event.id, clock.instant(), errorCode)

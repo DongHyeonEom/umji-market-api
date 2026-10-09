@@ -2,8 +2,8 @@ package com.buyeong.umji.api.access.service
 
 import com.buyeong.umji.api.access.model.AccessAudience
 import com.buyeong.umji.api.auth.service.CurrentAccountService
-import com.buyeong.umji.api.persistence.jpa.access.service.AdminAccessSnapshot
 import com.buyeong.umji.api.persistence.jpa.access.service.AccessContextJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.access.service.AdminAccessSnapshot
 import com.buyeong.umji.api.persistence.jpa.access.service.BuyerMembershipSnapshot
 import com.buyeong.umji.api.persistence.jpa.access.service.ScreenPermissionMapping
 import io.kotest.core.spec.style.DescribeSpec

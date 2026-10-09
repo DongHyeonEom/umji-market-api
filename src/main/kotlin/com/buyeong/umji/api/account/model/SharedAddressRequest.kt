@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.account.model
 
-import com.buyeong.umji.api.account.model.SharedAddressCommand
+import com.buyeong.umji.api.account.dto.SharedAddressCommandDto
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -31,7 +31,7 @@ data class SharedAddressRequest(
     val isDefault: Boolean = false,
 )
 
-fun SharedAddressRequest.toCommand() = SharedAddressCommand(
+fun SharedAddressRequest.toCommand() = SharedAddressCommandDto(
     recipientName.trim(),
     recipientPhone.trim(),
     postalCode.trim(),

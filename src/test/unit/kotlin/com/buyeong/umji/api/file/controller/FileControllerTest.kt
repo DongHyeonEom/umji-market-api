@@ -11,9 +11,9 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.springframework.security.core.Authentication
 import java.time.Instant
 import java.util.UUID
-import org.springframework.security.core.Authentication
 
 class FileControllerTest : DescribeSpec({
     val service = mockk<FileService>()

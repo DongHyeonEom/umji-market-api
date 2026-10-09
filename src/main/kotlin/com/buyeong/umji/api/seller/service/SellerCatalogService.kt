@@ -1,16 +1,17 @@
 package com.buyeong.umji.api.seller.service
 
 import com.buyeong.umji.api.account.service.OrganizationMembershipService
-import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.exception.ClientBadRequestException
-import com.buyeong.umji.api.operation.catalog.model.SalesOfferCommand
-import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
-import com.buyeong.umji.api.inventory.service.InventoryService
 import com.buyeong.umji.api.account.service.OrganizationTaxInvoiceProfileService
-import com.buyeong.umji.api.operation.catalog.model.BrandCommand
-import com.buyeong.umji.api.operation.catalog.model.ProductCommand
-import com.buyeong.umji.api.operation.catalog.model.ChannelListingCommand
+import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.inventory.service.InventoryService
+import com.buyeong.umji.api.operation.catalog.dto.BrandCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ChannelListingCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ProductCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.SalesOfferCommandDto
+import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
+import com.buyeong.umji.api.seller.dto.SellerSkuResponseDto
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
@@ -27,12 +28,17 @@ class SellerCatalogService(
 ) {
     @Transactional(readOnly = true)
     fun skus(accountId: UUID, page: Int, size: Int) = sellerOrganization(accountId).let {
-        commonCatalog.sellerSkus(it,
+        commonCatalog.sellerSkus(
+            it,
             PageRequest.of(page, size, Sort.by("product.name").ascending().and(Sort.by("skuCode").ascending())),
         ).map { sku ->
-            SellerSkuResponseView(
-                requireNotNull(sku.publicId), sku.skuCode, sku.name,
-                requireNotNull(sku.product.publicId), sku.product.name, sku.product.brand?.name,
+            SellerSkuResponseDto(
+                requireNotNull(sku.publicId),
+                sku.skuCode,
+                sku.name,
+                requireNotNull(sku.product.publicId),
+                sku.product.name,
+                sku.product.brand?.name,
             )
         }
     }
@@ -42,7 +48,7 @@ class SellerCatalogService(
 
     @Transactional
     fun createBrand(accountId: UUID, name: String, displayStatus: String) =
-        catalog.createSellerBrand(sellerOrganization(accountId), BrandCommand(name, displayStatus))
+        catalog.createSellerBrand(sellerOrganization(accountId), BrandCommandDto(name, displayStatus))
 
     @Transactional(readOnly = true)
     fun products(accountId: UUID, page: Int, size: Int) = catalog.sellerProducts(sellerOrganization(accountId), page, size)
@@ -51,15 +57,15 @@ class SellerCatalogService(
     fun product(accountId: UUID, productId: UUID) = catalog.sellerProduct(sellerOrganization(accountId), productId)
 
     @Transactional
-    fun createProduct(accountId: UUID, command: ProductCommand) = catalog.createSellerProduct(sellerOrganization(accountId), command)
+    fun createProduct(accountId: UUID, command: ProductCommandDto) = catalog.createSellerProduct(sellerOrganization(accountId), command)
 
     @Transactional
-    fun updateProduct(accountId: UUID, productId: UUID, command: ProductCommand) =
+    fun updateProduct(accountId: UUID, productId: UUID, command: ProductCommandDto) =
         catalog.updateSellerProduct(sellerOrganization(accountId), productId, command)
 
     @Transactional
     fun updateListing(accountId: UUID, channelCode: String, productId: UUID, categoryId: UUID, displayStatus: String, displayOrder: Int) =
-        catalog.updateSellerChannelListing(sellerOrganization(accountId), ChannelListingCommand(channelCode, productId, categoryId, displayStatus, displayOrder))
+        catalog.updateSellerChannelListing(sellerOrganization(accountId), ChannelListingCommandDto(channelCode, productId, categoryId, displayStatus, displayOrder))
 
     @Transactional
     fun updateOffer(accountId: UUID, channelCode: String, skuId: UUID, salePrice: Long, listPrice: Long?, salesStatus: String, unitsPerSale: Int?) =
@@ -70,7 +76,7 @@ class SellerCatalogService(
             verifyOwnedSku(organizationId, skuId)
             catalog.updateSellerSalesOffer(
                 organizationId,
-                SalesOfferCommand(channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale),
+                SalesOfferCommandDto(channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale),
             )
         }
 
@@ -96,12 +102,3 @@ class SellerCatalogService(
         return organization.id
     }
 }
-
-data class SellerSkuResponseView(
-    val id: UUID,
-    val skuCode: String,
-    val name: String,
-    val productId: UUID,
-    val productName: String,
-    val brandName: String?,
-)

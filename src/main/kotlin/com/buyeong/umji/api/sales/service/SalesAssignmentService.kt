@@ -2,21 +2,21 @@ package com.buyeong.umji.api.sales.service
 
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.persistence.jpa.sales.service.OrganizationSalesAssignmentJpaEntityService
-import com.buyeong.umji.api.sales.model.SalesAssignmentCommand
-import com.buyeong.umji.api.sales.model.SalesAssignmentView
-import java.util.UUID
+import com.buyeong.umji.api.sales.dto.SalesAssignmentCommandDto
+import com.buyeong.umji.api.sales.dto.SalesAssignmentViewDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class SalesAssignmentService(
     private val assignments: OrganizationSalesAssignmentJpaEntityService,
 ) {
     @Transactional(readOnly = true)
-    fun history(organizationId: UUID): List<SalesAssignmentView> = assignments.history(organizationId)
+    fun history(organizationId: UUID): List<SalesAssignmentViewDto> = assignments.history(organizationId)
 
     @Transactional
-    fun assign(organizationId: UUID, command: SalesAssignmentCommand): List<SalesAssignmentView> {
+    fun assign(organizationId: UUID, command: SalesAssignmentCommandDto): List<SalesAssignmentViewDto> {
         if (command.commissionRateBps != null && command.commissionRateBps !in 1..10_000) {
             throw InvalidRequestParameterException("인센티브율은 1~10000 basis points 범위여야 합니다.")
         }

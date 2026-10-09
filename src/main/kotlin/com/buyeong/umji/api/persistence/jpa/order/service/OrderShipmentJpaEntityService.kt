@@ -5,12 +5,12 @@ import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntit
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.repository.OrderShipmentRepository
-import com.buyeong.umji.api.shipment.model.ShipmentTrackingCandidate
+import com.buyeong.umji.api.shipment.dto.ShipmentTrackingCandidateDto
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
@@ -34,7 +34,7 @@ class OrderShipmentJpaEntityService(
 
     fun readyOrderIds(): List<UUID> = shipments.findReadyOrderIds()
 
-    fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidate> {
+    fun trackingCandidatesForCustomer(customerId: UUID): List<ShipmentTrackingCandidateDto> {
         val organizationId = requireNotNull(organizations.activeBuyerForAccountPublicId(customerId)?.id) {
             "계정의 활성 구매자 그룹을 찾을 수 없습니다."
         }
@@ -42,7 +42,7 @@ class OrderShipmentJpaEntityService(
     }
 
     @Transactional
-    fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidate): Boolean {
+    fun markDeliveredIfCurrent(candidate: ShipmentTrackingCandidateDto): Boolean {
         val current = shipments.findForUpdateByOrderId(candidate.orderId) ?: return false
         if (current.status != IN_TRANSIT || current.carrierCode != candidate.carrierCode || current.trackingNumber != candidate.trackingNumber) {
             return false

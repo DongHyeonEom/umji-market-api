@@ -1,19 +1,19 @@
 package com.buyeong.umji.api.operation.catalog.controller
 
-import com.buyeong.umji.api.operation.catalog.model.BrandCommand
-import com.buyeong.umji.api.operation.catalog.model.CatalogResource
-import com.buyeong.umji.api.operation.catalog.model.CategoryCommand
-import com.buyeong.umji.api.operation.catalog.model.ChannelCategoryCommand
-import com.buyeong.umji.api.operation.catalog.model.ChannelListingCommand
-import com.buyeong.umji.api.operation.catalog.model.ImageCommand
-import com.buyeong.umji.api.operation.catalog.model.OptionCommand
-import com.buyeong.umji.api.operation.catalog.model.OptionValueCommand
-import com.buyeong.umji.api.operation.catalog.model.ProductCommand
-import com.buyeong.umji.api.operation.catalog.model.ProductStatusCommand
-import com.buyeong.umji.api.operation.catalog.model.ProductView
-import com.buyeong.umji.api.operation.catalog.model.SalesOfferCommand
-import com.buyeong.umji.api.operation.catalog.model.SalesOfferView
-import com.buyeong.umji.api.operation.catalog.model.SkuCommand
+import com.buyeong.umji.api.operation.catalog.dto.BrandCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.CatalogResourceDto
+import com.buyeong.umji.api.operation.catalog.dto.CategoryCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ChannelCategoryCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ChannelListingCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ImageCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.OptionCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.OptionValueCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ProductCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ProductStatusCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.ProductViewDto
+import com.buyeong.umji.api.operation.catalog.dto.SalesOfferCommandDto
+import com.buyeong.umji.api.operation.catalog.dto.SalesOfferViewDto
+import com.buyeong.umji.api.operation.catalog.dto.SkuCommandDto
 import com.buyeong.umji.api.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.operation.model.CreateBrandRequest
 import com.buyeong.umji.api.operation.model.CreateCategoryRequest
@@ -42,7 +42,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
-import java.util.UUID
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -56,6 +55,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/operation")
@@ -81,7 +81,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
         @PathVariable channelCode: String,
         @Valid @RequestBody request: CreateChannelCategoryRequest,
     ) = useCase.createChannelCategory(
-        ChannelCategoryCommand(channelCode, request.name, request.parentId, request.displayOrder, request.displayStatus),
+        ChannelCategoryCommandDto(channelCode, request.name, request.parentId, request.displayOrder, request.displayStatus),
     ).toResponse()
 
     @Operation(summary = "채널별 상품 전시 수정", description = "공용 상품을 채널 카테고리에 연결하고 채널별 노출·순서를 수정")
@@ -92,7 +92,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
         @PathVariable productId: UUID,
         @Valid @RequestBody request: UpdateChannelListingRequest,
     ) = useCase.updateChannelListing(
-        ChannelListingCommand(channelCode, productId, request.categoryId, request.displayStatus, request.displayOrder),
+        ChannelListingCommandDto(channelCode, productId, request.categoryId, request.displayStatus, request.displayOrder),
     ).toResponse()
 
     @Operation(summary = "채널별 SKU 판매 오퍼 수정", description = "공용 실물 SKU의 채널별 판매가·정가·판매 상태를 수정")
@@ -103,7 +103,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
         @PathVariable skuId: UUID,
         @Valid @RequestBody request: UpdateSalesOfferRequest,
     ) = useCase.updateSalesOffer(
-        SalesOfferCommand(channelCode, skuId, request.salePrice, request.listPrice, request.salesStatus, request.unitsPerSale),
+        SalesOfferCommandDto(channelCode, skuId, request.salePrice, request.listPrice, request.salesStatus, request.unitsPerSale),
     ).toResponse()
 
     @Operation(summary = "브랜드 목록 조회", description = "브랜드 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
@@ -138,7 +138,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     @ResponseStatus(HttpStatus.CREATED)
     fun createCategory(
         @Valid @RequestBody r: CreateCategoryRequest,
-    ) = useCase.createCategory(CategoryCommand(r.name, r.parentId, r.displayOrder, r.displayStatus)).toResponse()
+    ) = useCase.createCategory(CategoryCommandDto(r.name, r.parentId, r.displayOrder, r.displayStatus)).toResponse()
 
     @Operation(summary = "브랜드 등록", description = "브랜드 등록 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @PostMapping("/brands")
@@ -146,7 +146,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     @ResponseStatus(HttpStatus.CREATED)
     fun createBrand(
         @Valid @RequestBody r: CreateBrandRequest,
-    ) = useCase.createBrand(BrandCommand(r.name, r.displayStatus)).toResponse()
+    ) = useCase.createBrand(BrandCommandDto(r.name, r.displayStatus)).toResponse()
 
     @Operation(summary = "상품등록", description = "카테고리·브랜드·상품·옵션·SKU 관리 API. /products 경로에서 상품등록를 수행")
     @PostMapping("/products")
@@ -197,22 +197,22 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     fun updateStatus(
         @Parameter(description = "상품 공개 식별자(UUID)") @PathVariable productId: UUID,
         @Valid @RequestBody r: UpdateProductStatusRequest,
-    ) = useCase.updateStatus(productId, ProductStatusCommand(r.displayStatus, r.salesStatus)).toResponse()
+    ) = useCase.updateStatus(productId, ProductStatusCommandDto(r.displayStatus, r.salesStatus)).toResponse()
 
-    private fun CreateProductRequest.toCommand() = ProductCommand(
+    private fun CreateProductRequest.toCommand() = ProductCommandDto(
         categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder,
         images.map {
             it.toCommand()
         },
         options.map { it.toCommand() }, skus.map { it.toCommand() },
     )
-    private fun UpdateProductRequest.toCommand() = ProductCommand(categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder)
-    private fun CreateProductImageRequest.toCommand() = ImageCommand(storageKey, altText, displayOrder)
-    private fun CreateProductOptionRequest.toCommand() = OptionCommand(name, displayOrder, values.map { OptionValueCommand(it.value, it.displayOrder) })
-    private fun CreateProductSkuRequest.toCommand() = SkuCommand(skuCode, name, salePrice, listPrice, salesStatus, optionValueIds)
-    private fun CatalogResource.toResponse() = OperationCatalogResourceResponse(id)
-    private fun SalesOfferView.toResponse() = OperationSalesOfferResponse(id, channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale)
-    private fun ProductView.toResponse() = OperationProductResponse(
+    private fun UpdateProductRequest.toCommand() = ProductCommandDto(categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder)
+    private fun CreateProductImageRequest.toCommand() = ImageCommandDto(storageKey, altText, displayOrder)
+    private fun CreateProductOptionRequest.toCommand() = OptionCommandDto(name, displayOrder, values.map { OptionValueCommandDto(it.value, it.displayOrder) })
+    private fun CreateProductSkuRequest.toCommand() = SkuCommandDto(skuCode, name, salePrice, listPrice, salesStatus, optionValueIds)
+    private fun CatalogResourceDto.toResponse() = OperationCatalogResourceResponse(id)
+    private fun SalesOfferViewDto.toResponse() = OperationSalesOfferResponse(id, channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale)
+    private fun ProductViewDto.toResponse() = OperationProductResponse(
         id, categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder,
         images.map {
             OperationProductImageResponse(it.id, it.storageKey, it.altText, it.displayOrder)

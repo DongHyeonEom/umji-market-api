@@ -2,32 +2,35 @@ package com.buyeong.umji.api.persistence.jpa.sales.service
 
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.sales.model.SalesCommissionPage
-import com.buyeong.umji.api.sales.model.SalesCommissionSettlementResult
-import com.buyeong.umji.api.sales.model.SalesCommissionView
+import com.buyeong.umji.api.payment.dto.PaymentRecordDto
+import com.buyeong.umji.api.sales.dto.SalesAssignmentSnapshotDto
+import com.buyeong.umji.api.sales.dto.SalesCommissionPageDto
+import com.buyeong.umji.api.sales.dto.SalesCommissionSettlementResultDto
+import com.buyeong.umji.api.sales.dto.SalesCommissionViewDto
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.UUID
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional
 class SalesCommissionJpaEntityService(
     private val jdbc: JdbcTemplate,
 ) {
-    fun assignmentAt(accountPublicId: UUID, orderedAt: Instant): SalesAssignmentSnapshot {
+    fun assignmentAt(accountPublicId: UUID, orderedAt: Instant): SalesAssignmentSnapshotDto {
         val buyerOrganizationId = jdbc.query(
             """SELECT organization.id FROM account
                 JOIN organization_member ON organization_member.account_id = account.id AND organization_member.status = 'ACTIVE'
                 JOIN organization ON organization.id = organization_member.organization_id AND organization.status = 'ACTIVE'
                 JOIN organization_capability ON organization_capability.organization_id = organization.id
                     AND organization_capability.capability_code = 'BUYER'
-                WHERE account.public_id = ?""".trimIndent(),
+                WHERE account.public_id = ?
+            """.trimIndent(),
             { result, _ -> result.getLong("id") },
             accountPublicId.toBytes(),
         ).firstOrNull() ?: throw ItemNotFoundException("주문 계정의 활성 구매 Organization을 찾을 수 없습니다.")
@@ -35,9 +38,10 @@ class SalesCommissionJpaEntityService(
         val assignment = jdbc.query(
             """SELECT id, sales_account_id, commission_rate_bps FROM organization_sales_assignment
                 WHERE organization_id = ? AND valid_from <= ? AND (valid_until IS NULL OR valid_until > ?)
-                ORDER BY valid_from DESC LIMIT 1""".trimIndent(),
+                ORDER BY valid_from DESC LIMIT 1
+            """.trimIndent(),
             { result, _ ->
-                SalesAssignmentSnapshot(
+                SalesAssignmentSnapshotDto(
                     buyerOrganizationId,
                     result.getLong("id"),
                     result.getLong("sales_account_id"),
@@ -48,12 +52,12 @@ class SalesCommissionJpaEntityService(
             Timestamp.from(orderedAt),
             Timestamp.from(orderedAt),
         ).firstOrNull()
-        return assignment ?: SalesAssignmentSnapshot(buyerOrganizationId, null, null, null)
+        return assignment ?: SalesAssignmentSnapshotDto(buyerOrganizationId, null, null, null)
     }
 
     fun createSnapshot(
         orderPublicId: UUID,
-        assignment: SalesAssignmentSnapshot,
+        assignment: SalesAssignmentSnapshotDto,
         basisAmount: Long,
         commissionAmount: Long,
         status: String,
@@ -64,7 +68,8 @@ class SalesCommissionJpaEntityService(
             """INSERT INTO sales_commission
                 (public_id, order_id, organization_id, assignment_id, sales_account_id, rate_bps_snapshot,
                  basis_snapshot, basis_amount, commission_amount, status)
-                VALUES (?, ?, ?, ?, ?, ?, 'NET_ITEM_SALES_EX_TAX', ?, ?, ?)""".trimIndent(),
+                VALUES (?, ?, ?, ?, ?, ?, 'NET_ITEM_SALES_EX_TAX', ?, ?, ?)
+            """.trimIndent(),
             UUID.randomUUID().toBytes(),
             orderId,
             assignment.organizationId,
@@ -79,14 +84,15 @@ class SalesCommissionJpaEntityService(
         jdbc.update(
             """INSERT INTO sales_commission_event
                 (commission_id, event_type, amount_delta, idempotency_key, reason_code)
-                VALUES (?, 'SNAPSHOT', 0, ?, 'ORDER_CREATED')""".trimIndent(),
+                VALUES (?, 'SNAPSHOT', 0, ?, 'ORDER_CREATED')
+            """.trimIndent(),
             commissionInternalId,
             "SNAPSHOT:$orderPublicId",
         )
     }
 
     @Transactional(readOnly = true)
-    fun mine(accountPublicId: UUID, page: Int, size: Int): SalesCommissionPage {
+    fun mine(accountPublicId: UUID, page: Int, size: Int): SalesCommissionPageDto {
         validatePage(page, size)
         val accountId = internalId("SELECT id FROM account WHERE public_id = ?", accountPublicId)
             ?: throw ItemNotFoundException("영업 계정을 찾을 수 없습니다.")
@@ -94,12 +100,12 @@ class SalesCommissionJpaEntityService(
     }
 
     @Transactional(readOnly = true)
-    fun all(page: Int, size: Int): SalesCommissionPage {
+    fun all(page: Int, size: Int): SalesCommissionPageDto {
         validatePage(page, size)
         return page(null, null, page, size)
     }
 
-    fun settle(month: YearMonth, operatorPublicId: UUID): SalesCommissionSettlementResult {
+    fun settle(month: YearMonth, operatorPublicId: UUID): SalesCommissionSettlementResultDto {
         val operatorId = internalId("SELECT id FROM account WHERE public_id = ? AND status = 'ACTIVE'", operatorPublicId)
             ?: throw ItemNotFoundException("정산 처리자 계정을 찾을 수 없습니다.")
         val periodStart = month.atDay(1)
@@ -119,7 +125,8 @@ class SalesCommissionJpaEntityService(
                 ) payment_paid ON payment_paid.payment_id = payment.id
                 WHERE commission.status = 'WAITING'
                   AND shipment.updated_at < ?
-                  AND payment_paid.paid_at < ?""".trimIndent(),
+                  AND payment_paid.paid_at < ?
+            """.trimIndent(),
             { result, _ ->
                 EligibleCommission(
                     result.getLong("id"),
@@ -137,7 +144,8 @@ class SalesCommissionJpaEntityService(
         eligible.forEach { item ->
             val changed = jdbc.update(
                 """UPDATE sales_commission SET status = 'PAYABLE', settlement_month = ?, qualified_at = ?
-                    WHERE id = ? AND status = 'WAITING'""".trimIndent(),
+                    WHERE id = ? AND status = 'WAITING'
+                """.trimIndent(),
                 java.sql.Date.valueOf(periodStart),
                 Timestamp.from(item.qualifiedAt),
                 item.internalId,
@@ -146,7 +154,8 @@ class SalesCommissionJpaEntityService(
                 jdbc.update(
                     """INSERT INTO sales_commission_event
                         (commission_id, event_type, amount_delta, idempotency_key, processed_by_account_id, reason_code)
-                        VALUES (?, 'ACCRUED', ?, ?, ?, 'MONTH_END_SETTLEMENT')""".trimIndent(),
+                        VALUES (?, 'ACCRUED', ?, ?, ?, 'MONTH_END_SETTLEMENT')
+                    """.trimIndent(),
                     item.internalId,
                     item.amount,
                     "ACCRUED:${item.publicId}:$month",
@@ -156,15 +165,15 @@ class SalesCommissionJpaEntityService(
                 total = Math.addExact(total, item.amount)
             }
         }
-        return SalesCommissionSettlementResult(month, count, total)
+        return SalesCommissionSettlementResultDto(month, count, total)
     }
 
-    fun markPaid(commissionPublicId: UUID, operatorPublicId: UUID): SalesCommissionView {
+    fun markPaid(commissionPublicId: UUID, operatorPublicId: UUID): SalesCommissionViewDto {
         val operatorId = internalId("SELECT id FROM account WHERE public_id = ? AND status = 'ACTIVE'", operatorPublicId)
             ?: throw ItemNotFoundException("지급 처리자 계정을 찾을 수 없습니다.")
         val record = jdbc.query(
             "SELECT id, commission_amount, status FROM sales_commission WHERE public_id = ? FOR UPDATE",
-            { result, _ -> PaymentRecord(result.getLong("id"), result.getLong("commission_amount"), result.getString("status")) },
+            { result, _ -> PaymentRecordDto(result.getLong("id"), result.getLong("commission_amount"), result.getString("status")) },
             commissionPublicId.toBytes(),
         ).firstOrNull() ?: throw ItemNotFoundException("인센티브 원장을 찾을 수 없습니다.")
         if (record.status == PAID) return findOne(commissionPublicId)
@@ -174,7 +183,8 @@ class SalesCommissionJpaEntityService(
         jdbc.update(
             """INSERT INTO sales_commission_event
                 (commission_id, event_type, amount_delta, idempotency_key, processed_by_account_id, reason_code)
-                VALUES (?, 'PAID', ?, ?, ?, 'ADMIN_PAYOUT')""".trimIndent(),
+                VALUES (?, 'PAID', ?, ?, ?, 'ADMIN_PAYOUT')
+            """.trimIndent(),
             record.internalId,
             -record.amount,
             "PAID:$commissionPublicId",
@@ -188,9 +198,10 @@ class SalesCommissionJpaEntityService(
             """SELECT commission.id, commission.public_id, commission.commission_amount, commission.status
                 FROM sales_commission commission
                 JOIN purchase_order ON purchase_order.id = commission.order_id
-                WHERE purchase_order.public_id = ? FOR UPDATE""".trimIndent(),
+                WHERE purchase_order.public_id = ? FOR UPDATE
+            """.trimIndent(),
             { result, _ ->
-                PaymentRecord(
+                PaymentRecordDto(
                     result.getLong("id"),
                     result.getLong("commission_amount"),
                     result.getString("status"),
@@ -206,7 +217,8 @@ class SalesCommissionJpaEntityService(
         jdbc.update(
             """INSERT INTO sales_commission_event
                 (commission_id, event_type, amount_delta, idempotency_key, reason_code)
-                VALUES (?, 'REVERSED', ?, ?, ?)""".trimIndent(),
+                VALUES (?, 'REVERSED', ?, ?, ?)
+            """.trimIndent(),
             commission.internalId,
             reversalAmount,
             "REVERSED:$orderPublicId",
@@ -214,13 +226,13 @@ class SalesCommissionJpaEntityService(
         )
     }
 
-    private fun findOne(publicId: UUID): SalesCommissionView = jdbc.query(
+    private fun findOne(publicId: UUID): SalesCommissionViewDto = jdbc.query(
         commissionSelect("commission.public_id = ?"),
         { result, _ -> result.toView() },
         publicId.toBytes(),
     ).firstOrNull() ?: throw ItemNotFoundException("인센티브 원장을 찾을 수 없습니다.")
 
-    private fun page(where: String?, accountId: Long?, page: Int, size: Int): SalesCommissionPage {
+    private fun page(where: String?, accountId: Long?, page: Int, size: Int): SalesCommissionPageDto {
         val predicate = where?.let { "WHERE $it" }.orEmpty()
         val total = jdbc.queryForObject(
             "SELECT COUNT(*) FROM sales_commission commission $predicate",
@@ -236,7 +248,7 @@ class SalesCommissionJpaEntityService(
                 add(page.toLong() * size)
             }.toTypedArray(),
         )
-        return SalesCommissionPage(items, page, size, total, if (total == 0L) 0 else ((total + size - 1) / size).toInt())
+        return SalesCommissionPageDto(items, page, size, total, if (total == 0L) 0 else ((total + size - 1) / size).toInt())
     }
 
     private fun commissionSelect(predicate: String) =
@@ -247,9 +259,10 @@ class SalesCommissionJpaEntityService(
             FROM sales_commission commission
             JOIN purchase_order ON purchase_order.id = commission.order_id
             LEFT JOIN account sales_account ON sales_account.id = commission.sales_account_id
-            ${if (predicate.isBlank()) "" else "WHERE $predicate"}""".trimIndent()
+            ${if (predicate.isBlank()) "" else "WHERE $predicate"}
+        """.trimIndent()
 
-    private fun java.sql.ResultSet.toView() = SalesCommissionView(
+    private fun java.sql.ResultSet.toView() = SalesCommissionViewDto(
         getBytes("public_id").toUuid(),
         getBytes("order_public_id").toUuid(),
         getBytes("sales_account_public_id")?.toUuid(),
@@ -270,7 +283,7 @@ class SalesCommissionJpaEntityService(
     }
 
     private data class EligibleCommission(val internalId: Long, val publicId: UUID, val amount: Long, val qualifiedAt: Instant)
-    private data class PaymentRecord(val internalId: Long, val amount: Long, val status: String, val publicId: UUID? = null)
+    private data class PaymentRecordDto(val internalId: Long, val amount: Long, val status: String, val publicId: UUID? = null)
 
     private fun UUID.toBytes(): ByteArray = ByteBuffer.allocate(16).putLong(mostSignificantBits).putLong(leastSignificantBits).array()
 
@@ -288,10 +301,3 @@ class SalesCommissionJpaEntityService(
         val KST: ZoneId = ZoneId.of("Asia/Seoul")
     }
 }
-
-data class SalesAssignmentSnapshot(
-    val organizationId: Long,
-    val assignmentId: Long?,
-    val salesAccountId: Long?,
-    val commissionRateBps: Int?,
-)

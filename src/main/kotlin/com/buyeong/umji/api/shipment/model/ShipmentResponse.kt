@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.shipment.model
 
-import com.buyeong.umji.api.shipment.model.ShipmentChange
+import com.buyeong.umji.api.shipment.dto.ShipmentChangeDto
 import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
@@ -19,4 +19,4 @@ data class ShipmentResponse(
     val trackingNumber: String?,
 )
 
-fun ShipmentChange.toResponse() = ShipmentResponse(orderId, status, carrierCode, trackingNumber)
+fun ShipmentChangeDto.toResponse() = ShipmentResponse(orderId, status, carrierCode, trackingNumber)

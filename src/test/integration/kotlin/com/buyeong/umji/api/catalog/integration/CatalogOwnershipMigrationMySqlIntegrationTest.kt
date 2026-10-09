@@ -1,6 +1,5 @@
 package com.buyeong.umji.api.catalog.integration
 
-import java.sql.DriverManager
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.flywaydb.core.Flyway
@@ -10,6 +9,7 @@ import org.testcontainers.containers.MySQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import org.testcontainers.utility.DockerImageName
+import java.sql.DriverManager
 
 @Testcontainers(disabledWithoutDocker = true)
 class CatalogOwnershipMigrationMySqlIntegrationTest {
@@ -79,7 +79,9 @@ class CatalogOwnershipMigrationMySqlIntegrationTest {
                 statement.execute("INSERT INTO brand (id, public_id, organization_id, name) VALUES (11, UNHEX(REPLACE(UUID(), '-', '')), 1, 'Shared name')")
                 statement.execute("INSERT INTO brand (id, public_id, organization_id, name) VALUES (12, UNHEX(REPLACE(UUID(), '-', '')), 2, 'Shared name')")
                 statement.execute("INSERT INTO brand (id, public_id, organization_id, name) VALUES (13, UNHEX(REPLACE(UUID(), '-', '')), NULL, 'Legacy brand')")
-                statement.execute("INSERT INTO product (id, public_id, organization_id, category_id) VALUES (21, UNHEX(REPLACE(UUID(), '-', '')), 1, 1), (22, UNHEX(REPLACE(UUID(), '-', '')), 2, 1)")
+                statement.execute(
+                    "INSERT INTO product (id, public_id, organization_id, category_id) VALUES (21, UNHEX(REPLACE(UUID(), '-', '')), 1, 1), (22, UNHEX(REPLACE(UUID(), '-', '')), 2, 1)"
+                )
                 statement.execute("INSERT INTO product_sku (id, product_id, sku_code) VALUES (31, 21, 'SHARED-SKU'), (32, 22, 'SHARED-SKU')")
 
                 assertThatThrownBy {

@@ -2,14 +2,14 @@ package com.buyeong.umji.api.persistence.jpa.order.service
 
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.order.model.OrderDraft
-import com.buyeong.umji.api.order.model.OrderItemDraft
-import com.buyeong.umji.api.order.model.OrderItemView
-import com.buyeong.umji.api.order.model.OrderPage
-import com.buyeong.umji.api.order.model.OrderView
-import com.buyeong.umji.api.order.model.TaxInvoiceBuyer
-import com.buyeong.umji.api.order.model.TaxInvoiceSnapshot
-import com.buyeong.umji.api.order.model.TaxInvoiceSupplier
+import com.buyeong.umji.api.order.dto.OrderDraftDto
+import com.buyeong.umji.api.order.dto.OrderItemDraftDto
+import com.buyeong.umji.api.order.dto.OrderItemViewDto
+import com.buyeong.umji.api.order.dto.OrderPageDto
+import com.buyeong.umji.api.order.dto.OrderViewDto
+import com.buyeong.umji.api.order.dto.TaxInvoiceBuyerDto
+import com.buyeong.umji.api.order.dto.TaxInvoiceSnapshotDto
+import com.buyeong.umji.api.order.dto.TaxInvoiceSupplierDto
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationMemberRepository
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
@@ -21,13 +21,13 @@ import com.buyeong.umji.api.persistence.jpa.order.entity.OrderStatusHistoryEntit
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderTaxInvoiceEntity
 import com.buyeong.umji.api.persistence.jpa.order.repository.OrderCancellationHistoryRepository
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-import java.util.UUID
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
@@ -51,7 +51,7 @@ class OrderCheckoutJpaEntityService(
     }
 
     @Transactional
-    fun save(draft: OrderDraft): OrderView {
+    fun save(draft: OrderDraftDto): OrderViewDto {
         require(draft.taxInvoiceRequested == (draft.taxInvoiceSnapshot != null)) {
             "세금계산서 발행 요청과 세금계산서 snapshot이 일치하지 않습니다."
         }
@@ -115,12 +115,12 @@ class OrderCheckoutJpaEntityService(
         return saved.toView()
     }
 
-    fun findAll(accountId: UUID, page: Int, size: Int): OrderPage {
+    fun findAll(accountId: UUID, page: Int, size: Int): OrderPageDto {
         val result = orders.findAll(organizationInternalId(accountId), PageRequest.of(page, size, Sort.by("orderedAt").descending()))
-        return OrderPage(result.content.map { it.toView() }, result.number, result.size, result.totalElements, result.totalPages)
+        return OrderPageDto(result.content.map { it.toView() }, result.number, result.size, result.totalElements, result.totalPages)
     }
 
-    fun find(accountId: UUID, orderId: UUID): OrderView? =
+    fun find(accountId: UUID, orderId: UUID): OrderViewDto? =
         orders.findWithItems(orderId, organizationInternalId(accountId))?.toView()
 
     private fun organizationInternalId(accountPublicId: UUID): Long =
@@ -137,7 +137,7 @@ class OrderCheckoutJpaEntityService(
         return "UMJ-${ORDER_DATE.format(orderedAt)}-${sequence.lastValue.toString().padStart(6, '0')}"
     }
 
-    private fun OrderItemDraft.toEntity() = OrderItemEntity().apply {
+    private fun OrderItemDraftDto.toEntity() = OrderItemEntity().apply {
         sku = catalog.sku(skuId) ?: throw ItemNotFoundException("SKU를 찾을 수 없습니다.")
         salesOffer = salesOffers.findByPublicId(salesOfferId) ?: throw ItemNotFoundException("판매 오퍼를 찾을 수 없습니다.")
         productName = this@toEntity.productName
@@ -151,7 +151,7 @@ class OrderCheckoutJpaEntityService(
         status = this@toEntity.status
     }
 
-    private fun PurchaseOrderEntity.toView() = OrderView(
+    private fun PurchaseOrderEntity.toView() = OrderViewDto(
         id = requireNotNull(publicId),
         orderNumber = orderNumber,
         status = status,
@@ -160,7 +160,7 @@ class OrderCheckoutJpaEntityService(
         totalAmount = totalAmount,
         orderedAt = orderedAt,
         items = items.map { item ->
-            OrderItemView(
+            OrderItemViewDto(
                 id = requireNotNull(item.publicId), skuId = requireNotNull(item.sku.publicId), reservationKey = item.reservationKey,
                 productName = item.productName, skuName = item.skuName, skuCode = item.skuCode,
                 unitPrice = item.unitPrice, quantity = item.quantity, lineAmount = item.lineAmount, status = item.status,
@@ -190,12 +190,12 @@ class OrderCheckoutJpaEntityService(
         sellerOrganizationId = items.mapNotNull { it.salesOffer.organization?.publicId }.distinct().singleOrNull(),
     )
 
-    private fun PurchaseOrderEntity.toTaxInvoiceSnapshot(): TaxInvoiceSnapshot? {
+    private fun PurchaseOrderEntity.toTaxInvoiceSnapshot(): TaxInvoiceSnapshotDto? {
         val invoice = taxInvoice ?: return null
         if (invoice.status !in setOf(WAITING_FOR_SHIPMENT, READY_FOR_ISSUANCE, MANUALLY_ISSUED)) return null
-        return TaxInvoiceSnapshot(
+        return TaxInvoiceSnapshotDto(
             status = invoice.status,
-            supplier = TaxInvoiceSupplier(
+            supplier = TaxInvoiceSupplierDto(
                 requireNotNull(invoice.supplierRegistrationNumber),
                 requireNotNull(invoice.supplierBusinessName),
                 requireNotNull(invoice.supplierName),
@@ -204,7 +204,7 @@ class OrderCheckoutJpaEntityService(
                 requireNotNull(invoice.supplierItem),
                 requireNotNull(invoice.supplierEmail),
             ),
-            buyer = TaxInvoiceBuyer(
+            buyer = TaxInvoiceBuyerDto(
                 organizationId = requireNotNull(organization.publicId),
                 businessRegistrationNumber = invoice.buyerRegistrationNumber,
                 businessName = invoice.buyerBusinessName,

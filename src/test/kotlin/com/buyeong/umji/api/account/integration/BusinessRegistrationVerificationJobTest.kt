@@ -1,10 +1,9 @@
 package com.buyeong.umji.api.account.integration
 
+import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
+import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationBusinessProfileEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationBusinessProfileRepository
-
-import com.buyeong.umji.api.account.model.BusinessRegistrationStatus
-import com.buyeong.umji.api.account.integration.http.BusinessRegistrationStatusClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito

@@ -1,12 +1,6 @@
 package com.buyeong.umji.api.sales.integration
 
 import com.buyeong.umji.api.sales.service.SalesCommissionService
-import java.nio.ByteBuffer
-import java.sql.Timestamp
-import java.time.Instant
-import java.time.YearMonth
-import java.time.ZoneId
-import java.util.UUID
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,6 +10,12 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.annotation.Rollback
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
+import java.nio.ByteBuffer
+import java.sql.Timestamp
+import java.time.Instant
+import java.time.YearMonth
+import java.time.ZoneId
+import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
 @ActiveProfiles("local")
@@ -50,11 +50,17 @@ class SalesCommissionMySqlIntegrationTest {
         val salesRole = jdbc.queryForObject("SELECT id FROM role WHERE code = 'SALES_MANAGER'", Long::class.java)!!
         jdbc.update(
             "INSERT INTO account_role (account_id, role_id, granted_by) VALUES (?, ?, ?), (?, ?, ?)",
-            salesOneInternalId, salesRole, adminInternalId, salesTwoInternalId, salesRole, adminInternalId,
+            salesOneInternalId,
+            salesRole,
+            adminInternalId,
+            salesTwoInternalId,
+            salesRole,
+            adminInternalId,
         )
         jdbc.update(
             """INSERT INTO organization (public_id, organization_type, display_name, status, representative_account_id)
-                VALUES (?, 'BUSINESS', 'Commission Test Organization', 'ACTIVE', ?)""".trimIndent(),
+                VALUES (?, 'BUSINESS', 'Commission Test Organization', 'ACTIVE', ?)
+            """.trimIndent(),
             organizationId.toBytes(),
             buyerAccountInternalId,
         )
@@ -140,7 +146,8 @@ class SalesCommissionMySqlIntegrationTest {
         jdbc.update(
             """INSERT INTO organization_sales_assignment
                 (public_id, organization_id, sales_account_id, commission_rate_bps, assignment_reason, valid_from, valid_until, assigned_by_account_id)
-                VALUES (?, ?, ?, ?, 'TEST_ASSIGNMENT', ?, ?, ?)""".trimIndent(),
+                VALUES (?, ?, ?, ?, 'TEST_ASSIGNMENT', ?, ?, ?)
+            """.trimIndent(),
             UUID.randomUUID().toBytes(),
             organizationInternalId,
             salesAccountId,
@@ -163,7 +170,8 @@ class SalesCommissionMySqlIntegrationTest {
             """INSERT INTO purchase_order
                 (public_id, order_number, account_id, sales_channel_code, organization_id, status,
                  subtotal_amount, total_amount, ordered_at)
-                VALUES (?, ?, ?, 'WHOLESALE', ?, ?, 100001, 100001, ?)""".trimIndent(),
+                VALUES (?, ?, ?, 'WHOLESALE', ?, ?, 100001, 100001, ?)
+            """.trimIndent(),
             orderId.toBytes(),
             number,
             buyerAccountInternalId,
@@ -189,7 +197,8 @@ class SalesCommissionMySqlIntegrationTest {
         )
         jdbc.update(
             """INSERT INTO order_shipment (order_id, status, processed_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)""".trimIndent(),
+                VALUES (?, ?, ?, ?, ?)
+            """.trimIndent(),
             orderInternalId,
             if (deliveredAt == null) "READY_TO_SHIP" else "DELIVERED",
             if (deliveredAt == null) null else adminInternalId,
