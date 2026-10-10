@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.order.service
 
-import com.buyeong.umji.api.domain.order.model.OrderPage
+import com.buyeong.umji.api.domain.order.dto.OrderPageDto
 import com.buyeong.umji.api.domain.order.service.OrderService
 import com.buyeong.umji.api.domain.shipment.service.ShipmentService
 import io.kotest.core.spec.style.DescribeSpec
@@ -15,7 +15,7 @@ class CustomerOrderListingServiceTest : DescribeSpec({
     val orders = mockk<OrderService>()
     val shipments = mockk<ShipmentService>()
     val service = CustomerOrderListingService(orders, shipments)
-    val page = OrderPage(emptyList(), 0, 20, 0, 0)
+    val page = OrderPageDto(emptyList(), 0, 20, 0, 0)
 
     it("배송 상태 최신화가 끝난 후 주문 목록을 조회한다") {
         every { shipments.refreshForCustomer(customerId) } returns 1

@@ -1,12 +1,14 @@
 package com.buyeong.umji.api.domain.seller.integration
 
-import com.buyeong.umji.api.domain.account.model.OrganizationSummary
+import com.buyeong.umji.api.domain.account.dto.OrganizationSummaryDto
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.domain.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.domain.auth.service.CurrentAccountService
-import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
 import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
+import com.buyeong.umji.api.domain.seller.controller.SellerCatalogController
+import com.buyeong.umji.api.domain.seller.service.SellerCatalogService
+import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.BrandEntity
@@ -17,8 +19,6 @@ import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesChannelRepos
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.SalesOfferRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.service.OperationCatalogJpaEntityService
-import com.buyeong.umji.api.domain.seller.controller.SellerCatalogController
-import com.buyeong.umji.api.domain.seller.service.SellerCatalogService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -95,7 +95,7 @@ class SellerCatalogBrandOwnershipApiIntegrationTest(
         }
         Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(accountId)
         Mockito.`when`(organizations.current(accountId)).thenReturn(
-            OrganizationSummary(sellerOrganizationId, "BUSINESS", "Seller", true, setOf("SELLER")),
+            OrganizationSummaryDto(sellerOrganizationId, "BUSINESS", "Seller", true, setOf("SELLER")),
         )
         Mockito.`when`(organizationRepository.findByPublicId(sellerOrganizationId)).thenReturn(sellerOrganization)
         Mockito.`when`(catalog.category(categoryId)).thenReturn(category)

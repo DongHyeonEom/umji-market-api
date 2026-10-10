@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.domain.notification.integration
 
-import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.domain.notification.model.NotificationDevicePlatform
 import com.buyeong.umji.api.domain.notification.service.NotificationDeviceTokenService
+import com.buyeong.umji.api.exception.ItemNotFoundException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

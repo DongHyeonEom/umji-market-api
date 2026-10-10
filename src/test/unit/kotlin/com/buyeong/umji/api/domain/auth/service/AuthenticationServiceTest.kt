@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.domain.auth.service
 
+import com.buyeong.umji.api.domain.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.domain.auth.dto.AuthenticationStatus
+import com.buyeong.umji.api.domain.auth.dto.PhoneLoginCommandDto
+import com.buyeong.umji.api.domain.auth.dto.RefreshSessionRecordDto
+import com.buyeong.umji.api.domain.auth.dto.RefreshTokenCommandDto
 import com.buyeong.umji.api.domain.auth.integration.security.JwtAccessTokenIssuer
-import com.buyeong.umji.api.domain.auth.model.AccountRecord
-import com.buyeong.umji.api.domain.auth.model.AuthenticationStatus
-import com.buyeong.umji.api.domain.auth.model.PhoneLoginCommand
-import com.buyeong.umji.api.domain.auth.model.RefreshSessionRecord
-import com.buyeong.umji.api.domain.auth.model.RefreshTokenCommand
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow
@@ -35,11 +35,11 @@ class AuthenticationServiceTest : DescribeSpec({
 
     describe("휴대폰 번호 로그인") {
         it("ACTIVE 계정은 본인 인증 없이 토큰을 발급한다") {
-            val account = AccountRecord(accountId, "테스트 회원", "ACTIVE", 0)
+            val account = AccountRecordDto(accountId, "테스트 회원", "ACTIVE", 0)
             every { accounts.findByNormalizedPhone("01012345678") } returns account
             every { tokenIssuer.issue(any(), any(), any()) } returns "access-token"
 
-            val result = service.login(PhoneLoginCommand("010-1234-5678", "device-1"))
+            val result = service.login(PhoneLoginCommandDto("010-1234-5678", "device-1"))
 
             result.status shouldBe AuthenticationStatus.AUTHENTICATED
             result.account?.id shouldBe accountId
@@ -50,7 +50,7 @@ class AuthenticationServiceTest : DescribeSpec({
         it("미등록 번호는 본인 인증 필요 상태를 반환한다") {
             every { accounts.findByNormalizedPhone("01012345678") } returns null
 
-            val result = service.login(PhoneLoginCommand("01012345678", null))
+            val result = service.login(PhoneLoginCommandDto("01012345678", null))
 
             result.status shouldBe AuthenticationStatus.PHONE_VERIFICATION_REQUIRED
             result.account.shouldBeNull()
@@ -58,14 +58,14 @@ class AuthenticationServiceTest : DescribeSpec({
         }
 
         it("Access Token은 1시간, Refresh Token은 기기 정보와 함께 1년 뒤 만료된다") {
-            val account = AccountRecord(accountId, "테스트 회원", "ACTIVE", 0)
+            val account = AccountRecordDto(accountId, "테스트 회원", "ACTIVE", 0)
             every { accounts.findByNormalizedPhone("01012345678") } returns account
             every { tokenIssuer.issue(any(), any(), any()) } returns "access-token"
-            val savedSession = io.mockk.slot<RefreshSessionRecord>()
+            val savedSession = io.mockk.slot<RefreshSessionRecordDto>()
             every { sessions.save(capture(savedSession)) } answers { Unit }
             val before = Instant.now()
 
-            val result = service.login(PhoneLoginCommand("01012345678", " device-1 "))
+            val result = service.login(PhoneLoginCommandDto("01012345678", " device-1 "))
 
             val tokens = result.tokens!!
             Duration.between(before.plus(Duration.ofHours(1)), tokens.accessTokenExpiresAt).abs().seconds shouldBe 0L
@@ -79,8 +79,8 @@ class AuthenticationServiceTest : DescribeSpec({
 
     describe("Refresh Token 갱신과 만료") {
         it("MFA 검증을 마친 관리자 세션은 refresh 이후에도 MFA 완료 상태를 유지한다") {
-            val account = AccountRecord(accountId, "관리자", "ACTIVE", 2, roles = setOf("SUPER_ADMIN"), mfaVerified = true)
-            val session = RefreshSessionRecord(
+            val account = AccountRecordDto(accountId, "관리자", "ACTIVE", 2, roles = setOf("SUPER_ADMIN"), mfaVerified = true)
+            val session = RefreshSessionRecordDto(
                 MessageDigest.getInstance("SHA-256").digest("mfa-refresh".toByteArray()),
                 account,
                 "admin-browser",
@@ -91,20 +91,20 @@ class AuthenticationServiceTest : DescribeSpec({
             )
             every { sessions.findLockedByHash(any()) } returns session
             every { tokenIssuer.issue(any(), any(), any()) } returns "new-access"
-            val saved = slot<RefreshSessionRecord>()
+            val saved = slot<RefreshSessionRecordDto>()
             every { sessions.save(capture(saved)) } answers { Unit }
 
-            service.refresh(RefreshTokenCommand("mfa-refresh", "admin-browser"))
+            service.refresh(RefreshTokenCommandDto("mfa-refresh", "admin-browser"))
 
             saved.captured.mfaVerified shouldBe true
-            val issuedAccount = slot<AccountRecord>()
+            val issuedAccount = slot<AccountRecordDto>()
             verify { tokenIssuer.issue(capture(issuedAccount), any(), any()) }
             issuedAccount.captured.mfaVerified shouldBe true
         }
 
         it("사용한 세션을 폐기하고 새 Refresh Token과 rolling 만료 시각을 저장한다") {
-            val account = AccountRecord(accountId, "테스트 회원", "ACTIVE", 0)
-            val previous = RefreshSessionRecord(
+            val account = AccountRecordDto(accountId, "테스트 회원", "ACTIVE", 0)
+            val previous = RefreshSessionRecordDto(
                 MessageDigest.getInstance("SHA-256").digest("old-refresh-token".toByteArray()),
                 account,
                 "device-1",
@@ -113,7 +113,7 @@ class AuthenticationServiceTest : DescribeSpec({
                 Instant.now().plusSeconds(60),
             )
             every { tokenIssuer.issue(any(), any(), any()) } returns "new-access-token"
-            val savedSessions = mutableListOf<RefreshSessionRecord>()
+            val savedSessions = mutableListOf<RefreshSessionRecordDto>()
             every { sessions.findLockedByHash(any()) } answers {
                 savedSessions.firstOrNull()?.takeIf { savedSessions.size == 2 } ?: previous
             }
@@ -123,7 +123,7 @@ class AuthenticationServiceTest : DescribeSpec({
             }
             val before = Instant.now()
 
-            val result = service.refresh(RefreshTokenCommand("old-refresh-token", "device-1"))
+            val result = service.refresh(RefreshTokenCommandDto("old-refresh-token", "device-1"))
 
             savedSessions.size shouldBe 2
             savedSessions[0].revokedAt shouldBe savedSessions[0].lastUsedAt
@@ -136,15 +136,15 @@ class AuthenticationServiceTest : DescribeSpec({
             verify { sessions.findLockedByHash(match { it.contentEquals(previous.tokenHash) }) }
 
             shouldThrow<ClientBadRequestException> {
-                service.refresh(RefreshTokenCommand("old-refresh-token", "device-1"))
+                service.refresh(RefreshTokenCommandDto("old-refresh-token", "device-1"))
             }
             savedSessions.size shouldBe 2
         }
 
         it("만료된 Refresh Token은 갱신하지 않는다") {
-            val expired = RefreshSessionRecord(
+            val expired = RefreshSessionRecordDto(
                 ByteArray(32),
-                AccountRecord(accountId, "테스트 회원", "ACTIVE", 0),
+                AccountRecordDto(accountId, "테스트 회원", "ACTIVE", 0),
                 "device-1",
                 null,
                 null,
@@ -153,16 +153,16 @@ class AuthenticationServiceTest : DescribeSpec({
             every { sessions.findLockedByHash(any()) } returns expired
 
             shouldThrow<ClientBadRequestException> {
-                service.refresh(RefreshTokenCommand("expired-refresh-token", "device-1"))
+                service.refresh(RefreshTokenCommandDto("expired-refresh-token", "device-1"))
             }
 
             verify(exactly = 0) { sessions.save(any()) }
         }
 
         it("정지된 계정의 Refresh Token은 갱신하지 않는다") {
-            val suspended = RefreshSessionRecord(
+            val suspended = RefreshSessionRecordDto(
                 ByteArray(32),
-                AccountRecord(accountId, "테스트 회원", "SUSPENDED", 0),
+                AccountRecordDto(accountId, "테스트 회원", "SUSPENDED", 0),
                 "device-1",
                 null,
                 null,
@@ -171,16 +171,16 @@ class AuthenticationServiceTest : DescribeSpec({
             every { sessions.findLockedByHash(any()) } returns suspended
 
             shouldThrow<ClientBadRequestException> {
-                service.refresh(RefreshTokenCommand("suspended-refresh-token", "device-1"))
+                service.refresh(RefreshTokenCommandDto("suspended-refresh-token", "device-1"))
             }
 
             verify(exactly = 0) { sessions.save(any()) }
         }
 
         it("다른 기기의 Refresh Token 요청은 거부한다") {
-            val session = RefreshSessionRecord(
+            val session = RefreshSessionRecordDto(
                 ByteArray(32),
-                AccountRecord(accountId, "테스트 회원", "ACTIVE", 0),
+                AccountRecordDto(accountId, "테스트 회원", "ACTIVE", 0),
                 "registered-device",
                 null,
                 null,
@@ -189,7 +189,7 @@ class AuthenticationServiceTest : DescribeSpec({
             every { sessions.findLockedByHash(any()) } returns session
 
             shouldThrow<ClientBadRequestException> {
-                service.refresh(RefreshTokenCommand("valid-refresh-token", "different-device"))
+                service.refresh(RefreshTokenCommandDto("valid-refresh-token", "different-device"))
             }
 
             verify(exactly = 0) { sessions.save(any()) }

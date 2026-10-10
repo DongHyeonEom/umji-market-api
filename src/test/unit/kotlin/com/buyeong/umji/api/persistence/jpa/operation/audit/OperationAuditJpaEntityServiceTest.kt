@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.persistence.jpa.operation.audit.service
 
-import com.buyeong.umji.api.domain.operation.audit.model.OperationAuditEvent
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEventDto
 import io.kotest.core.spec.style.DescribeSpec
 import io.mockk.clearMocks
 import io.mockk.every
@@ -25,7 +25,7 @@ class OperationAuditJpaEntityServiceTest : DescribeSpec({
     }
 
     it("허용된 감사 필드만 저장한다") {
-        val event = OperationAuditEvent(
+        val event = OperationAuditEventDto(
             actorId,
             "PATCH /api/operation/inventory/skus/{skuId}",
             "INVENTORY",

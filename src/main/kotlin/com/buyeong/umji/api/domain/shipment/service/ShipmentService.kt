@@ -1,16 +1,16 @@
 package com.buyeong.umji.api.domain.shipment.service
 
-import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
 import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
-import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
-import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentChangeDto
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentRecordDto
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
+import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID

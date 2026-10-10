@@ -1,7 +1,7 @@
 package com.buyeong.umji.api.domain.catalog.integration
 
 import com.buyeong.umji.api.domain.catalog.service.CatalogService
-import com.buyeong.umji.api.domain.operation.catalog.model.SalesOfferCommand
+import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -74,10 +74,10 @@ class CatalogChannelMySqlIntegrationTest {
                 price,
             )
         }
-        operationCatalog.updateSalesOffer(SalesOfferCommand("WHOLESALE", skuId, 1000, null, "ON_SALE", 12))
-        operationCatalog.updateSalesOffer(SalesOfferCommand("WHOLESALE", skuId, 1000, null, "ON_SALE"))
+        operationCatalog.updateSalesOffer(SalesOfferCommandDto("WHOLESALE", skuId, 1000, null, "ON_SALE", 12))
+        operationCatalog.updateSalesOffer(SalesOfferCommandDto("WHOLESALE", skuId, 1000, null, "ON_SALE"))
         assertThatThrownBy {
-            operationCatalog.updateSalesOffer(SalesOfferCommand("RETAIL", skuId, 1500, null, "ON_SALE", 2))
+            operationCatalog.updateSalesOffer(SalesOfferCommandDto("RETAIL", skuId, 1500, null, "ON_SALE", 2))
         }.isInstanceOf(IllegalArgumentException::class.java)
 
         assertThat(catalog.categories("WHOLESALE").map { it.name })

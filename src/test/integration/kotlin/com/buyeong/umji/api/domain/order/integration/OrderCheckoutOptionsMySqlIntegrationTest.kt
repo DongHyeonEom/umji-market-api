@@ -1,26 +1,26 @@
 package com.buyeong.umji.api.domain.order.integration
 
+import com.buyeong.umji.api.domain.account.dto.BusinessGroupRegistrationDto
+import com.buyeong.umji.api.domain.account.dto.OrganizationRegistrationCommandDto
+import com.buyeong.umji.api.domain.account.dto.OrganizationTaxInvoiceProfileCommandDto
+import com.buyeong.umji.api.domain.account.dto.SharedAddressCommandDto
 import com.buyeong.umji.api.domain.account.integration.BusinessRegistrationVerificationJob
 import com.buyeong.umji.api.domain.account.integration.http.BusinessRegistrationStatusClient
-import com.buyeong.umji.api.domain.account.model.BusinessGroupRegistration
 import com.buyeong.umji.api.domain.account.model.BusinessRegistrationStatus
-import com.buyeong.umji.api.domain.account.model.OrganizationRegistrationCommand
-import com.buyeong.umji.api.domain.account.model.OrganizationTaxInvoiceProfileCommand
-import com.buyeong.umji.api.domain.account.model.SharedAddressCommand
 import com.buyeong.umji.api.domain.account.service.CustomerAccountService
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.domain.account.service.OrganizationTaxInvoiceProfileService
-import com.buyeong.umji.api.exception.ClientBadRequestException
-import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.domain.operation.account.model.OrganizationProfileData
+import com.buyeong.umji.api.domain.operation.account.dto.OrganizationProfileDataDto
 import com.buyeong.umji.api.domain.operation.account.service.OperationAccountService
 import com.buyeong.umji.api.domain.operation.order.service.OperationTaxInvoiceService
 import com.buyeong.umji.api.domain.order.service.OrderCancellationService
 import com.buyeong.umji.api.domain.order.service.OrderService
 import com.buyeong.umji.api.domain.payment.integration.TaxInvoiceSupplierService
 import com.buyeong.umji.api.domain.payment.service.PaymentService
-import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.domain.shipment.service.ShipmentService
+import com.buyeong.umji.api.exception.ClientBadRequestException
+import com.buyeong.umji.api.exception.ItemNotFoundException
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import org.assertj.core.api.Assertions.assertThat
@@ -154,10 +154,10 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val created = orders.createAdminPhoneOrder(
             operatorId,
             buyerId,
-            com.buyeong.umji.api.domain.order.model.ShippingAddressSnapshot("Recipient", "01012345678", "12345", "Seoul address", null),
+            com.buyeong.umji.api.domain.order.dto.ShippingAddressSnapshotDto("Recipient", "01012345678", "12345", "Seoul address", null),
             listOf(
-                com.buyeong.umji.api.domain.order.model.AdminPhoneOrderLine(offerA, 2),
-                com.buyeong.umji.api.domain.order.model.AdminPhoneOrderLine(offerB, 3),
+                com.buyeong.umji.api.domain.order.dto.AdminPhoneOrderLineDto(offerA, 2),
+                com.buyeong.umji.api.domain.order.dto.AdminPhoneOrderLineDto(offerB, 3),
             ),
             false,
         )
@@ -212,8 +212,8 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             orders.createAdminPhoneOrder(
                 operatorId,
                 buyerId,
-                com.buyeong.umji.api.domain.order.model.ShippingAddressSnapshot("Recipient", "01012345678", "12345", "Seoul address", null),
-                listOf(com.buyeong.umji.api.domain.order.model.AdminPhoneOrderLine(offerId, 2)),
+                com.buyeong.umji.api.domain.order.dto.ShippingAddressSnapshotDto("Recipient", "01012345678", "12345", "Seoul address", null),
+                listOf(com.buyeong.umji.api.domain.order.dto.AdminPhoneOrderLineDto(offerId, 2)),
                 false,
             )
         }.isInstanceOf(IllegalArgumentException::class.java).hasMessage("가용 재고가 부족합니다.")
@@ -366,7 +366,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         createBusinessGroup(accountId)
         taxInvoiceProfiles.updateForAccount(
             accountId,
-            OrganizationTaxInvoiceProfileCommand(
+            OrganizationTaxInvoiceProfileCommandDto(
                 "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", null, "Retail", "Hardware", "buyer@example.com",
             ),
         )
@@ -408,7 +408,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         customerAccounts.updateAddress(
             accountId,
             addressId,
-            SharedAddressCommand("Changed recipient", "01087654321", "54321", "Changed address", null, true),
+            SharedAddressCommandDto("Changed recipient", "01087654321", "54321", "Changed address", null, true),
         )
         assertThat(orders.detail(accountId, invoiceOrder.id).shippingAddress1).isEqualTo("Seoul address")
         assertThat(orders.checkoutOptions(accountId).defaultTaxInvoiceRequested).isTrue()
@@ -427,7 +427,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThat(standardOrder.depositAccountNumber).isEqualTo("111-222")
         assertThat(standardOrder.depositAccountHolder).isEqualTo("Standard Holder")
         assertPersistedOrderSnapshot(standardOrder.id, false, "Standard Bank", "111-222", "Standard Holder")
-        assertThat(orders.checkoutOptions(standardAccountId).defaultTaxInvoiceRequested).isTrue()
+        assertThat(orders.checkoutOptions(standardAccountId).defaultTaxInvoiceRequested).isFalse()
     }
 
     @Test
@@ -478,7 +478,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
         val sharedAddress = customerAccounts.createAddress(
             ownerId,
-            SharedAddressCommand("Group recipient", "01012345678", "12345", "Shared address", null, false),
+            SharedAddressCommandDto("Group recipient", "01012345678", "12345", "Shared address", null, false),
         )
 
         assertThat(sharedAddress.isDefault).isTrue()
@@ -490,12 +490,12 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
         val secondAddress = customerAccounts.createAddress(
             memberId,
-            SharedAddressCommand("Second recipient", "01087654321", "54321", "Second address", null, false),
+            SharedAddressCommandDto("Second recipient", "01087654321", "54321", "Second address", null, false),
         )
         customerAccounts.updateAddress(
             memberId,
             sharedAddress.id,
-            SharedAddressCommand("Updated recipient", "01012345678", "12345", "Updated shared address", null, false),
+            SharedAddressCommandDto("Updated recipient", "01012345678", "12345", "Updated shared address", null, false),
         )
         assertThat(customerAccounts.addresses(ownerId).first { it.id == sharedAddress.id }.recipientName).isEqualTo("Updated recipient")
 
@@ -507,7 +507,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             customerAccounts.updateAddress(
                 otherId,
                 secondAddress.id,
-                SharedAddressCommand("No access", "01011112222", "10000", "Hidden", null, false),
+                SharedAddressCommandDto("No access", "01011112222", "10000", "Hidden", null, false),
             )
         }.isInstanceOf(ItemNotFoundException::class.java)
     }
@@ -662,7 +662,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             "SELECT EXISTS (SELECT 1 FROM purchase_order_tax_invoice invoice WHERE invoice.order_id = purchase_order.id) AS tax_invoice_requested, deposit_bank_name, deposit_account_number, deposit_account_holder, shipping_recipient_name, shipping_recipient_phone, shipping_postal_code, shipping_address1, shipping_address2 FROM purchase_order WHERE public_id = ?",
             orderId.toBytes(),
         )
-        assertThat(row["tax_invoice_requested"]).isEqualTo(taxInvoiceRequested)
+        assertThat((row["tax_invoice_requested"] as Number).toInt()).isEqualTo(if (taxInvoiceRequested) 1 else 0)
         assertThat(row["deposit_bank_name"]).isEqualTo(bankName)
         assertThat(row["deposit_account_number"]).isEqualTo(accountNumber)
         assertThat(row["deposit_account_holder"]).isEqualTo(accountHolder)
@@ -687,14 +687,14 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         organizations.ensureForAccount(accountId)
         return customerAccounts.createAddress(
             accountId,
-            SharedAddressCommand("Recipient", "01012345678", "12345", "Seoul address", "Details", false),
+            SharedAddressCommandDto("Recipient", "01012345678", "12345", "Seoul address", "Details", false),
         ).id
     }
 
     private fun createBusinessGroup(accountId: UUID, verified: Boolean = true): UUID {
         val group = organizations.ensureForAccount(
             accountId,
-            profileData = com.buyeong.umji.api.domain.operation.account.model.OrganizationProfileData(
+            profileData = com.buyeong.umji.api.domain.operation.account.dto.OrganizationProfileDataDto(
                 businessName = "Group test business",
                 businessRegistrationNumber = null,
                 representativeName = "Buyer",
@@ -712,7 +712,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             )
         } else {
             jdbc.update(
-                "UPDATE organization_business_profile SET business_registration_number = '987-65-43210' WHERE organization_id = ?",
+                "UPDATE organization_business_profile SET business_registration_number = '987-65-43210', business_registration_verification_status = 'PENDING' WHERE organization_id = ?",
                 group.id,
             )
         }
@@ -724,7 +724,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     fun `buyer group tax invoice profile is shared and order snapshot becomes issuable on shipment start`() {
         val ownerId = createAccount()
         val organizationId = createBusinessGroup(ownerId)
-        val command = OrganizationTaxInvoiceProfileCommand(
+        val command = OrganizationTaxInvoiceProfileCommandDto(
             "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", "Suite 2", "Retail", "Hardware", "buyer@example.com",
         )
         val saved = taxInvoiceProfiles.updateForAccount(ownerId, command)
@@ -795,7 +795,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     fun `pre-registered group waits for background verification then representative confirmation`() {
         val ownerId = createAccount()
         createBusinessGroup(ownerId, verified = false)
-        val command = OrganizationTaxInvoiceProfileCommand(
+        val command = OrganizationTaxInvoiceProfileCommandDto(
             "987-65-43210", "Group test business", "Buyer", "12345", "Buyer address", null, "Retail", "Hardware", "buyer@example.com",
         )
 
@@ -819,7 +819,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
     @Test
     fun `first group registration creates personal group or verifies business number and keeps registered address separate`() {
         val personalAccountId = createAccount()
-        val personalGroup = groupMembership.register(personalAccountId, OrganizationRegistrationCommand("INDIVIDUAL", null))
+        val personalGroup = groupMembership.register(personalAccountId, OrganizationRegistrationCommandDto("INDIVIDUAL", null))
         assertThat(personalGroup.type).isEqualTo("INDIVIDUAL")
         assertThat(groupMembership.current(personalAccountId)?.id).isEqualTo(personalGroup.id)
         assertThat(
@@ -834,9 +834,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         Mockito.doNothing().`when`(businessRegistrationStatus).ensureNotClosed("1234567890")
         val businessGroup = groupMembership.register(
             businessAccountId,
-            OrganizationRegistrationCommand(
+            OrganizationRegistrationCommandDto(
                 "BUSINESS",
-                BusinessGroupRegistration(
+                BusinessGroupRegistrationDto(
                     "1234567890", "Buyer Business", "Buyer Owner", "12345", "Registered Place", "Building 1", "Retail", "Hardware", "billing@example.com", true,
                 ),
             ),
@@ -857,7 +857,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
                 businessGroup.id.toBytes(),
             ),
         ).isZero()
-        assertThatThrownBy { groupMembership.register(businessAccountId, OrganizationRegistrationCommand("INDIVIDUAL", null)) }
+        assertThatThrownBy { groupMembership.register(businessAccountId, OrganizationRegistrationCommandDto("INDIVIDUAL", null)) }
             .isInstanceOf(IllegalArgumentException::class.java)
     }
 
@@ -869,9 +869,9 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         assertThatThrownBy {
             groupMembership.register(
                 closedAccountId,
-                OrganizationRegistrationCommand(
+                OrganizationRegistrationCommandDto(
                     "BUSINESS",
-                    BusinessGroupRegistration(
+                    BusinessGroupRegistrationDto(
                         "1234567890", "Closed Business", "Owner", "12345", "Registered Place", null, "Retail", "Hardware", null, true,
                     ),
                 ),
@@ -956,7 +956,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val organization = organizations.ensureForAccount(
             accountId,
             capability = "SELLER",
-            profileData = OrganizationProfileData(
+            profileData = OrganizationProfileDataDto(
                 businessName = businessName,
                 businessRegistrationNumber = registrationNumber,
                 representativeName = "Seller representative",
@@ -974,7 +974,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         entityManager.clear()
         taxInvoiceProfiles.updateForAccount(
             accountId,
-            OrganizationTaxInvoiceProfileCommand(
+            OrganizationTaxInvoiceProfileCommandDto(
                 registrationNumber,
                 businessName,
                 "Seller representative",

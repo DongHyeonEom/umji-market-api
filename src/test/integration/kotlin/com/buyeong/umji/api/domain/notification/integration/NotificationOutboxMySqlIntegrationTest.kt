@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.notification.integration
 
-import com.buyeong.umji.api.domain.notification.model.NotificationEventType
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -109,9 +109,10 @@ class NotificationOutboxMySqlIntegrationTest {
         )
         val orderId = UUID.randomUUID()
         jdbc.update(
-            "INSERT INTO purchase_order (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, ordered_at) VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)",
+            "INSERT INTO purchase_order (public_id, order_number, account_id, created_by_account_id, organization_id, status, subtotal_amount, total_amount, ordered_at) VALUES (?, ?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)",
             orderId.toBytes(),
             "OUT-${UUID.randomUUID()}",
+            internalAccountId,
             internalAccountId,
             internalGroupId,
             Timestamp.from(Instant.now()),

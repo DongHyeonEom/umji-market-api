@@ -1,11 +1,11 @@
 package com.buyeong.umji.api.domain.auth.service
 
+import com.buyeong.umji.api.domain.auth.dto.AccountRecordDto
+import com.buyeong.umji.api.domain.auth.dto.WebAccountCredentialsDto
+import com.buyeong.umji.api.domain.auth.dto.WebLoginCommandDto
+import com.buyeong.umji.api.domain.auth.dto.WebPasswordCommandDto
 import com.buyeong.umji.api.domain.auth.integration.security.JwtAccessTokenIssuer
 import com.buyeong.umji.api.domain.auth.integration.security.Rfc6238TotpService
-import com.buyeong.umji.api.domain.auth.model.AccountRecord
-import com.buyeong.umji.api.domain.auth.model.WebAccountCredentials
-import com.buyeong.umji.api.domain.auth.model.WebLoginCommand
-import com.buyeong.umji.api.domain.auth.model.WebPasswordCommand
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.auth.service.WebCredentialJpaEntityService
@@ -30,7 +30,7 @@ class WebAuthenticationServiceTest : DescribeSpec({
     val attempts = mockk<WebLoginAttemptJpaEntityService>(relaxed = true)
     val service = WebAuthenticationService(credentials, encoder, totp, sessions, accessTokens, attempts)
     val accountId = UUID.randomUUID()
-    val regularAccount = WebAccountCredentials(AccountRecord(accountId, "회원", "ACTIVE", 1), "encoded", emptySet())
+    val regularAccount = WebAccountCredentialsDto(AccountRecordDto(accountId, "회원", "ACTIVE", 1), "encoded", emptySet())
 
     beforeTest { clearMocks(credentials, encoder, totp, sessions, accessTokens, attempts) }
 
@@ -39,14 +39,14 @@ class WebAuthenticationServiceTest : DescribeSpec({
             every { credentials.findById(accountId) } returns regularAccount
             every { encoder.encode("a-long-passphrase-for-web") } returns "argon-hash"
 
-            service.setPassword(WebPasswordCommand(accountId, "a-long-passphrase-for-web"))
+            service.setPassword(WebPasswordCommandDto(accountId, "a-long-passphrase-for-web"))
 
             verify { credentials.savePassword(accountId, "argon-hash") }
         }
 
         it("15자 미만 비밀번호는 저장하지 않는다") {
             shouldThrow<ClientBadRequestException> {
-                service.setPassword(WebPasswordCommand(accountId, "short"))
+                service.setPassword(WebPasswordCommandDto(accountId, "short"))
             }
             verify(exactly = 0) { credentials.savePassword(any(), any()) }
         }
@@ -58,10 +58,10 @@ class WebAuthenticationServiceTest : DescribeSpec({
             every { encoder.matches("a-long-passphrase-for-web", "encoded") } returns true
             every { accessTokens.issue(any(), any(), any()) } returns "access"
 
-            val result = service.login(WebLoginCommand("010-1234-5678", "a-long-passphrase-for-web", null, "web", "127.0.0.1"))
+            val result = service.login(WebLoginCommandDto("010-1234-5678", "a-long-passphrase-for-web", null, "web", "127.0.0.1"))
 
             result.tokens.accessToken shouldBe "access"
-            val issuedAccount = slot<AccountRecord>()
+            val issuedAccount = slot<AccountRecordDto>()
             verify { accessTokens.issue(capture(issuedAccount), any(), any()) }
             issuedAccount.captured.mfaVerified shouldBe false
         }
@@ -73,7 +73,7 @@ class WebAuthenticationServiceTest : DescribeSpec({
             every { totp.verify("SECRET", "123456") } returns false
 
             shouldThrow<ClientBadRequestException> {
-                service.login(WebLoginCommand("01012345678", "a-long-passphrase-for-web", "123456", null, "127.0.0.1"))
+                service.login(WebLoginCommandDto("01012345678", "a-long-passphrase-for-web", "123456", null, "127.0.0.1"))
             }
             verify(exactly = 0) { accessTokens.issue(any(), any(), any()) }
             verify { attempts.recordFailure("01012345678", "127.0.0.1") }
@@ -83,7 +83,7 @@ class WebAuthenticationServiceTest : DescribeSpec({
             every { attempts.isBlocked("01012345678", "127.0.0.1") } returns true
 
             shouldThrow<ClientBadRequestException> {
-                service.login(WebLoginCommand("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1"))
+                service.login(WebLoginCommandDto("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1"))
             }
 
             verify(exactly = 0) { credentials.findByNormalizedPhone(any()) }
@@ -95,7 +95,7 @@ class WebAuthenticationServiceTest : DescribeSpec({
             every { encoder.matches(any(), any()) } returns true
             every { accessTokens.issue(any(), any(), any()) } returns "access"
 
-            service.login(WebLoginCommand("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1")).tokens.accessToken shouldBe "access"
+            service.login(WebLoginCommandDto("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1")).tokens.accessToken shouldBe "access"
             verify(exactly = 0) { totp.verify(any(), any()) }
         }
 
@@ -105,7 +105,7 @@ class WebAuthenticationServiceTest : DescribeSpec({
             every { encoder.matches(any(), any()) } returns true
             every { accessTokens.issue(any(), any(), any()) } returns "access"
 
-            service.login(WebLoginCommand("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1")).tokens.accessToken shouldBe "access"
+            service.login(WebLoginCommandDto("01012345678", "a-long-passphrase-for-web", null, null, "127.0.0.1")).tokens.accessToken shouldBe "access"
             verify(exactly = 0) { totp.verify(any(), any()) }
         }
     }

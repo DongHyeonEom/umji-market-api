@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.shipment.integration
 
-import com.buyeong.umji.api.domain.account.model.OrganizationRegistrationCommand
+import com.buyeong.umji.api.domain.account.dto.OrganizationRegistrationCommandDto
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.domain.order.service.CustomerOrderListingService
 import com.buyeong.umji.api.domain.order.service.OrderCancellationService
@@ -57,21 +57,18 @@ class OrderShipmentMySqlIntegrationTest {
     private lateinit var trackingSource: OfficialCarrierTrackingGateway
 
     @Test
-    fun `flyway v14 creates shipment rows for existing orders`() {
+    fun `flyway v14 creates shipment schema`() {
         val migrationCount = jdbc.queryForObject(
             "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '14' AND success = TRUE",
             Int::class.java,
         )
-        val orderCount = jdbc.queryForObject("SELECT COUNT(*) FROM purchase_order", Long::class.java)
-        val shipmentCount = jdbc.queryForObject("SELECT COUNT(*) FROM order_shipment", Long::class.java)
-        val missingShipmentCount = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM purchase_order o LEFT JOIN order_shipment s ON s.order_id = o.id WHERE s.id IS NULL",
+        val tableCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'order_shipment'",
             Long::class.java,
         )
 
         assertThat(migrationCount).isEqualTo(1)
-        assertThat(shipmentCount).isEqualTo(orderCount)
-        assertThat(missingShipmentCount).isZero()
+        assertThat(tableCount).isEqualTo(1)
     }
 
     @Test
@@ -252,7 +249,7 @@ class OrderShipmentMySqlIntegrationTest {
             suffix,
             "555${UUID.randomUUID().toString().take(7)}",
         )
-        groupMembership.register(publicId, OrganizationRegistrationCommand("INDIVIDUAL", null))
+        groupMembership.register(publicId, OrganizationRegistrationCommandDto("INDIVIDUAL", null))
         return publicId
     }
 
@@ -324,11 +321,12 @@ class OrderShipmentMySqlIntegrationTest {
         val now = Instant.now()
         jdbc.update(
             """INSERT INTO purchase_order
-                (public_id, order_number, account_id, organization_id, status, subtotal_amount, total_amount, ordered_at)
-                VALUES (?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)
+                (public_id, order_number, account_id, created_by_account_id, organization_id, status, subtotal_amount, total_amount, ordered_at)
+                VALUES (?, ?, ?, ?, ?, 'PENDING_PAYMENT', 1000, 1000, ?)
             """.trimIndent(),
             orderId.toBytes(),
             "SHIP-${UUID.randomUUID().toString().take(8)}",
+            accountInternalId,
             accountInternalId,
             organizationInternalId,
             Timestamp.from(now),

@@ -1,17 +1,17 @@
 package com.buyeong.umji.api.domain.seller.integration
 
-import com.buyeong.umji.api.domain.account.model.OrganizationSummary
+import com.buyeong.umji.api.domain.account.dto.OrganizationSummaryDto
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
 import com.buyeong.umji.api.domain.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.domain.auth.service.CurrentAccountService
-import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
-import com.buyeong.umji.api.domain.operation.catalog.model.BrandView
-import com.buyeong.umji.api.domain.operation.catalog.model.ProductPageView
+import com.buyeong.umji.api.domain.operation.catalog.dto.BrandViewDto
+import com.buyeong.umji.api.domain.operation.catalog.dto.ProductPageViewDto
 import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
-import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.domain.seller.controller.SellerCatalogController
 import com.buyeong.umji.api.domain.seller.service.SellerCatalogService
+import com.buyeong.umji.api.exception.DefaultErrorMessageService
+import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
@@ -56,13 +56,13 @@ class SellerCatalogControllerIntegrationTest(
         val brandId = UUID.randomUUID()
         Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(accountId)
         Mockito.`when`(organizations.current(accountId)).thenReturn(
-            OrganizationSummary(organizationId, "BUSINESS", "Seller", true, setOf("SELLER")),
+            OrganizationSummaryDto(organizationId, "BUSINESS", "Seller", true, setOf("SELLER")),
         )
         Mockito.`when`(catalog.sellerBrands(organizationId, 0, 20)).thenReturn(
-            listOf(BrandView(brandId, "Seller brand", "DISPLAYED")),
+            listOf(BrandViewDto(brandId, "Seller brand", "DISPLAYED")),
         )
         Mockito.`when`(catalog.sellerProducts(organizationId, 0, 20)).thenReturn(
-            ProductPageView(emptyList(), 0, 20, 0, 0),
+            ProductPageViewDto(emptyList(), 0, 20, 0, 0),
         )
 
         mockMvc.perform(get("/api/seller/brands"))

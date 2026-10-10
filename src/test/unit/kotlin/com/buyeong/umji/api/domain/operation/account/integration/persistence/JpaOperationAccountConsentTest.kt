@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.operation.account.integration.persistence
 
-import com.buyeong.umji.api.domain.operation.account.model.ConsentCommand
+import com.buyeong.umji.api.domain.operation.account.dto.ConsentCommandDto
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.ConsentHistoryEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
@@ -43,7 +43,7 @@ class JpaOperationAccountConsentTest {
 
         val result = adapter.addConsent(
             accountId,
-            ConsentCommand("PERSONAL_INFORMATION", "privacy-v2", "WRITTEN", "paper-form-2026-001", operatorId),
+            ConsentCommandDto("PERSONAL_INFORMATION", "privacy-v2", "WRITTEN", "paper-form-2026-001", operatorId),
             "PENDING_PROFILE",
         )
 

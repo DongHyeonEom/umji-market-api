@@ -1,8 +1,8 @@
 package com.buyeong.umji.api.domain.sales.service
 
+import com.buyeong.umji.api.domain.sales.dto.SalesAssignmentCommandDto
 import com.buyeong.umji.api.exception.InvalidRequestParameterException
 import com.buyeong.umji.api.persistence.jpa.sales.service.OrganizationSalesAssignmentJpaEntityService
-import com.buyeong.umji.api.domain.sales.model.SalesAssignmentCommand
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -23,7 +23,7 @@ class SalesAssignmentServiceTest : DescribeSpec({
 
             service.assign(
                 organizationId,
-                SalesAssignmentCommand(salesAccountId, null, "INITIAL_ASSIGNMENT", operatorId),
+                SalesAssignmentCommandDto(salesAccountId, null, "INITIAL_ASSIGNMENT", operatorId),
             ).shouldBeEmpty()
         }
 
@@ -31,7 +31,7 @@ class SalesAssignmentServiceTest : DescribeSpec({
             shouldThrow<InvalidRequestParameterException> {
                 service.assign(
                     organizationId,
-                    SalesAssignmentCommand(salesAccountId, 10_001, "RATE_CHANGE", operatorId),
+                    SalesAssignmentCommandDto(salesAccountId, 10_001, "RATE_CHANGE", operatorId),
                 )
             }
         }
@@ -40,13 +40,13 @@ class SalesAssignmentServiceTest : DescribeSpec({
             shouldThrow<InvalidRequestParameterException> {
                 service.assign(
                     organizationId,
-                    SalesAssignmentCommand(salesAccountId, 30, " ", operatorId),
+                    SalesAssignmentCommandDto(salesAccountId, 30, " ", operatorId),
                 )
             }
             shouldThrow<InvalidRequestParameterException> {
                 service.assign(
                     organizationId,
-                    SalesAssignmentCommand(salesAccountId, 30, "A".repeat(31), operatorId),
+                    SalesAssignmentCommandDto(salesAccountId, 30, "A".repeat(31), operatorId),
                 )
             }
         }

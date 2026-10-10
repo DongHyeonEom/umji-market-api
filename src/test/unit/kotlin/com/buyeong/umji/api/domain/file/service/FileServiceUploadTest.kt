@@ -1,9 +1,9 @@
 package com.buyeong.umji.api.domain.file.service
 
-import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.domain.file.integration.LocalFileStorage
 import com.buyeong.umji.api.domain.file.integration.LocalFileStorageProperties
 import com.buyeong.umji.api.domain.file.model.CreateFileUploadRequest
+import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.persistence.jpa.file.entity.FileAssetEntity
 import com.buyeong.umji.api.persistence.jpa.file.service.FileAssetJpaEntityService
 import io.kotest.assertions.throwables.shouldThrow

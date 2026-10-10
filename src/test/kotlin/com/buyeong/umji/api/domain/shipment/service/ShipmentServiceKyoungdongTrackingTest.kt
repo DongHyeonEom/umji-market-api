@@ -2,10 +2,10 @@ package com.buyeong.umji.api.domain.shipment.service
 
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
-import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.domain.shipment.integration.tracking.KyoungdongTrackingClient
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
+import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
 import io.mockk.mockk

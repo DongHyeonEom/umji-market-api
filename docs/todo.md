@@ -25,24 +25,6 @@
   도입 전제: SMS 제공자 및 본인 확인·신규/비활성 계정 정책 확정.<br>
   후속 검증: 인증 코드 단회 사용·만료·재시도·요청 한도·발송 실패와 계정 활성화 검증.<br>
 
-## Task 11 — 계층형 아키텍처 전환
-
-### 서비스 개발
-
-- [x] 모든 도메인 요청 흐름을 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`로 통일
-- [x] `adapter/in/web` Controller와 `application` Service·model을 도메인별 `controller`·`service`·`model` 패키지로 이동
-- [x] UseCase·Port 계약 및 위임 adapter 제거, 구체 Service·JpaEntityService 직접 주입으로 전환
-- [x] 외부 연동 구현을 `integration` 패키지로 이동하고 SDK callback/provider 인터페이스만 내부 구현 세부로 유지
-- [x] Controller에서 인증 조회 전용 Port를 거치지 않고 구체 인증 Service 직접 호출
-- [x] 트랜잭션 경계를 도메인 Service에 통합하고 모든 wrapper 제거
-- [x] `AGENTS.md`·README·architecture·서비스 문서 및 구현 현황을 새 패키지 경계에 맞춰 갱신
-- [x] `persistence.jpa.<domain>` 아래 JPA Entity·Spring Data Repository·JpaEntityService를 각각 `entity`·`repository`·`service` 패키지로 정리
-
-### 서비스 자동화 테스트 개발 및 테스트
-
-- [x] Service 단위 테스트 및 Controller·JPA 통합 테스트를 계층별로 작성·실행
-- [ ] 전체 기존 동작·권한·트랜잭션 회귀 검증
-
 ## Task 12 — Organization 구조와 공통 사업자 정보
 
 ### 서비스 개발

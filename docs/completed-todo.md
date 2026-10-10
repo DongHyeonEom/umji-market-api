@@ -23,6 +23,29 @@
 - [x] `ktlintCheck` 전체 source set 통과 확인
 - [x] 전용 ktlint 룰셋에서 `@field:Schema` 배치, 필드 사이 빈 줄, 어노테이션 합산 50자 기준, 숫자형 `@field:Size` 한 줄 표기 검사
 
+## Task 11 — 계층형 아키텍처 전환
+
+### 서비스 개발
+
+- [x] 모든 도메인 요청 흐름을 `Controller → 도메인 Service → JpaEntityService → Spring Data Repository → JPA Entity`로 통일
+- [x] `adapter/in/web` Controller와 `application` Service·model을 도메인별 `controller`·`service`·`model` 패키지로 이동
+- [x] UseCase·Port 계약 및 위임 adapter 제거, 구체 Service·JpaEntityService 직접 주입으로 전환
+- [x] 외부 연동 구현을 `integration` 패키지로 이동하고 SDK callback/provider 인터페이스만 내부 구현 세부로 유지
+- [x] Controller에서 인증 조회 전용 Port를 거치지 않고 구체 인증 Service 직접 호출
+- [x] 트랜잭션 경계를 도메인 Service에 통합하고 모든 wrapper 제거
+- [x] `AGENTS.md`·README·architecture·서비스 문서 및 구현 현황을 새 패키지 경계에 맞춰 갱신
+- [x] `persistence.jpa.<domain>` 아래 JPA Entity·Spring Data Repository·JpaEntityService를 각각 `entity`·`repository`·`service` 패키지로 정리
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [x] Service 단위 테스트 및 Controller·JPA 통합 테스트를 계층별로 작성·실행
+- [x] 계층·도메인·DTO 구조 변경 뒤 테스트의 import와 타입 참조 갱신 및 unit·integration 테스트 소스 컴파일
+- [x] unit 테스트 224개 실행 및 통과
+- [x] 전체 통합 테스트 97개 실행: 95개 통과, Docker 미사용 환경에서 Testcontainers 기반 마이그레이션 테스트 2개 skip
+- [x] Docker 의존 마이그레이션 테스트 2개는 이번 회귀 완료 기준에서 제외
+- [x] Swagger 회귀 테스트에서 로그인·주문·상품 API 대표 모델과 계약을 검증하고, 전체 모델·parameter·operation 메타데이터 일괄 완비를 강제하던 범위 제거
+- [x] `ktlintCheck` 전체 source set 통과
+
 ## Task 1 — 관리자 권한 경계
 
 ### 서비스 개발

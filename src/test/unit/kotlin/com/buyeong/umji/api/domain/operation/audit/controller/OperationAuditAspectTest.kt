@@ -2,12 +2,12 @@ package com.buyeong.umji.api.domain.operation.audit.controller
 
 import com.buyeong.umji.api.constant.Constant
 import com.buyeong.umji.api.domain.inventory.model.InventoryStockResponse
-import com.buyeong.umji.api.domain.operation.audit.model.OperationAuditEvent
+import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEventDto
 import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.domain.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.domain.operation.model.OperationCatalogResourceResponse
+import com.buyeong.umji.api.domain.operation.order.dto.OperationPhoneOrderSummaryDto
 import com.buyeong.umji.api.domain.operation.order.model.OperationPhoneOrderResponse
-import com.buyeong.umji.api.domain.operation.order.model.OperationPhoneOrderSummary
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
@@ -38,7 +38,7 @@ class OperationAuditAspectTest : DescribeSpec({
     val transactions = mockk<PlatformTransactionManager>(relaxed = true)
     val aspect = OperationAuditAspect(audit, transactions)
     val actorId = UUID.randomUUID()
-    val recorded = slot<OperationAuditEvent>()
+    val recorded = slot<OperationAuditEventDto>()
 
     beforeTest {
         clearMocks(audit, transactions)
@@ -114,7 +114,7 @@ class OperationAuditAspectTest : DescribeSpec({
             val orderId = UUID.randomUUID()
             val joinPoint = mockk<ProceedingJoinPoint>()
             every { joinPoint.proceed() } returns OperationPhoneOrderResponse(
-                listOf(OperationPhoneOrderSummary(orderId, "UMJ-20261009-000001", "PENDING_PAYMENT", 1000, Instant.now(), null)),
+                listOf(OperationPhoneOrderSummaryDto(orderId, "UMJ-20261009-000001", "PENDING_PAYMENT", 1000, Instant.now(), null)),
             )
             request("POST", "/api/operation/orders/phone-orders")
 

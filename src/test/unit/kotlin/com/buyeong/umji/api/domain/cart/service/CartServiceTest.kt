@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.cart.service
 
-import com.buyeong.umji.api.domain.cart.model.AddCartItemCommand
+import com.buyeong.umji.api.domain.cart.dto.AddCartItemCommandDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.entity.AccountEntity
 import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
@@ -33,7 +33,7 @@ class CartServiceTest : DescribeSpec({
     describe("장바구니 상품 추가") {
         it("SKU와 판매 오퍼 ID 중 하나를 지정해야 한다") {
             shouldThrow<IllegalArgumentException> {
-                service.add(UUID.randomUUID(), AddCartItemCommand(null, null, quantity = 1))
+                service.add(UUID.randomUUID(), AddCartItemCommandDto(null, null, quantity = 1))
             }
         }
 
@@ -41,7 +41,7 @@ class CartServiceTest : DescribeSpec({
             val offerId = UUID.randomUUID()
             every { catalog.salesOffer(offerId) } returns null
             shouldThrow<ItemNotFoundException> {
-                service.add(UUID.randomUUID(), AddCartItemCommand(null, offerId, "RETAIL", 1))
+                service.add(UUID.randomUUID(), AddCartItemCommandDto(null, offerId, "RETAIL", 1))
             }
         }
 
@@ -79,7 +79,7 @@ class CartServiceTest : DescribeSpec({
                 firstArg<CartEntity>().also { saved -> saved.items.forEach { it.setPublicId(UUID.randomUUID()) } }
             }
 
-            val result = service.add(accountId, AddCartItemCommand(null, offerId, "WHOLESALE", 2))
+            val result = service.add(accountId, AddCartItemCommandDto(null, offerId, "WHOLESALE", 2))
 
             result.items.single().salesOfferId shouldBe offerId
             result.items.single().sellerOrganizationId shouldBe sellerOrganizationId

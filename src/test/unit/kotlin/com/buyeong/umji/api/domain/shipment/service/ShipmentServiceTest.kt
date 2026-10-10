@@ -1,15 +1,15 @@
 package com.buyeong.umji.api.domain.shipment.service
 
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
-import com.buyeong.umji.api.domain.notification.model.NotificationEventType
+import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
+import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
+import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
-import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
-import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
-import com.buyeong.umji.api.domain.shipment.model.ShipmentTrackingCandidate
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -90,7 +90,7 @@ class ShipmentServiceTest : DescribeSpec({
 
     it("고객 주문 목록의 배송완료 송장은 DELIVERED로 전환한다") {
         val customerId = UUID.randomUUID()
-        val candidate = ShipmentTrackingCandidate(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
+        val candidate = ShipmentTrackingCandidateDto(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
         every { store.trackingCandidatesForCustomer(customerId) } returns listOf(candidate)
         every { tracking.lookup("DAESIN", candidate.trackingNumber) } returns CarrierTrackingStatus.DELIVERED
         every { store.markDeliveredIfCurrent(candidate) } returns true
@@ -107,9 +107,9 @@ class ShipmentServiceTest : DescribeSpec({
 
     it("택배사 응답이 없으면 배송중 상태를 유지하고 다른 주문도 계속 조회한다") {
         val customerId = UUID.randomUUID()
-        val candidate = ShipmentTrackingCandidate(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
+        val candidate = ShipmentTrackingCandidateDto(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
         val otherOrderId = UUID.randomUUID()
-        val otherCandidate = ShipmentTrackingCandidate(otherOrderId, "IN_TRANSIT", "CHUNIL", "72601701177")
+        val otherCandidate = ShipmentTrackingCandidateDto(otherOrderId, "IN_TRANSIT", "CHUNIL", "72601701177")
         every { store.trackingCandidatesForCustomer(customerId) } returns listOf(candidate, otherCandidate)
         every { tracking.lookup("DAESIN", candidate.trackingNumber) } returns CarrierTrackingStatus.UNAVAILABLE
         every { tracking.lookup("CHUNIL", otherCandidate.trackingNumber) } returns CarrierTrackingStatus.DELIVERED
