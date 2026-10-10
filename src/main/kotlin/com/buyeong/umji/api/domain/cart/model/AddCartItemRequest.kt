@@ -14,7 +14,7 @@ data class AddCartItemRequest(
     )
     val skuId: UUID? = null,
 
-    @field:Schema(description = "채널별 판매 오퍼 공개 식별자(UUID)", format = "uuid", type = "string")
+    @field:Schema(description = "채널별 판매 오퍼 공개 식별자(UUID)", example = "550e8400-e29b-41d4-a716-446655440000", format = "uuid", type = "string")
     val salesOfferId: UUID? = null,
 
     @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", required = true)

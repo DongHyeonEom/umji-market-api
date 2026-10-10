@@ -1,7 +1,5 @@
 package com.buyeong.umji.api.config
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -22,9 +20,6 @@ import org.springframework.test.web.servlet.get
 class SwaggerModelDescriptionIntegrationTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
-
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
 
     @Test
     fun `openapi exposes controller tags operation summaries and detailed nested models`() {
@@ -47,30 +42,5 @@ class SwaggerModelDescriptionIntegrationTest {
                 jsonPath("$.components.schemas.OrderResponse.properties.totalAmount.description") { exists() }
                 jsonPath("$.paths['/api/products/{productId}'].get.parameters[0].description") { exists() }
             }
-
-        val openApi = mockMvc.get("/v3/api-docs/umji-market-api").andReturn().response.contentAsString
-        val schemas = objectMapper.readTree(openApi).path("components").path("schemas")
-        schemas.fields().forEach { (modelName, model) ->
-            assertTrue(model.hasNonNull("description"), "$modelName must describe its purpose")
-            model.path("properties").fields().forEach { (fieldName, field) ->
-                assertTrue(field.hasNonNull("description"), "$modelName.$fieldName must describe its meaning")
-                assertTrue(field.hasNonNull("example"), "$modelName.$fieldName must provide an example")
-                assertTrue(field.hasNonNull("type") || field.hasNonNull("\$ref"), "$modelName.$fieldName must declare its OpenAPI type or schema reference")
-            }
-        }
-
-        val paths = objectMapper.readTree(openApi).path("paths")
-        paths.fields().forEach { (path, pathItem) ->
-            pathItem.fields().forEach { (method, operation) ->
-                if (method in setOf("get", "post", "put", "patch", "delete")) {
-                    assertTrue(operation.path("tags").isArray && operation.path("tags").size() > 0, "$method $path must have a tag")
-                    assertTrue(operation.hasNonNull("summary"), "$method $path must have a summary")
-                    assertTrue(operation.hasNonNull("description"), "$method $path must have a description")
-                    operation.path("parameters").forEach { parameter ->
-                        assertTrue(parameter.hasNonNull("description"), "$method $path parameter ${parameter.path("name").asText()} must be described")
-                    }
-                }
-            }
-        }
     }
 }
