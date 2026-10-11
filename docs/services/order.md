@@ -309,3 +309,44 @@ flowchart TD
 목록 조회는 택배사별 상태를 먼저 갱신한 뒤 최신 상태와 공식 조회 링크를 반환. 고객이 링크를 선택하면 WebView에서 택배사 공식 조회 화면 표시.<br>
 `PUT /api/operation/orders/{orderId}/shipment/tracking` 및 `POST /api/operation/orders/{orderId}/shipment/delivered`는 `SHIPMENT_WRITE` 권한 운영자만 호출 가능.<br>
 입금·취소·휴무일 운영 API는 `ORDER_WRITE` 권한을 요구. 송장·배송 상태 변경은 `SHIPMENT_WRITE` 권한을 요구.<br>
+
+## 미구현 설계 — 품목 원가·택배 운송비·순이익
+
+다음 흐름은 순이익 및 브랜드 범위 배송관리의 목표 설계이며 현재 API 동작이 아님.<br>
+품목 원가는 품목별 사입가로 관리하고, 택배 기본 운송비는 브랜드 품목과 택배사 조합별로 관리하는 방향.<br>
+브랜드 배송 담당자가 자기 담당 브랜드의 품목·택배사별 기본 운송비를 설정. 송장 등록 시 택배사를 선택하면 해당 조합의 기본 운송비를 주문 배송비에 채움.<br>
+기본 운송비가 없거나 실제 청구액과 다르면 담당자가 주문별 실제 운송비를 입력·수정하고 송장번호와 함께 저장. 기본 운송비 변경은 이미 저장된 주문 비용을 소급 변경하지 않음.<br>
+관리자는 브랜드 범위에 제한받지 않고 전체 주문의 배송 상태와 기본·실제 운송비를 조회하는 목표. 관리자에게 비용 수정 권한을 줄지는 구현 전 결정.<br>
+순이익 집계는 주문 시점 품목 판매액·사입가 snapshot 및 확정된 실제 배송비를 기준으로 집계. 세금·환불·취소·부분수량 반영 공식은 확정 전.<br>
+
+```mermaid
+flowchart TD
+    ADMIN[관리자] --> ASSIGN[브랜드별 배송 담당자 지정]
+    ASSIGN --> SCOPE[(담당 브랜드 권한 범위)]
+    MANAGER[브랜드 배송 담당자] --> AUTH[인증 및 담당 브랜드 권한 검사]
+    AUTH --> CONFIG[담당 브랜드 품목·택배사별 기본 운송비 관리]
+    CONFIG --> MATRIX[(브랜드·품목·택배사 기본 운송비표)]
+    ORDER[판매자 주문] --> ITEMS[주문 품목·판매 금액 snapshot]
+    ITEMS --> COST[품목별 사입가 snapshot]
+    ORDER --> SHIPREADY[배송 준비 및 브랜드 범위 품목 확인]
+    SHIPREADY --> PICK[담당자가 택배사 선택]
+    PICK --> LOOKUP[브랜드·품목·택배사 기본 운송비 조회]
+    MATRIX --> LOOKUP
+    LOOKUP --> FOUND{기본 운송비 존재}
+    FOUND -->|예| PREFILL[주문 배송비에 기본값 채움]
+    FOUND -->|아니오| INPUT[담당자가 운송비 입력]
+    PREFILL --> REVIEW[담당자가 실제 운송비 확인·수정]
+    INPUT --> REVIEW
+    REVIEW --> TRACK[송장번호·택배사·실제 운송비 저장]
+    TRACK --> STATUS[배송 상태 IN_TRANSIT]
+    TRACK --> SNAP[(주문별 실제 비용 snapshot)]
+    ADMIN --> ALL[전체 브랜드 배송 상태·비용 조회]
+    STATUS --> ALL
+    SNAP --> ALL
+    COST --> PROFIT[품목·기간별 순이익 집계]
+    ITEMS --> PROFIT
+    SNAP --> PROFIT
+```
+
+현재 주문은 판매 Organization별로 생성되고 배송 정보는 주문당 하나의 `order_shipment`에 저장됨. 한 주문에 여러 브랜드 품목이 포함될 때 브랜드별 권한·출고·송장·운송비를 어떤 단위로 적용할지 구현 전에 확정 필요.<br>
+주문 품목의 사입가 이력·주문 시점 원가 snapshot, 브랜드별 담당자 배정, 브랜드·품목·택배사 기본 비용표, 주문별 실제 운송비 snapshot 및 집계 API는 미구현.<br>
