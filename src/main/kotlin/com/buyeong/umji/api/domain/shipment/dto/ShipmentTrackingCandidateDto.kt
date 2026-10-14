@@ -4,6 +4,7 @@ import java.util.UUID
 
 data class ShipmentTrackingCandidateDto(
     val orderId: UUID,
+    val packageId: UUID,
     val status: String,
     val carrierCode: String,
     val trackingNumber: String,

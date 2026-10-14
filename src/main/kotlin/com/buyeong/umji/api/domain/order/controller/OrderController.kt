@@ -15,6 +15,7 @@ import com.buyeong.umji.api.domain.order.model.OrderPageResponse
 import com.buyeong.umji.api.domain.order.model.OrderResponse
 import com.buyeong.umji.api.domain.order.model.TaxInvoiceItemResponse
 import com.buyeong.umji.api.domain.order.model.TaxInvoiceSnapshotResponse
+import com.buyeong.umji.api.domain.shipment.model.toResponse
 import com.buyeong.umji.api.domain.order.service.CustomerOrderListingService
 import com.buyeong.umji.api.domain.order.service.OrderService
 import io.swagger.v3.oas.annotations.Operation
@@ -135,6 +136,11 @@ class OrderController(
         },
         channelCode,
         sellerOrganizationId,
+        shipmentPackages.map { packageDto ->
+            packageDto.toResponse().copy(
+                trackingUrl = CarrierTrackingLink.create(packageDto.carrierCode, packageDto.trackingNumber),
+            )
+        },
     )
 
     private fun OrderCheckoutOptionsDto.toResponse() = OrderCheckoutOptionsResponse(

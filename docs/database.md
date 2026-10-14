@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V50으로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V51으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -74,6 +74,7 @@
 | V48 | 주문별 인센티브 기준·요율 snapshot, 정산 상태·append-only 이벤트 원장 및 관리자 정산 permission 추가 |
 | V49 | 주문 출처·생성 관리자 기록, 홈택스 수기 세금계산서 발행 필드와 append-only 이벤트 추가 |
 | V50 | Organization 프로필로 이관 완료된 레거시 `business_profile` 제거 |
+| V51 | 브랜드 배송 담당자·품목/택배사 기본 운송비, 다중 송장·송장 품목 snapshot 테이블 및 `SHIPMENT_ASSIGN` permission 추가. 기존 단일 송장 정보를 package로 이관 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 

@@ -89,5 +89,5 @@ class PurchaseOrderEntity : DomainPublicEntity() {
     fun add(item: OrderItemEntity) {
         item.order = this
         items.add(item)
-    }
+}
 }

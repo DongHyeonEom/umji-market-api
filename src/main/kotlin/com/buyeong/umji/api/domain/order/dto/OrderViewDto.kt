@@ -2,6 +2,7 @@ package com.buyeong.umji.api.domain.order.dto
 
 import java.time.Instant
 import java.util.UUID
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentPackageDto
 
 data class OrderViewDto(
     val id: UUID,
@@ -31,4 +32,5 @@ data class OrderViewDto(
     val taxInvoiceSnapshot: TaxInvoiceSnapshotDto? = null,
     val channelCode: String = "WHOLESALE",
     val sellerOrganizationId: UUID? = null,
+    val shipmentPackages: List<ShipmentPackageDto> = emptyList(),
 )
