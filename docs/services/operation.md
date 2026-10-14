@@ -336,8 +336,9 @@ Organization과 세금계산서 정보 조회·수정은 `ADMIN_ACCOUNT_MANAGE` 
 ### 운영 변경 감사 로그
 
 운영자 계정·role, 카테고리·브랜드·상품 및 SKU, 관리자 재고 조정의 성공한 변경 요청을 기록함.<br>
-감사 로그에는 운영자 공개 UUID, endpoint method·route template, 대상 리소스 공개 UUID, 요청 trace ID, UTC 발생 시각만 저장함.<br>
-요청 본문, 변경 전·후 값, 이름·전화번호·이메일·사업자 정보·주소·동의 근거·인증 정보·재고 메모는 저장하지 않음.<br>
+감사 로그에는 운영자 공개 UUID, endpoint method·route template, 대상 리소스 공개 UUID, 요청 trace ID, UTC 발생 시각을 공통 저장함.<br>
+Task 22 대상 변경(결제 상태, 송장·배송 상태, 실제 운송비, 세금계산서 수기 결과)은 업무 변경 전·후 allowlist 값과 입력 사유를 추가 저장함.<br>
+요청 본문 전체를 저장하지 않으며 이름·전화번호·이메일·사업자 정보·주소·동의 근거·인증 정보는 상세 감사 값에서 제외함.<br>
 로컬 `BYPASS` 요청처럼 인증 subject가 없는 경우 운영자 UUID는 nullable로 기록됨.<br>
 role 변경 시 제한된 role code를 action 값에 포함함.<br>
 감사 로그 기록에 실패하면 같은 요청의 업무 변경도 rollback 처리함.<br>
@@ -350,15 +351,68 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 | --- | --- | --- |
 | `GET` | `/api/operation/audit-logs?actorId=&resourceType=&from=&until=&page=&size=` | 운영 변경 이력 검색 |
 
-조회 권한은 `ADMIN_AUDIT_READ`이며 `SUPER_ADMIN`에만 부여함.<br>
+조회 권한은 `ADMIN_AUDIT_READ`이며 현재 `SUPER_ADMIN`에만 부여함.<br>
 일반 `ADMIN`은 로그를 조회할 수 없음.<br>
 `from`은 포함, `until`은 제외하는 UTC ISO-8601 시각 범위이며 페이지 크기는 최대 100.<br>
 
 ### 입금 상태 확인
 
-`ORDER_WRITE` 권한 운영자는 `GET /api/operation/payments`로 기본 입금 대기·부분 입금 확인 필요 목록을 조회하고, `PATCH /api/operation/payments/{orderId}/status`로 상태를 변경함.<br>
+`ORDER_READ` 권한 운영자는 `GET /api/operation/payments`로 기본 입금 대기·부분 입금 확인 필요 목록을 조회하고, `ORDER_WRITE` 권한 운영자는 `PATCH /api/operation/payments/{orderId}/status`로 상태를 변경함.<br>
 입금 확인 응답에는 주문자명과 연락처가 포함되며, 실제 은행 내역 확인과 부분 입금 후속 통화는 운영 절차로 수행.<br>
 상태 변경은 payment history와 운영 변경 감사 로그에 처리자·시각을 남김.<br>
+
+### 관리자 거래 검색·상세 조회
+
+Task 22 조회 기준은 주문 시각(KST) 기간, 구매 Organization 표시명, 주문자명, 결제 상태, 배송 상태이며 주문번호는 보조 검색 조건.<br>
+조회 기간은 시작일·종료일을 모두 포함. 기간 조건을 필수로 받아 전체 주문 무제한 조회를 방지하고 최신 주문부터 페이지네이션.<br>
+Organization·주문자명은 공백 제거 후 부분 일치, 상태는 완전 일치. 목록에서 주문자 연락처는 뒤 4자리만 노출.<br>
+목록·상세·입금 대기 목록 조회는 `ORDER_READ`, 결제 상태 변경은 `ORDER_WRITE` 권한 사용.<br>
+
+| Method | Endpoint | Query·동작 |
+| --- | --- | --- |
+| `GET` | `/api/operation/orders?from=&until=&organizationName=&ordererName=&paymentStatus=&shipmentStatus=&orderNumber=&page=&size=` | 필수 KST 날짜 범위(양끝 포함), 주문 조건 검색 및 최신순 페이지네이션 |
+| `GET` | `/api/operation/orders/{orderId}` | 주문 품목·결제·배송 송장·세금계산서 상태 상세. 연락처는 뒤 4자리만 노출 |
+
+```mermaid
+flowchart TD
+    REQ[관리자 거래 검색 요청] --> AUTH[Access Token·ORDER_READ 권한 검사]
+    AUTH -->|거부| DENY[401·403]
+    AUTH -->|허용| VALID[필수 기간·상태·페이지 입력 검증]
+    VALID -->|오류| REJECT[400 입력 오류]
+    VALID -->|통과| QUERY[기간·Organization·주문자·결제·배송·주문번호 조건 조회]
+    QUERY --> PAGE[주문 시각 내림차순 페이지 구성]
+    PAGE --> MASK[주문자 연락처 뒤 4자리만 응답]
+    MASK --> RESPONSE[검색 결과 반환]
+    DETAIL[주문 상세 요청] --> AUTH2[ORDER_READ 권한 검사]
+    AUTH2 --> LOAD[주문·품목·결제·배송 송장·세금계산서 상태 조회]
+    LOAD --> DETAILRESP[업무에 필요한 정보만 최소화해 반환]
+```
+
+### 브랜드별 월간 운송비 정산 조회
+
+운송비는 구매자 결제·청구액에서 제외하는 판매자 부담 비용 데이터. 정산 조회는 지급·차감 처리가 아닌 해당 월 배송 원가 현황 확인.<br>
+브랜드 UUID와 `YearMonth` 형식 월을 필수로 받아 담당 브랜드 scope 또는 전체 배송 조회 권한을 확인.<br>
+월 귀속은 송장 등록 시각의 한국 표준시 월. 등록 이후 실제 운송비가 수정되면 현재 실제 금액을 원래 등록 월 합계에 반영하고 수정 시각·전후 금액은 감사 이력에서 확인.<br>
+실제 운송비가 없는 레거시 송장은 합계에서 제외하고 미등록 건수로 표시. 택배사별 합계 및 송장·주문·품목 상세는 페이지네이션 조회.<br>
+
+```mermaid
+flowchart TD
+    REQ[브랜드·월 운송비 조회 요청] --> AUTH[SHIPMENT_READ 권한 검사]
+    AUTH -->|거부| DENY[401·403]
+    AUTH -->|허용| VALID[브랜드·YearMonth 검증]
+    VALID -->|오류| REJECT[400·404]
+    VALID -->|통과| SCOPE{전체 관리자 또는 브랜드 담당자인가}
+    SCOPE -->|아니오| DENY
+    SCOPE -->|예| WINDOW[송장 등록 KST 월 범위 조회]
+    WINDOW --> AGG[실제 비용·미등록 및 택배사별 집계]
+    WINDOW --> ROWS[송장·주문·품목 상세 페이지 조회]
+    AGG --> RESPONSE[집계와 상세 결과 반환]
+    ROWS --> RESPONSE
+```
+
+| Method | Endpoint | Query·동작 |
+| --- | --- | --- |
+| `GET` | `/api/operation/shipping/settlements?brandId=&month=&page=&size=` | 브랜드별 송장 등록 KST 월 집계와 상세. `month`는 `YYYY-MM` |
 
 ### 홈택스 세금계산서 수기 발행 결과 등록 흐름
 

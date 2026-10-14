@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V51이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V52가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -762,7 +762,7 @@ erDiagram
 - `account_role`과 `role_permission`은 각각 계정-역할, 역할-권한 다대다 연결임.<br>
   `account_role.granted_by`는 migration에서 FK 제약이 없음.<br>
 - `operation_audit_log`의 운영자·대상 공개 UUID는 삭제·정책 변경과 무관하게 이력에서 식별 가능하도록 FK 없이 보관.<br>
-  이름과 변경 전·후 값은 저장하지 않으며 V11 감사 정책에 따라 730일 후 삭제.<br>
+  V52부터 allowlist 업무 변경값의 before/after JSON과 사유를 저장하며 개인정보·전화번호·주소·인증정보는 포함하지 않음. 기존 V11 감사 정책에 따라 730일 후 삭제.<br>
 - `refresh_token.expires_at`은 V6 이후 nullable임.<br>
   `account.phone_normalized`는 V6에서 추가된 unique 정규화 번호임.<br>
 - 구매자 그룹은 법적 사업자번호와 독립적인 주문 소유 범위임.<br>
@@ -840,6 +840,7 @@ erDiagram
 | V49 | 주문 출처·생성 관리자, 수기 세금계산서 발행 metadata와 append-only 이벤트 추가 |
 | V50 | Organization 프로필로 이관 완료된 레거시 `business_profile` 제거 |
 | V51 | 브랜드 담당자 배정·브랜드별 SKU/택배사 운송비·다중 송장 및 송장 품목 비용 snapshot 추가 |
+| V52 | `operation_audit_log` 변경 전·후 업무 값·사유 JSON 추가 및 주문·송장 조회 인덱스 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

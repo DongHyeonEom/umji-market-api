@@ -49,11 +49,11 @@ class ManualPaymentMySqlIntegrationTest {
         createPayment(orderId)
         createShipment(orderId)
 
-        val issue = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId)
+        val issue = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId, "입금 이슈 확인")
         assertThat(issue.paymentStatus).isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
         assertThat(issue.orderStatus).isEqualTo("PENDING_PAYMENT")
 
-        val repeatedIssue = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId)
+        val repeatedIssue = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId, "중복 요청 테스트")
         assertThat(repeatedIssue.changed).isFalse()
 
         val issueQueue = transactionalPayments.queue("PAYMENT_ISSUE_REVIEW_REQUIRED", 0, 10)
@@ -64,15 +64,15 @@ class ManualPaymentMySqlIntegrationTest {
         assertThat(customerOrder.status).isEqualTo("PENDING_PAYMENT")
         assertThat(customerOrder.shippingStatus).isEqualTo("READY_TO_SHIP")
 
-        assertThat(transactionalPayments.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId).paymentStatus)
+        assertThat(transactionalPayments.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId, "부분 입금 확인").paymentStatus)
             .isEqualTo("PARTIAL_PAYMENT_REVIEW_REQUIRED")
-        assertThat(transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId).paymentStatus)
+        assertThat(transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId, "입금 이슈 검토").paymentStatus)
             .isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
-        assertThat(transactionalPayments.updateStatus(orderId, "WAITING_FOR_DEPOSIT", operatorId).paymentStatus)
+        assertThat(transactionalPayments.updateStatus(orderId, "WAITING_FOR_DEPOSIT", operatorId, "입금 대기 재확인").paymentStatus)
             .isEqualTo("WAITING_FOR_DEPOSIT")
-        assertThat(transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId).paymentStatus)
+        assertThat(transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", operatorId, "입금 이슈 재검토").paymentStatus)
             .isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
-        val resolved = transactionalPayments.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId)
+        val resolved = transactionalPayments.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId, "입금 확인 완료")
         assertThat(resolved.paymentStatus).isEqualTo("PAYMENT_CONFIRMED")
         assertThat(resolved.orderStatus).isEqualTo("PAID")
 
@@ -127,7 +127,7 @@ class ManualPaymentMySqlIntegrationTest {
         val orderId = createOrder(customer, skuId, reservationKey)
         createPayment(orderId)
 
-        val result = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", actor)
+        val result = transactionalPayments.updateStatus(orderId, "PAYMENT_ISSUE_REVIEW_REQUIRED", actor, "입금 이슈 확인")
 
         assertThat(result.orderStatus).isEqualTo("PENDING_PAYMENT")
         assertThat(result.paymentStatus).isEqualTo("PAYMENT_ISSUE_REVIEW_REQUIRED")
@@ -187,7 +187,7 @@ class ManualPaymentMySqlIntegrationTest {
         createPayment(orderId)
         createShipment(orderId)
 
-        val partial = transactionalPayments.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", actor)
+        val partial = transactionalPayments.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", actor, "부분 입금 확인")
 
         assertThat(partial.orderStatus).isEqualTo("PENDING_PAYMENT")
         assertThat(partial.paymentStatus).isEqualTo("PARTIAL_PAYMENT_REVIEW_REQUIRED")
@@ -196,7 +196,7 @@ class ManualPaymentMySqlIntegrationTest {
         ).isEqualTo(1)
         assertShipmentStatus(orderId, "READY_TO_SHIP")
 
-        val confirmed = transactionalPayments.updateStatus(orderId, "PAYMENT_CONFIRMED", actor)
+        val confirmed = transactionalPayments.updateStatus(orderId, "PAYMENT_CONFIRMED", actor, "입금 확인")
 
         assertThat(confirmed.orderStatus).isEqualTo("PAID")
         assertThat(confirmed.paymentStatus).isEqualTo("PAYMENT_CONFIRMED")

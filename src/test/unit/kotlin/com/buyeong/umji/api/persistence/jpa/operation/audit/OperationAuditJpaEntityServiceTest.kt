@@ -32,6 +32,9 @@ class OperationAuditJpaEntityServiceTest : DescribeSpec({
             resourceId,
             "trace-123",
             occurredAt,
+            mapOf("paymentStatus" to "WAITING_FOR_DEPOSIT"),
+            mapOf("paymentStatus" to "PAYMENT_CONFIRMED"),
+            "입금 확인",
         )
 
         adapter.record(event)
@@ -45,6 +48,9 @@ class OperationAuditJpaEntityServiceTest : DescribeSpec({
                 match<ByteArray> { it.contentEquals(resourceId.toBytes()) },
                 event.requestTraceId,
                 Timestamp.from(occurredAt),
+                "{\"paymentStatus\":\"WAITING_FOR_DEPOSIT\"}",
+                "{\"paymentStatus\":\"PAYMENT_CONFIRMED\"}",
+                "입금 확인",
             )
         }
     }

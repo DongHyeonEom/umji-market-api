@@ -3,6 +3,7 @@ package com.buyeong.umji.api.domain.operation.audit.controller
 import com.buyeong.umji.api.constant.Constant
 import com.buyeong.umji.api.domain.inventory.model.InventoryStockResponse
 import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEventDto
+import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditChangeContext
 import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.domain.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.domain.operation.model.OperationCatalogResourceResponse
@@ -36,7 +37,8 @@ import java.util.UUID
 class OperationAuditAspectTest : DescribeSpec({
     val audit = mockk<OperationAuditService>(relaxed = true)
     val transactions = mockk<PlatformTransactionManager>(relaxed = true)
-    val aspect = OperationAuditAspect(audit, transactions)
+    val changes = OperationAuditChangeContext()
+    val aspect = OperationAuditAspect(audit, transactions, changes)
     val actorId = UUID.randomUUID()
     val recorded = slot<OperationAuditEventDto>()
 
@@ -136,8 +138,22 @@ class OperationAuditAspectTest : DescribeSpec({
 
             aspect.recordSuccessfulChanges(joinPoint)
 
-            recorded.captured.resourceType shouldBe "ORDER"
+            recorded.captured.resourceType shouldBe "TAX_INVOICE"
             recorded.captured.resourceId shouldBe orderId
+        }
+
+        it("허용된 변경 전후 값과 사유를 운영 이력에 저장한다") {
+            val joinPoint = mockk<ProceedingJoinPoint>()
+            every { joinPoint.proceed() } returns "ok"
+            changes.capture(mapOf("paymentStatus" to "WAITING_FOR_DEPOSIT"), mapOf("paymentStatus" to "PAYMENT_CONFIRMED"), "입금 확인")
+            request("PATCH", "/api/operation/payments/{orderId}/status", mapOf("orderId" to UUID.randomUUID().toString()))
+
+            aspect.recordSuccessfulChanges(joinPoint)
+
+            recorded.captured.beforeValues shouldBe mapOf("paymentStatus" to "WAITING_FOR_DEPOSIT")
+            recorded.captured.afterValues shouldBe mapOf("paymentStatus" to "PAYMENT_CONFIRMED")
+            recorded.captured.reason shouldBe "입금 확인"
+            changes.consume() shouldBe null
         }
 
         it("관리자 재고 조정은 SKU를 감사 대상으로 기록한다") {

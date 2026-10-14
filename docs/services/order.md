@@ -321,6 +321,9 @@ flowchart TD
 운영 API는 `SHIPMENT_ASSIGN`, `SHIPMENT_READ`, `SHIPMENT_WRITE` 권한과 담당 브랜드 범위를 서버에서 확인.<br>
 `POST /api/operation/orders/{orderId}/shipment/brands/{brandId}/packages`는 송장을 추가하고, `POST /api/operation/orders/{orderId}/shipment/packages/{packageId}/delivered`는 개별 송장을 배송 완료 처리. `GET /api/operation/shipping/packages`는 관리자 전체 또는 담당자의 배정 브랜드 송장 목록을 반환하고, `PUT /api/operation/shipping/packages/{packageId}/cost`는 실제 비용 수정.<br>
 브랜드 담당자는 `/api/operation/shipping/brands/{brandId}/managers` 및 `/rates`를 통한 담당자·기본 운송비 운영 대상으로 구성.<br>
+운영자는 `GET /api/operation/shipping/settlements?brandId={brandId}&month=YYYY-MM`로 브랜드별 운송비 정산 조회. 월 귀속은 송장 등록일(KST)이며 구매자 청구 금액과 분리.<br>
+집계 금액은 현재 저장된 송장 실제 운송비의 합. 기본 요율 snapshot은 비교 근거로 유지하고 실제 비용 미등록 건수와 택배사별 합계를 별도 반환.<br>
+수정된 실제 운송비는 원 송장 등록 월 집계에 반영하고 수정 시각·변경 전후 값·사유를 운영 감사 이력에 저장.<br>
 순이익 집계는 주문 시점 품목 판매액·사입가 snapshot 및 실제 배송비를 기준으로 구현 예정. 세금·환불·취소·부분수량 반영 공식은 미확정.<br>
 
 ```mermaid

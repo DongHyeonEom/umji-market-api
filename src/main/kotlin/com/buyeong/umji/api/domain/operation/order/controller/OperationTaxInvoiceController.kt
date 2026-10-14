@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.domain.operation.order.controller
 
 import com.buyeong.umji.api.domain.auth.service.CurrentAccountService
+import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditChangeContext
 import com.buyeong.umji.api.domain.operation.order.model.OperationManualTaxInvoiceRequest
 import com.buyeong.umji.api.domain.operation.order.model.OperationTaxInvoicePageResponse
 import com.buyeong.umji.api.domain.operation.order.model.OperationTaxInvoiceResponse
@@ -28,9 +29,10 @@ import java.util.UUID
 class OperationTaxInvoiceController(
     private val currentAccounts: CurrentAccountService,
     private val invoices: OperationTaxInvoiceService,
+    private val auditChanges: OperationAuditChangeContext = OperationAuditChangeContext(),
 ) {
     @GetMapping
-    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_READ')")
     @Operation(summary = "수기 발행 대상 및 완료 목록", description = "발행 준비 또는 수기 발행 완료 상태의 주문 조회")
     fun queue(
         @RequestParam(defaultValue = "0") @Min(0) page: Int,
@@ -43,11 +45,26 @@ class OperationTaxInvoiceController(
     fun recordManualIssue(
         @PathVariable orderId: UUID,
         @Valid @RequestBody request: OperationManualTaxInvoiceRequest,
-    ): OperationTaxInvoiceResponse = OperationTaxInvoiceResponse.from(
-        invoices.recordManualIssue(
+    ): OperationTaxInvoiceResponse {
+        val result = invoices.recordManualIssue(
             orderId, currentAccounts.activeAccountPublicId(), request.approvalNumber, request.issuedAt,
             request.writtenDate, request.supplyDate, request.supplyAmount, request.taxAmount,
             request.totalAmount, request.reason,
-        ),
-    )
+        )
+        auditChanges.capture(
+            beforeValues = mapOf("status" to "READY_FOR_ISSUANCE"),
+            afterValues = mapOf(
+                "status" to result.status,
+                "approvalNumber" to result.approvalNumber,
+                "issuedAt" to result.issuedAt?.toString(),
+                "writtenDate" to result.writtenDate?.toString(),
+                "supplyDate" to result.supplyDate?.toString(),
+                "supplyAmount" to result.supplyAmount,
+                "taxAmount" to result.taxAmount,
+                "totalAmount" to result.totalAmount,
+            ),
+            reason = request.reason,
+        )
+        return OperationTaxInvoiceResponse.from(result)
+    }
 }

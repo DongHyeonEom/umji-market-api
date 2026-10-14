@@ -3,6 +3,8 @@ package com.buyeong.umji.api.domain.operation.audit.controller
 import com.buyeong.umji.api.constant.Constant
 import com.buyeong.umji.api.domain.inventory.model.InventoryStockResponse
 import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEventDto
+import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditChange
+import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditChangeContext
 import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.domain.operation.model.OperationAccountResponse
 import com.buyeong.umji.api.domain.operation.model.OperationCatalogResourceResponse
@@ -28,6 +30,7 @@ import java.util.UUID
 class OperationAuditAspect(
     private val audit: OperationAuditService,
     transactionManager: PlatformTransactionManager,
+    private val changeContext: OperationAuditChangeContext = OperationAuditChangeContext(),
 ) {
     private val transaction = TransactionTemplate(transactionManager).apply {
         propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRED
@@ -39,13 +42,17 @@ class OperationAuditAspect(
         if (request == null || request.method !in MUTATING_METHODS) return joinPoint.proceed()
 
         return transaction.execute {
-            val response = joinPoint.proceed()
-            audit.record(request.toAuditEvent(response))
-            response
+            try {
+                val response = joinPoint.proceed()
+                audit.record(request.toAuditEvent(response, changeContext.consume()))
+                response
+            } finally {
+                changeContext.clear()
+            }
         }
     }
 
-    private fun jakarta.servlet.http.HttpServletRequest.toAuditEvent(response: Any?): OperationAuditEventDto {
+    private fun jakarta.servlet.http.HttpServletRequest.toAuditEvent(response: Any?, change: OperationAuditChange?): OperationAuditEventDto {
         val route = getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE)?.toString() ?: requestURI
         val variables = getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE) as? Map<*, *> ?: emptyMap<Any, Any>()
         val resourceType = route.removePrefix("/api/operation/").substringBefore('/').let { segment ->
@@ -57,7 +64,11 @@ class OperationAuditAspect(
                 segment == "products" -> "PRODUCT"
                 segment == "inventory" -> "INVENTORY"
                 segment == "organizations" -> "ORGANIZATION"
+                segment == "orders" && route.contains("tax-invoices") -> "TAX_INVOICE"
+                segment == "orders" && route.contains("shipment") -> "SHIPPING"
                 segment == "orders" -> "ORDER"
+                segment == "payments" -> "PAYMENT"
+                segment == "shipping" -> "SHIPPING"
                 else -> "OPERATION"
             }
         }
@@ -78,7 +89,10 @@ class OperationAuditAspect(
         }
         val actorId = (SecurityContextHolder.getContext().authentication?.principal as? Jwt)?.subject?.let(::uuidOrNull)
         val traceId = MDC.get(Constant.KEY_TRACE_ID)?.takeIf { it.length <= 64 && TRACE_ID_PATTERN.matches(it) }
-        return OperationAuditEventDto(actorId, action, resourceType, routeId ?: resultId, traceId, Instant.now())
+        return OperationAuditEventDto(
+            actorId, action, resourceType, routeId ?: resultId, traceId, Instant.now(),
+            change?.beforeValues, change?.afterValues, change?.reason,
+        )
     }
 
     private fun uuidOrNull(value: String): UUID? = runCatching { UUID.fromString(value) }.getOrNull()

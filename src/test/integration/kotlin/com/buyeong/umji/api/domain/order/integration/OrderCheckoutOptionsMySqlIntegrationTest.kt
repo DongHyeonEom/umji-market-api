@@ -442,8 +442,8 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val order = orders.create(accountId, addressId, false, false).single()
         val operatorId = createAccount()
 
-        payments.updateStatus(order.id, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId)
-        payments.updateStatus(order.id, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId)
+        payments.updateStatus(order.id, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId, "부분 입금 확인 테스트")
+        payments.updateStatus(order.id, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId, "중복 요청 테스트")
         shipments.prepareOrder(order.id)
         val trackingNumber = "TRACK-${UUID.randomUUID()}"
         shipments.registerTracking(order.id, "DAESIN", trackingNumber, operatorId)

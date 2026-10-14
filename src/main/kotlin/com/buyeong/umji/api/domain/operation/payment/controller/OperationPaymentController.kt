@@ -33,7 +33,7 @@ class OperationPaymentController(
 ) {
     @Operation(summary = "결제 대기 목록 조회", description = "결제 대기 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping
-    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_WRITE')")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_READ')")
     fun queue(
         @Parameter(description = "조회할 상태 코드") @RequestParam(required = false) status: String?,
         @Parameter(description = "조회할 페이지 번호(0부터 시작)") @RequestParam(defaultValue = "0") @Min(0) page: Int,
@@ -46,5 +46,5 @@ class OperationPaymentController(
     fun updateStatus(
         @Parameter(description = "대상 주문 공개 식별자(UUID)") @PathVariable orderId: UUID,
         @Valid @RequestBody request: PaymentStatusRequest,
-    ): PaymentStatusResponse = payments.updateStatus(orderId, request.status, currentAccounts.activeAccountPublicId()).toResponse()
+    ): PaymentStatusResponse = payments.updateStatus(orderId, request.status, currentAccounts.activeAccountPublicId(), request.reason).toResponse()
 }
