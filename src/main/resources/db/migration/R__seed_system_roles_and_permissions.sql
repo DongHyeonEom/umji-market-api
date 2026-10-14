@@ -16,6 +16,7 @@ INSERT INTO permission (code, name) VALUES
     ('ADMIN_ACCOUNT_MANAGE', '관리자 계정 관리'),
     ('ADMIN_AUDIT_READ', '운영 감사 로그 조회'),
     ('SHIPMENT_WRITE', '배송 정보 변경'),
+    ('SHIPMENT_ASSIGN', '브랜드 배송 담당자 배정'),
     ('SALES_GROUP_CREATE', '영업 담당 그룹 생성'),
     ('SALES_GROUP_READ', '영업 담당 그룹 조회'),
     ('SALES_GROUP_ASSIGN', '영업 담당자·인센티브율 배정'),

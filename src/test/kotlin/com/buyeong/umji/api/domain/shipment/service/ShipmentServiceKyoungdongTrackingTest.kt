@@ -5,6 +5,7 @@ import com.buyeong.umji.api.domain.notification.service.NotificationEventService
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.domain.shipment.integration.tracking.KyoungdongTrackingClient
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
+import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.mockk.every
@@ -18,6 +19,7 @@ class ShipmentServiceKyoungdongTrackingTest {
     fun `customer order refresh marks a Kyoungdong shipment delivered from latest carrier scan`() {
         val candidate = ShipmentTrackingCandidateDto(
             orderId = UUID.randomUUID(),
+            packageId = UUID.randomUUID(),
             status = "IN_TRANSIT",
             carrierCode = "KDEXP",
             trackingNumber = "1501602023302",
@@ -35,6 +37,7 @@ class ShipmentServiceKyoungdongTrackingTest {
             inventory = mockk<InventoryService>(relaxed = true),
             tracking = tracking,
             notifications = mockk<NotificationEventService>(relaxed = true),
+            brandShipping = mockk<BrandShippingService>(relaxed = true),
         )
 
         assertThat(service.refreshForCustomer(UUID.randomUUID())).isEqualTo(1)

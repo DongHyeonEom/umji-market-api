@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V50이 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V51이 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -570,6 +570,44 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
+    ORDER_SHIPMENT_PACKAGE["ORDER_SHIPMENT_PACKAGE · 주문별 브랜드 단위 송장"] {
+        BIGINT id PK "송장 내부 ID"
+        BINARY public_id UK "API 공개 UUID"
+        BIGINT order_shipment_id FK "주문 배송 ID"
+        BIGINT brand_id FK "단일 브랜드, nullable for migrated legacy"
+        VARCHAR carrier_code "택배사 코드"
+        VARCHAR tracking_number "송장번호"
+        BIGINT actual_shipping_cost "실제 배송비, nullable"
+        VARCHAR status "IN_TRANSIT 또는 DELIVERED"
+        BIGINT processed_by FK "최근 처리 운영자, nullable"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    ORDER_SHIPMENT_PACKAGE_ITEM["ORDER_SHIPMENT_PACKAGE_ITEM · 송장 품목·박스 비용 snapshot"] {
+        BIGINT id PK "송장 품목 내부 ID"
+        BIGINT package_id FK "송장 ID"
+        BIGINT order_item_id FK "주문 품목 ID"
+        INT box_quantity "배정 박스 수량"
+        BIGINT amount_per_box_snapshot "등록 당시 박스 기본 비용, nullable"
+        BIGINT line_shipping_cost_snapshot "등록 당시 품목별 비용, nullable"
+    }
+    BRAND_SHIPPING_RATE["BRAND_SHIPPING_RATE · 브랜드·SKU·택배사별 기본 운송비"] {
+        BIGINT id PK "기본 운송비 내부 ID"
+        BIGINT brand_id FK "브랜드 ID"
+        BIGINT sku_id FK "SKU ID"
+        VARCHAR carrier_code "택배사 코드"
+        BIGINT amount_per_box "박스당 기본 운송비"
+        BIGINT updated_by_account_id FK "수정 운영자"
+        DATETIME created_at "생성 시각"
+        DATETIME updated_at "수정 시각"
+    }
+    BRAND_SHIPPING_MANAGER_ASSIGNMENT["BRAND_SHIPPING_MANAGER_ASSIGNMENT · 브랜드 배송 담당 배정"] {
+        BIGINT id PK "배정 내부 ID"
+        BIGINT brand_id FK "브랜드 ID"
+        BIGINT account_id FK "담당 계정 ID"
+        BIGINT assigned_by_account_id FK "배정 운영자 ID"
+        DATETIME created_at "배정 시각"
+    }
     NOTIFICATION_OUTBOX["NOTIFICATION_OUTBOX · 업무 이벤트 알림 발송 대기열"] {
         BIGINT id PK "내부 outbox ID"
         BINARY public_id UK "고유 event ID"
@@ -700,6 +738,16 @@ erDiagram
     ORDER_PAYMENT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : tracks
     ACCOUNT ||--o{ ORDER_PAYMENT_STATUS_HISTORY : processes
     PURCHASE_ORDER ||--o| ORDER_SHIPMENT : shipment
+    ORDER_SHIPMENT ||--o{ ORDER_SHIPMENT_PACKAGE : contains
+    ORDER_SHIPMENT_PACKAGE ||--|{ ORDER_SHIPMENT_PACKAGE_ITEM : allocates
+    ORDER_ITEM ||--o{ ORDER_SHIPMENT_PACKAGE_ITEM : shipped_as
+    BRAND ||--o{ ORDER_SHIPMENT_PACKAGE : scopes
+    BRAND ||--o{ BRAND_SHIPPING_RATE : configures
+    PRODUCT_SKU ||--o{ BRAND_SHIPPING_RATE : prices
+    BRAND ||--o{ BRAND_SHIPPING_MANAGER_ASSIGNMENT : assigns
+    ACCOUNT ||--o{ BRAND_SHIPPING_MANAGER_ASSIGNMENT : manages
+    ACCOUNT ||--o{ BRAND_SHIPPING_MANAGER_ASSIGNMENT : assigns_by
+    ACCOUNT ||--o{ BRAND_SHIPPING_RATE : updates
     PURCHASE_ORDER ||--o{ NOTIFICATION_OUTBOX : generates
     ACCOUNT ||--o{ NOTIFICATION_DEVICE_TOKEN : owns
     ACCOUNT ||--o{ ORDER_SHIPMENT : processes
@@ -791,6 +839,7 @@ erDiagram
 | V48 | 주문별 영업 인센티브 snapshot·정산 이벤트 원장 및 전체 관리자 정산 permission 추가 |
 | V49 | 주문 출처·생성 관리자, 수기 세금계산서 발행 metadata와 append-only 이벤트 추가 |
 | V50 | Organization 프로필로 이관 완료된 레거시 `business_profile` 제거 |
+| V51 | 브랜드 담당자 배정·브랜드별 SKU/택배사 운송비·다중 송장 및 송장 품목 비용 snapshot 추가 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

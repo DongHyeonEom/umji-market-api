@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
 import java.util.UUID
+import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageResponse
 
 @Schema(description = "주문 당시 상품·가격·결제·배송 정보를 포함하는 주문 응답")
 data class OrderResponse(
@@ -92,4 +93,8 @@ data class OrderResponse(
 
     @field:Schema(description = "판매 Organization 공개 식별자", format = "uuid", type = "string")
     val sellerOrganizationId: UUID? = null,
+
+    @field:ArraySchema(schema = Schema(implementation = ShipmentPackageResponse::class))
+    @field:Schema(description = "주문에 등록된 송장 목록", type = "array", required = true)
+    val shipments: List<ShipmentPackageResponse> = emptyList(),
 )

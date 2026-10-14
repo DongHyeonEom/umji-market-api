@@ -6,10 +6,16 @@ import com.buyeong.umji.api.domain.notification.service.NotificationEventService
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentChangeDto
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentRecordDto
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentPackageDto
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentPackageItemDto
+import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageRequest
+import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentPackageEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentPackageItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,6 +28,7 @@ class ShipmentService(
     private val inventory: InventoryService,
     private val tracking: OfficialCarrierTrackingGateway,
     private val notifications: NotificationEventService,
+    private val brandShipping: BrandShippingService,
 ) {
     fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChangeDto {
         val carrier = carrierCode.trim()
@@ -29,6 +36,7 @@ class ShipmentService(
         require(carrier.isNotEmpty() && carrier.length <= MAX_CARRIER_LENGTH) { "택배사 코드는 1~80자여야 합니다." }
         require(tracking.isNotEmpty() && tracking.length <= MAX_TRACKING_LENGTH) { "송장번호는 1~100자여야 합니다." }
         val current = shipments.findForUpdate(orderId)?.toRecord() ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
+        require(shipments.findForUpdate(orderId)?.packages.isNullOrEmpty()) { "개별 송장 API를 사용해야 하는 주문입니다." }
         if (current.status == IN_TRANSIT && current.carrierCode == carrier && current.trackingNumber == tracking) {
             return current.toChange(false)
         }
@@ -41,6 +49,7 @@ class ShipmentService(
 
     fun markDelivered(orderId: UUID, operatorId: UUID): ShipmentChangeDto {
         val current = shipments.findForUpdate(orderId)?.toRecord() ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
+        require(shipments.findForUpdate(orderId)?.packages.isNullOrEmpty()) { "개별 송장 API를 사용해야 하는 주문입니다." }
         if (current.status == DELIVERED) return current.toChange(false)
         require(current.status == IN_TRANSIT) { "배송 중인 주문만 배송 완료 처리할 수 있습니다." }
         val entity = requireNotNull(shipments.findForUpdate(orderId))
@@ -48,6 +57,115 @@ class ShipmentService(
         notifications.record(NotificationEventType.SHIPMENT_DELIVERED, orderId)
         return delivered.toChange(true)
     }
+
+    fun registerPackage(orderId: UUID, expectedBrandId: UUID, request: ShipmentPackageRequest, operatorId: UUID): ShipmentPackageDto {
+        val shipment = shipments.findForUpdate(orderId) ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
+        require(shipment.status == PREPARING || shipment.status == IN_TRANSIT) { "배송 준비 중인 주문만 송장을 등록할 수 있습니다." }
+        val carrier = request.carrierCode.trim().uppercase()
+        val trackingNumber = request.trackingNumber.trim()
+        require(carrier.isNotEmpty() && carrier.length <= MAX_CARRIER_LENGTH) { "택배사 코드는 1~80자여야 합니다." }
+        require(trackingNumber.isNotEmpty() && trackingNumber.length <= MAX_TRACKING_LENGTH) { "송장번호는 1~100자여야 합니다." }
+        require(request.items.map { it.orderItemId }.distinct().size == request.items.size) { "송장 내 같은 품목을 중복 지정할 수 없습니다." }
+
+        val orderItems = request.items.map { requested ->
+            val item = shipment.order.items.firstOrNull { it.publicId == requested.orderItemId }
+                ?: throw ItemNotFoundException("주문 품목을 찾을 수 없습니다.")
+            require(requested.boxQuantity > 0) { "박스 수량은 1 이상이어야 합니다." }
+            require(shipments.allocatedBoxQuantity(requested.orderItemId) + requested.boxQuantity <= item.quantity) {
+                "이미 다른 송장에 등록된 수량을 초과했습니다."
+            }
+            item to requested.boxQuantity
+        }
+        val brand = orderItems.map { it.first.sku.product.brand }.distinctBy { it?.id }.singleOrNull()
+            ?: throw IllegalArgumentException("송장 하나에는 한 브랜드의 품목만 등록할 수 있습니다.")
+        val brandId = brand.publicId ?: throw IllegalArgumentException("브랜드가 지정되지 않은 품목은 배송 관리자 송장에 등록할 수 없습니다.")
+        require(brandId == expectedBrandId) { "송장 브랜드가 요청 경로와 일치하지 않습니다." }
+        if (!brandShipping.canManageBrandOrAdmin(brandId, operatorId)) {
+            throw org.springframework.security.access.AccessDeniedException("담당 브랜드 품목만 송장에 등록할 수 있습니다.")
+        }
+
+        var estimatedCost = 0L
+        var completeRateSet = true
+        val lineSnapshots = orderItems.map { (item, quantity) ->
+            val rate = brandShipping.rate(brandId, requireNotNull(item.sku.publicId), carrier)
+            val lineAmount = rate?.let { Math.multiplyExact(it.amountPerBox, quantity.toLong()) }
+            if (lineAmount == null) completeRateSet = false else estimatedCost = Math.addExact(estimatedCost, lineAmount)
+            Triple(item, quantity, rate?.amountPerBox to lineAmount)
+        }
+        val actualCost = request.actualShippingCost ?: estimatedCost.takeIf { completeRateSet }
+            ?: throw IllegalArgumentException("기본 운송비가 없는 품목이 있어 실제 운송비 입력이 필요합니다.")
+        require(actualCost >= 0) { "실제 운송비는 0원 이상이어야 합니다." }
+
+        val parcel = OrderShipmentPackageEntity().apply {
+            this.brand = brand
+            carrierCode = carrier
+            this.trackingNumber = trackingNumber
+            actualShippingCost = actualCost
+            status = IN_TRANSIT
+        }
+        parcel.items = lineSnapshots.map { (item, quantity, snapshot) ->
+                OrderShipmentPackageItemEntity().apply {
+                    shipmentPackage = parcel
+                    orderItem = item
+                    boxQuantity = quantity
+                    amountPerBoxSnapshot = snapshot.first
+                    lineShippingCostSnapshot = snapshot.second
+                }
+            }.toMutableList()
+        val saved = shipments.registerPackage(shipment, parcel, operatorId)
+        notifications.record(NotificationEventType.SHIPMENT_IN_TRANSIT, orderId)
+        return saved.toDto()
+    }
+
+    fun markPackageDelivered(orderId: UUID, packageId: UUID, operatorId: UUID): ShipmentPackageDto {
+        val parcel = shipments.findPackageForUpdate(packageId) ?: throw ItemNotFoundException("송장 정보를 찾을 수 없습니다.")
+        require(parcel.shipment.order.publicId == orderId) { "송장이 주문에 속하지 않습니다." }
+        val brandId = parcel.brand?.publicId ?: throw ItemNotFoundException("브랜드가 지정된 송장을 찾을 수 없습니다.")
+        if (!brandShipping.canManageBrandOrAdmin(brandId, operatorId)) {
+            throw org.springframework.security.access.AccessDeniedException("담당 브랜드의 송장만 변경할 수 있습니다.")
+        }
+        val previousStatus = parcel.shipment.status
+        val saved = shipments.markPackageDelivered(parcel, operatorId)
+        if (saved.shipment.status == DELIVERED && previousStatus != DELIVERED) {
+            notifications.record(NotificationEventType.SHIPMENT_DELIVERED, orderId)
+        }
+        return saved.toDto()
+    }
+
+    fun operationPackages(operatorId: UUID): List<ShipmentPackageDto> {
+        val all = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication?.authorities
+            ?.any { it.authority == "SHIPMENT_ASSIGN" } == true
+        return shipments.operationPackages(brandShipping.assignedBrandIds(operatorId), all).map { it.toDto() }
+    }
+
+    fun updateActualCost(packageId: UUID, amount: Long, operatorId: UUID): ShipmentPackageDto {
+        val parcel = shipments.findPackageForUpdate(packageId) ?: throw ItemNotFoundException("송장 정보를 찾을 수 없습니다.")
+        val brandId = parcel.brand?.publicId ?: throw ItemNotFoundException("브랜드가 지정된 송장을 찾을 수 없습니다.")
+        if (!brandShipping.canManageBrandOrAdmin(brandId, operatorId)) {
+            throw org.springframework.security.access.AccessDeniedException("담당 브랜드 송장만 수정할 수 있습니다.")
+        }
+        return shipments.updateActualCost(parcel, amount, operatorId).toDto()
+    }
+
+    private fun OrderShipmentPackageEntity.toDto() = ShipmentPackageDto(
+        orderId = requireNotNull(shipment.order.publicId),
+        packageId = requireNotNull(publicId),
+        brandId = brand?.publicId,
+        status = status,
+        carrierCode = carrierCode,
+        trackingNumber = trackingNumber,
+        actualShippingCost = actualShippingCost,
+        items = items.map { item ->
+            ShipmentPackageItemDto(
+                orderItemId = requireNotNull(item.orderItem.publicId),
+                skuId = requireNotNull(item.orderItem.sku.publicId),
+                skuName = item.orderItem.skuName,
+                boxQuantity = item.boxQuantity,
+                amountPerBox = item.amountPerBoxSnapshot,
+                lineShippingCost = item.lineShippingCostSnapshot,
+            )
+        },
+    )
 
     fun refreshForCustomer(customerId: UUID): Int = shipments.trackingCandidatesForCustomer(customerId).count { candidate ->
         synchronize(candidate).changed

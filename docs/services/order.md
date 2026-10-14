@@ -299,7 +299,7 @@ flowchart TD
 
 배송 상태는 `READY_TO_SHIP`, `PREPARING`, `IN_TRANSIT`, `DELIVERED`로 결제 상태와 분리해 관리함.<br>
 평일 15시 배송 준비 배치가 재고를 확정하고 `PREPARING`으로 변경. 배송 관리자가 택배사와 송장번호를 등록하면 `IN_TRANSIT`으로 변경.<br>
-고객은 주문 목록·상세 조회에서 배송 상태와 송장 정보를 확인함.<br>
+고객은 주문 목록·상세 조회에서 배송 상태와 복수 송장 목록을 확인함. 단일 송장 호환 필드는 유지되며 새 출고 정보는 `shipments` 목록에 포함.<br>
 대신택배·경동택배·천일택배의 공식 조회 URL과 송장번호를 사용자 주문 응답에서 제공.<br>
 확인한 조회 URL은 대신택배 `https://www.ds3211.co.kr/freight/internalFreightSearch.ht?billno=`, 경동택배 `https://kdexp.com/service/delivery/etc/delivery.do?barcode=`, 천일택배 `https://www.chunil.co.kr/HTrace/HTrace.jsp?transNo=`.<br>
 세 택배사는 고객이 주문 목록을 조회할 때 본인 구매자 그룹 주문 중 배송완료 전 송장에 대해서만 상태를 확인.<br>
@@ -307,17 +307,21 @@ flowchart TD
 경동택배 서버 상태 조회는 신규 공식 화면의 JSON 조회 경로 `/service/delivery/new/ajax_basic.do?barcode={운송장번호}`를 사용. `result=suc` 응답의 `data.scanList`는 오래된 이력부터 최신 이력 순이며 마지막 `scanTypeNm`이 정확히 `배송완료`이면 완료로 전환하고, 진행 이력이 있으면 배송중으로 유지.<br>
 임의 번호와 다른 택배사 예시 번호는 경동택배 경로에서 `result=fail`을 반환하므로 유효 송장 실조회 결과로 간주하지 않음. 조회 불가·실패는 기존 배송 상태 유지.<br>
 목록 조회는 택배사별 상태를 먼저 갱신한 뒤 최신 상태와 공식 조회 링크를 반환. 고객이 링크를 선택하면 WebView에서 택배사 공식 조회 화면 표시.<br>
-`PUT /api/operation/orders/{orderId}/shipment/tracking` 및 `POST /api/operation/orders/{orderId}/shipment/delivered`는 `SHIPMENT_WRITE` 권한 운영자만 호출 가능.<br>
+`PUT /api/operation/orders/{orderId}/shipment/tracking` 및 `POST /api/operation/orders/{orderId}/shipment/delivered`는 레거시 단일 송장 호환 경로이며 package가 있는 주문에서는 거부.<br>
+신규 송장·배송완료·실제비용 변경 및 관리자 조회 API는 배송 권한과 브랜드 scope를 확인.<br>
 입금·취소·휴무일 운영 API는 `ORDER_WRITE` 권한을 요구. 송장·배송 상태 변경은 `SHIPMENT_WRITE` 권한을 요구.<br>
 
 ## 미구현 설계 — 품목 원가·택배 운송비·순이익
 
-다음 흐름은 순이익 및 브랜드 범위 배송관리의 목표 설계이며 현재 API 동작이 아님.<br>
-품목 원가는 품목별 사입가로 관리하고, 택배 기본 운송비는 브랜드 품목과 택배사 조합별로 관리하는 방향.<br>
-브랜드 배송 담당자가 자기 담당 브랜드의 품목·택배사별 기본 운송비를 설정. 송장 등록 시 택배사를 선택하면 해당 조합의 기본 운송비를 주문 배송비에 채움.<br>
-기본 운송비가 없거나 실제 청구액과 다르면 담당자가 주문별 실제 운송비를 입력·수정하고 송장번호와 함께 저장. 기본 운송비 변경은 이미 저장된 주문 비용을 소급 변경하지 않음.<br>
-관리자는 브랜드 범위에 제한받지 않고 전체 주문의 배송 상태와 기본·실제 운송비를 조회하는 목표. 관리자에게 비용 수정 권한을 줄지는 구현 전 결정.<br>
-순이익 집계는 주문 시점 품목 판매액·사입가 snapshot 및 확정된 실제 배송비를 기준으로 집계. 세금·환불·취소·부분수량 반영 공식은 확정 전.<br>
+배송 담당자 배정, 브랜드별 기본 운송비, 주문 내 복수 송장 등록·비용 수정·전체 배송 조회 흐름을 제공. 품목 사입가와 순이익 집계는 미구현.<br>
+한 주문에는 복수 송장을 등록할 수 있으며, 송장 하나에는 한 브랜드의 여러 주문 품목·박스 수량을 연결. 품목 수량이 여러 송장에 중복 배정되지 않도록 주문 배송 행을 잠그고 검증.<br>
+담당자는 배정 브랜드 범위에서 품목·택배사별 박스 기본 운송비를 설정하고 배송 정보를 변경. 관리자는 전체 브랜드 배송 조회 및 실제 비용 수정 가능.<br>
+송장 등록 시 브랜드·품목·택배사별 박스 비용과 수량을 합산하고, 누락된 기본 비용이 있으면 실제 운송비 직접 입력을 요구. 등록 당시의 박스별 기준 운송비 snapshot과 송장 실제 비용을 분리 저장.<br>
+모든 주문 품목 수량이 송장에 배정되고 모든 송장이 배송 완료인 경우 주문 배송 상태를 `DELIVERED`로 전환. 송장별 운송비 변경은 비용 snapshot을 소급 변경하지 않음.<br>
+운영 API는 `SHIPMENT_ASSIGN`, `SHIPMENT_READ`, `SHIPMENT_WRITE` 권한과 담당 브랜드 범위를 서버에서 확인.<br>
+`POST /api/operation/orders/{orderId}/shipment/brands/{brandId}/packages`는 송장을 추가하고, `POST /api/operation/orders/{orderId}/shipment/packages/{packageId}/delivered`는 개별 송장을 배송 완료 처리. `GET /api/operation/shipping/packages`는 관리자 전체 또는 담당자의 배정 브랜드 송장 목록을 반환하고, `PUT /api/operation/shipping/packages/{packageId}/cost`는 실제 비용 수정.<br>
+브랜드 담당자는 `/api/operation/shipping/brands/{brandId}/managers` 및 `/rates`를 통한 담당자·기본 운송비 운영 대상으로 구성.<br>
+순이익 집계는 주문 시점 품목 판매액·사입가 snapshot 및 실제 배송비를 기준으로 구현 예정. 세금·환불·취소·부분수량 반영 공식은 미확정.<br>
 
 ```mermaid
 flowchart TD
@@ -328,18 +332,21 @@ flowchart TD
     CONFIG --> MATRIX[(브랜드·품목·택배사 기본 운송비표)]
     ORDER[판매자 주문] --> ITEMS[주문 품목·판매 금액 snapshot]
     ITEMS --> COST[품목별 사입가 snapshot]
-    ORDER --> SHIPREADY[배송 준비 및 브랜드 범위 품목 확인]
-    SHIPREADY --> PICK[담당자가 택배사 선택]
-    PICK --> LOOKUP[브랜드·품목·택배사 기본 운송비 조회]
+    ORDER --> SHIPREADY[주문 배송 준비 및 주문 품목 확인]
+    SHIPREADY --> BOX[브랜드 담당자가 송장별 품목·박스 수량 등록]
+    BOX --> ONEBRAND{송장 내 품목 브랜드가 하나인가?}
+    ONEBRAND -->|아니오| REJECT[송장 등록 거부]
+    ONEBRAND -->|예| PICK[송장별 택배사 선택]
+    PICK --> LOOKUP[브랜드·품목·택배사별 박스 운송비 조회]
     MATRIX --> LOOKUP
     LOOKUP --> FOUND{기본 운송비 존재}
-    FOUND -->|예| PREFILL[주문 배송비에 기본값 채움]
-    FOUND -->|아니오| INPUT[담당자가 운송비 입력]
-    PREFILL --> REVIEW[담당자가 실제 운송비 확인·수정]
+    FOUND -->|예| PREFILL[송장 품목·박스 수량에 따른 기본값 채움]
+    FOUND -->|아니오| INPUT[담당자가 송장 운송비 입력]
+    PREFILL --> REVIEW[담당자가 송장별 실제 운송비 확인·수정]
     INPUT --> REVIEW
-    REVIEW --> TRACK[송장번호·택배사·실제 운송비 저장]
-    TRACK --> STATUS[배송 상태 IN_TRANSIT]
-    TRACK --> SNAP[(주문별 실제 비용 snapshot)]
+    REVIEW --> TRACK[송장별 택배사·송장번호·실제 운송비 저장]
+    TRACK --> STATUS[송장별 배송 상태 IN_TRANSIT]
+    TRACK --> SNAP[(송장별 실제 비용 snapshot)]
     ADMIN --> ALL[전체 브랜드 배송 상태·비용 조회]
     STATUS --> ALL
     SNAP --> ALL
@@ -348,5 +355,5 @@ flowchart TD
     SNAP --> PROFIT
 ```
 
-현재 주문은 판매 Organization별로 생성되고 배송 정보는 주문당 하나의 `order_shipment`에 저장됨. 한 주문에 여러 브랜드 품목이 포함될 때 브랜드별 권한·출고·송장·운송비를 어떤 단위로 적용할지 구현 전에 확정 필요.<br>
-주문 품목의 사입가 이력·주문 시점 원가 snapshot, 브랜드별 담당자 배정, 브랜드·품목·택배사 기본 비용표, 주문별 실제 운송비 snapshot 및 집계 API는 미구현.<br>
+V51부터 주문당 하나의 `order_shipment` 아래 복수 `order_shipment_package` 송장을 저장하고, `order_shipment_package_item`으로 주문 품목·박스 수량을 연결. 한 송장 내 브랜드 혼합은 허용하지 않음.<br>
+품목 사입가·주문 시점 원가 snapshot과 순이익 집계는 미구현.<br>

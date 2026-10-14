@@ -3,6 +3,8 @@ package com.buyeong.umji.api.domain.operation.shipment.controller
 import com.buyeong.umji.api.domain.auth.service.CurrentAccountService
 import com.buyeong.umji.api.domain.shipment.model.ShipmentResponse
 import com.buyeong.umji.api.domain.shipment.model.ShipmentTrackingRequest
+import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageRequest
+import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageResponse
 import com.buyeong.umji.api.domain.shipment.model.toResponse
 import com.buyeong.umji.api.domain.shipment.service.ShipmentService
 import io.swagger.v3.oas.annotations.Operation
@@ -44,5 +46,27 @@ class OperationShipmentController(
     fun markDelivered(@Parameter(description = "대상 주문 공개 식별자(UUID)") @PathVariable orderId: UUID): ShipmentResponse = shipments.markDelivered(
         orderId,
         currentAccounts.activeAccountPublicId(),
+    ).toResponse()
+
+    @Operation(summary = "주문 송장 추가", description = "한 브랜드 품목으로 구성된 송장을 주문에 추가")
+    @PostMapping("/brands/{brandId}/packages")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_WRITE')")
+    fun registerPackage(
+        @PathVariable orderId: UUID,
+        @PathVariable brandId: UUID,
+        @Valid @RequestBody request: ShipmentPackageRequest,
+    ): ShipmentPackageResponse {
+        val result = shipments.registerPackage(orderId, brandId, request, currentAccounts.activeAccountPublicId())
+        return result.toResponse()
+    }
+
+    @Operation(summary = "송장 배송 완료 처리", description = "개별 송장의 배송 완료 상태를 변경")
+    @PostMapping("/packages/{packageId}/delivered")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_WRITE')")
+    fun markPackageDelivered(
+        @PathVariable orderId: UUID,
+        @PathVariable packageId: UUID,
+    ): ShipmentPackageResponse = shipments.markPackageDelivered(
+        orderId, packageId, currentAccounts.activeAccountPublicId(),
     ).toResponse()
 }

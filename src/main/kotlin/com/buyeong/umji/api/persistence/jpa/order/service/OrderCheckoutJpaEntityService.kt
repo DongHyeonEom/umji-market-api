@@ -8,6 +8,8 @@ import com.buyeong.umji.api.domain.order.dto.OrderViewDto
 import com.buyeong.umji.api.domain.order.dto.TaxInvoiceBuyerDto
 import com.buyeong.umji.api.domain.order.dto.TaxInvoiceSnapshotDto
 import com.buyeong.umji.api.domain.order.dto.TaxInvoiceSupplierDto
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentPackageDto
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentPackageItemDto
 import com.buyeong.umji.api.exception.ClientBadRequestException
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.repository.OrganizationMemberRepository
@@ -188,6 +190,27 @@ class OrderCheckoutJpaEntityService(
         shippingAddress2 = shippingAddress2,
         taxInvoiceSnapshot = toTaxInvoiceSnapshot(),
         sellerOrganizationId = items.mapNotNull { it.salesOffer.organization?.publicId }.distinct().singleOrNull(),
+        shipmentPackages = shipment.packages.map { parcel ->
+            ShipmentPackageDto(
+                orderId = requireNotNull(publicId),
+                packageId = requireNotNull(parcel.publicId),
+                brandId = parcel.brand?.publicId,
+                status = parcel.status,
+                carrierCode = parcel.carrierCode,
+                trackingNumber = parcel.trackingNumber,
+                actualShippingCost = parcel.actualShippingCost,
+                items = parcel.items.map { packageItem ->
+                    ShipmentPackageItemDto(
+                        orderItemId = requireNotNull(packageItem.orderItem.publicId),
+                        skuId = requireNotNull(packageItem.orderItem.sku.publicId),
+                        skuName = packageItem.orderItem.skuName,
+                        boxQuantity = packageItem.boxQuantity,
+                        amountPerBox = packageItem.amountPerBoxSnapshot,
+                        lineShippingCost = packageItem.lineShippingCostSnapshot,
+                    )
+                },
+            )
+        },
     )
 
     private fun PurchaseOrderEntity.toTaxInvoiceSnapshot(): TaxInvoiceSnapshotDto? {

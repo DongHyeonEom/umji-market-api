@@ -6,6 +6,7 @@ import com.buyeong.umji.api.domain.notification.service.NotificationEventService
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
+import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
@@ -23,7 +24,8 @@ class ShipmentServiceTest : DescribeSpec({
     val inventory = mockk<InventoryService>(relaxed = true)
     val tracking = mockk<OfficialCarrierTrackingGateway>(relaxed = true)
     val notifications = mockk<NotificationEventService>(relaxed = true)
-    val service = ShipmentService(store, inventory, tracking, notifications)
+    val brandShipping = mockk<BrandShippingService>(relaxed = true)
+    val service = ShipmentService(store, inventory, tracking, notifications, brandShipping)
     val orderId = UUID.randomUUID()
     val reservation = UUID.randomUUID()
     fun entity(status: String, carrier: String? = null, trackingNumber: String? = null) = mockk<OrderShipmentEntity>(relaxed = true) {
@@ -90,7 +92,7 @@ class ShipmentServiceTest : DescribeSpec({
 
     it("고객 주문 목록의 배송완료 송장은 DELIVERED로 전환한다") {
         val customerId = UUID.randomUUID()
-        val candidate = ShipmentTrackingCandidateDto(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
+        val candidate = ShipmentTrackingCandidateDto(orderId, UUID.randomUUID(), "IN_TRANSIT", "DAESIN", "1501602023302")
         every { store.trackingCandidatesForCustomer(customerId) } returns listOf(candidate)
         every { tracking.lookup("DAESIN", candidate.trackingNumber) } returns CarrierTrackingStatus.DELIVERED
         every { store.markDeliveredIfCurrent(candidate) } returns true
@@ -107,9 +109,9 @@ class ShipmentServiceTest : DescribeSpec({
 
     it("택배사 응답이 없으면 배송중 상태를 유지하고 다른 주문도 계속 조회한다") {
         val customerId = UUID.randomUUID()
-        val candidate = ShipmentTrackingCandidateDto(orderId, "IN_TRANSIT", "DAESIN", "1501602023302")
+        val candidate = ShipmentTrackingCandidateDto(orderId, UUID.randomUUID(), "IN_TRANSIT", "DAESIN", "1501602023302")
         val otherOrderId = UUID.randomUUID()
-        val otherCandidate = ShipmentTrackingCandidateDto(otherOrderId, "IN_TRANSIT", "CHUNIL", "72601701177")
+        val otherCandidate = ShipmentTrackingCandidateDto(otherOrderId, UUID.randomUUID(), "IN_TRANSIT", "CHUNIL", "72601701177")
         every { store.trackingCandidatesForCustomer(customerId) } returns listOf(candidate, otherCandidate)
         every { tracking.lookup("DAESIN", candidate.trackingNumber) } returns CarrierTrackingStatus.UNAVAILABLE
         every { tracking.lookup("CHUNIL", otherCandidate.trackingNumber) } returns CarrierTrackingStatus.DELIVERED
