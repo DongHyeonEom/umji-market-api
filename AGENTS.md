@@ -62,7 +62,7 @@ Flutter 앱의 React WebView가 호출하는 Kotlin/Spring Boot 통합 API.<br>
 - PR 제목은 `feat: <English summary>`, `fix: <English summary>`, `test: <English summary>`, `docs: <English summary>` 등 Conventional Commit 형식으로 작성함.
 - dev 병합은 GitHub merge commit 방식을 유지함. PR 제목과 자동 생성 merge commit 제목은 별도 규칙으로 취급함.
 - 기능 브랜치 push 전에 `docs/todo.md`에서 검증된 수용 기준만 완료 처리함.
-- 같은 Task의 자동화 테스트는 수용 기준별로 같은 feature 브랜치에 반영하고, 전체 완료 후 feature 단위 PR 하나로 제출함. 완료·병합된 테스트는 반복하지 않음.
+- 같은 Task의 기능 구현과 자동화 테스트는 같은 feature 브랜치와 PR에 포함하되, 기능 구현 커밋과 테스트 커밋은 분리함. 테스트는 Task당 한 번 실행하며, 테스트 코드와 검증 결과를 별도 `test: <English summary>` 커밋으로 반영함. 완료·병합된 테스트는 반복하지 않음.
 - 이미 진행 중이거나 병합된 기능의 일반 수정은 `dev`에서 작업하고 `fix: <English summary>` 형식으로 커밋함. 수정 범위가 방대하면 `codex/feature/<기존 기능명>-fix` 브랜치와 PR을 사용함.
 - 문서 전용 변경은 `dev`에서 `docs: <English summary>` 형식으로 커밋함.
 - 모든 커밋 메시지는 영문으로 작성함.
