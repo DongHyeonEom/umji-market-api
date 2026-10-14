@@ -7,6 +7,9 @@ import com.buyeong.umji.api.domain.inventory.model.AdjustInventoryRequest
 import com.buyeong.umji.api.domain.inventory.model.InventoryMovementPageResponse
 import com.buyeong.umji.api.domain.inventory.model.InventoryMovementResponse
 import com.buyeong.umji.api.domain.inventory.model.InventoryStockResponse
+import com.buyeong.umji.api.domain.inventory.model.RegisterInventoryCostLotRequest
+import com.buyeong.umji.api.domain.inventory.model.SetInventoryCostLotRequest
+import com.buyeong.umji.api.domain.inventory.model.InventoryCostLotResponse
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -18,6 +21,8 @@ import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -32,6 +37,21 @@ import java.util.UUID
 class OperationInventoryController(
     private val inventoryService: InventoryService,
 ) {
+    @PostMapping("/skus/{skuId}/lots")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'INVENTORY_WRITE')")
+    fun registerLot(@PathVariable skuId: UUID, @Valid @RequestBody request: RegisterInventoryCostLotRequest): InventoryCostLotResponse =
+        inventoryService.registerCostLot(skuId, request.organizationId, request.containerReference, request.quantity, request.totalPurchaseCost).toResponse()
+
+    @GetMapping("/skus/{skuId}/lots")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'INVENTORY_READ')")
+    fun costLots(@PathVariable skuId: UUID, @RequestParam(required = false) organizationId: UUID?): List<InventoryCostLotResponse> =
+        inventoryService.costLots(skuId, organizationId).map { it.toResponse() }
+
+    @PutMapping("/lots/{lotId}/cost")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'INVENTORY_WRITE')")
+    fun setLotCost(@PathVariable lotId: Long, @Valid @RequestBody request: SetInventoryCostLotRequest): InventoryCostLotResponse =
+        inventoryService.setCostLot(lotId, request.totalPurchaseCost).toResponse()
+
     @Operation(summary = "상품 옵션조회", description = "SKU 재고 조회·조정과 변동 이력 관리 API. /skus/{skuId} 경로에서 상품 옵션조회를 수행")
     @GetMapping("/skus/{skuId}")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'INVENTORY_READ')")
@@ -57,6 +77,10 @@ class OperationInventoryController(
     private fun StockViewDto.toResponse() = InventoryStockResponse(
         skuId, skuCode, onHand, reserved, available, safety, unitsPerSale, onHandBoxes, onHandRemainder,
         reservedBoxes, reservedRemainder, availableBoxes, availableRemainder,
+    )
+    private fun com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryCostLotEntity.toResponse() = InventoryCostLotResponse(
+        requireNotNull(id), requireNotNull(sku.publicId), organization?.publicId, containerReference, receivedQuantity,
+        remainingQuantity, reservedQuantity, totalPurchaseCost, totalPurchaseCost?.div(receivedQuantity),
     )
     private fun MovementPageStateDto.toResponse() = InventoryMovementPageResponse(items.map { it.toResponse() }, page, size, totalElements, totalPages)
     private fun MovementStateDto.toResponse() = InventoryMovementResponse(id, sku.id, sku.code, type, delta, referenceType, referenceId, memo, occurredAt)
