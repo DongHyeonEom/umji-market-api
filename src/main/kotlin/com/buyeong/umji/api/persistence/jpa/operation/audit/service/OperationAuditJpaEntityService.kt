@@ -4,6 +4,8 @@ import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEntryDto
 import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditEventDto
 import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditPageDto
 import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditQueryDto
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -14,12 +16,16 @@ import java.util.UUID
 
 @Service
 @Transactional
-class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
+class OperationAuditJpaEntityService(
+    private val jdbc: JdbcTemplate,
+    private val objectMapper: ObjectMapper = ObjectMapper(),
+) {
     fun record(event: OperationAuditEventDto) {
         jdbc.update(
             """INSERT INTO operation_audit_log
-                (actor_public_id, action, resource_type, resource_public_id, request_trace_id, occurred_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (actor_public_id, action, resource_type, resource_public_id, request_trace_id, occurred_at,
+                 before_values_json, after_values_json, reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             event.actorId?.toBytes(),
             event.action,
@@ -27,6 +33,9 @@ class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
             event.resourceId?.toBytes(),
             event.requestTraceId,
             Timestamp.from(event.occurredAt),
+            event.beforeValues?.let(objectMapper::writeValueAsString),
+            event.afterValues?.let(objectMapper::writeValueAsString),
+            event.reason,
         )
     }
 
@@ -53,7 +62,8 @@ class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
         val where = filters.takeIf { it.isNotEmpty() }?.joinToString(" AND ", prefix = " WHERE ").orEmpty()
         val total = jdbc.queryForObject("SELECT COUNT(*) FROM operation_audit_log$where", Long::class.java, *arguments.toTypedArray()) ?: 0L
         val items = jdbc.query(
-            """SELECT id, actor_public_id, action, resource_type, resource_public_id, request_trace_id, occurred_at
+            """SELECT id, actor_public_id, action, resource_type, resource_public_id, request_trace_id, occurred_at,
+                      before_values_json, after_values_json, reason
                 FROM operation_audit_log$where
                 ORDER BY occurred_at DESC, id DESC
                 LIMIT ? OFFSET ?
@@ -67,6 +77,9 @@ class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
                     result.getBytes("resource_public_id")?.toUuid(),
                     result.getString("request_trace_id"),
                     result.getTimestamp("occurred_at").toInstant(),
+                    result.getString("before_values_json")?.let { objectMapper.readValue(it, VALUE_MAP_TYPE) },
+                    result.getString("after_values_json")?.let { objectMapper.readValue(it, VALUE_MAP_TYPE) },
+                    result.getString("reason"),
                 )
             },
             *arguments.plus(query.size).plus(query.page.toLong() * query.size).toTypedArray(),
@@ -83,4 +96,8 @@ class OperationAuditJpaEntityService(private val jdbc: JdbcTemplate) {
 
     private fun UUID.toBytes(): ByteArray = ByteBuffer.allocate(16).putLong(mostSignificantBits).putLong(leastSignificantBits).array()
     private fun ByteArray.toUuid(): UUID = ByteBuffer.wrap(this).let { UUID(it.long, it.long) }
+
+    private companion object {
+        val VALUE_MAP_TYPE = object : TypeReference<Map<String, Any?>>() {}
+    }
 }

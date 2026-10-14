@@ -11,4 +11,7 @@ data class OperationAuditEntryDto(
     val resourceId: UUID?,
     val requestTraceId: String?,
     val occurredAt: Instant,
+    val beforeValues: Map<String, Any?>? = null,
+    val afterValues: Map<String, Any?>? = null,
+    val reason: String? = null,
 )

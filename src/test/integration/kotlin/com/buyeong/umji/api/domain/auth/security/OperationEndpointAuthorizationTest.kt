@@ -27,12 +27,17 @@ import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditPageDto
 import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditService
 import com.buyeong.umji.api.domain.operation.catalog.controller.OperationCatalogController
 import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
+import com.buyeong.umji.api.domain.operation.order.controller.OperationOrderController
 import com.buyeong.umji.api.domain.operation.order.controller.OperationPhoneOrderController
 import com.buyeong.umji.api.domain.operation.order.controller.OperationTaxInvoiceController
+import com.buyeong.umji.api.domain.operation.order.dto.OperationOrderPageDto
+import com.buyeong.umji.api.domain.operation.order.dto.OperationOrderQueryDto
 import com.buyeong.umji.api.domain.operation.order.dto.TaxInvoiceQueueDataDto
+import com.buyeong.umji.api.domain.operation.order.service.OperationOrderService
 import com.buyeong.umji.api.domain.operation.order.service.OperationTaxInvoiceService
 import com.buyeong.umji.api.domain.operation.payment.controller.OperationPaymentController
 import com.buyeong.umji.api.domain.operation.shipment.controller.OperationShipmentController
+import com.buyeong.umji.api.domain.operation.shipment.controller.OperationShipmentSettlementController
 import com.buyeong.umji.api.domain.order.controller.OperationShippingHolidayController
 import com.buyeong.umji.api.domain.order.controller.OrderCancellationController
 import com.buyeong.umji.api.domain.order.dto.AdminPhoneOrderBuyerDto
@@ -49,7 +54,9 @@ import com.buyeong.umji.api.domain.sales.dto.SalesCommissionViewDto
 import com.buyeong.umji.api.domain.sales.service.SalesAssignmentService
 import com.buyeong.umji.api.domain.sales.service.SalesCommissionService
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentChangeDto
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentSettlementDto
 import com.buyeong.umji.api.domain.shipment.service.ShipmentService
+import com.buyeong.umji.api.domain.shipment.service.ShipmentSettlementService
 import com.buyeong.umji.api.exception.DefaultErrorMessageService
 import com.buyeong.umji.api.persistence.jpa.auth.service.AuthenticationJpaEntityService
 import org.junit.jupiter.api.Test
@@ -74,6 +81,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.request.RequestPostProcessor
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Instant
+import java.time.YearMonth
 import java.util.UUID
 
 @WebMvcTest(
@@ -85,7 +94,8 @@ import java.util.UUID
         com.buyeong.umji.api.domain.sales.controller.SalesAssignmentController::class,
         com.buyeong.umji.api.domain.sales.controller.SalesCommissionController::class,
         OrderCancellationController::class, OperationShippingHolidayController::class, OperationPhoneOrderController::class,
-        OperationTaxInvoiceController::class, NotificationDeviceTokenController::class,
+        OperationTaxInvoiceController::class, OperationOrderController::class,
+        OperationShipmentSettlementController::class, NotificationDeviceTokenController::class,
     ],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
@@ -120,6 +130,12 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var payments: PaymentService
+
+    @MockitoBean
+    private lateinit var operationOrders: OperationOrderService
+
+    @MockitoBean
+    private lateinit var shipmentSettlements: ShipmentSettlementService
 
     @MockitoBean
     private lateinit var shipments: ShipmentService
@@ -471,16 +487,48 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
-    fun `payment queue rejects non order write permission`() {
+    fun `payment queue rejects non order read permission`() {
         mockMvc.perform(get("/api/operation/payments").with(authorities("PRODUCT_READ")))
             .andExpect(status().isForbidden)
     }
 
     @Test
-    fun `payment queue accepts order write permission`() {
+    fun `payment queue accepts order read permission`() {
         Mockito.`when`(payments.queue(null, 0, 20)).thenReturn(PaymentQueuePageDto(emptyList(), 0, 20, 0, 0))
-        mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_WRITE")))
+        mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_READ")))
             .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `admin order search accepts order read permission`() {
+        val query = OperationOrderQueryDto(
+            Instant.parse("2025-12-31T15:00:00Z"),
+            Instant.parse("2026-01-31T15:00:00Z"),
+            null, null, null, null, null, 0, 20,
+        )
+        Mockito.`when`(operationOrders.search(query)).thenReturn(OperationOrderPageDto(emptyList(), 0, 20, 0, 0))
+        mockMvc.perform(
+            get("/api/operation/orders")
+                .param("from", "2026-01-01")
+                .param("until", "2026-01-31")
+                .with(authorities("ORDER_READ")),
+        ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `brand monthly shipping settlement accepts shipment read permission`() {
+        val brandId = UUID.randomUUID()
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(shipmentSettlements.monthly(brandId, "2026-01", operatorId, 0, 20)).thenReturn(
+            ShipmentSettlementDto(brandId, "테스트 브랜드", YearMonth.of(2026, 1), 0, 0, 0, 0, emptyList(), emptyList(), 0, 20, 0, 0),
+        )
+        mockMvc.perform(
+            get("/api/operation/shipping/settlements")
+                .param("brandId", brandId.toString())
+                .param("month", "2026-01")
+                .with(authorities("SHIPMENT_READ")),
+        ).andExpect(status().isOk)
     }
 
     @Test
@@ -574,7 +622,7 @@ class OperationEndpointAuthorizationTest(
 
         Mockito.`when`(payments.queue(null, 0, 20)).thenReturn(PaymentQueuePageDto(emptyList(), 0, 20, 0, 0))
         Mockito.`when`(cancellations.queue(0, 20)).thenReturn(CancellationQueuePageDto(emptyList(), 0, 20, 0, 0))
-        mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_WRITE")))
+        mockMvc.perform(get("/api/operation/payments").with(authorities("ORDER_READ")))
             .andExpect(status().isOk)
         mockMvc.perform(get("/api/operation/order-cancellations").with(authorities("ORDER_WRITE")))
             .andExpect(status().isOk)
@@ -602,7 +650,7 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
-    fun `order write permission can search phone order buyers and read invoice queue`() {
+    fun `order write and read permissions protect buyer search and invoice queue`() {
         val buyerId = UUID.randomUUID()
         Mockito.`when`(orders.findAdminPhoneOrderBuyer("01012345678"))
             .thenReturn(AdminPhoneOrderBuyerDto(buyerId, "구매자", "01012345678", UUID.randomUUID(), "구매 조직"))
@@ -610,7 +658,7 @@ class OperationEndpointAuthorizationTest(
 
         mockMvc.perform(get("/api/operation/orders/phone-orders/buyers?phone=01012345678").with(authorities("ORDER_WRITE")))
             .andExpect(status().isOk)
-        mockMvc.perform(get("/api/operation/orders/tax-invoices").with(authorities("ORDER_WRITE")))
+        mockMvc.perform(get("/api/operation/orders/tax-invoices").with(authorities("ORDER_READ")))
             .andExpect(status().isOk)
     }
 

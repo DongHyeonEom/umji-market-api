@@ -15,6 +15,8 @@ import org.springframework.boot.json.JsonParseException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.authorization.AuthorizationDeniedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingRequestHeaderException
 import org.springframework.web.bind.MissingServletRequestParameterException
@@ -45,6 +47,13 @@ class GlobalExceptionHandler(
     @ExceptionHandler(ForbiddenOperationException::class)
     protected fun handleForbiddenOperationException(ex: ForbiddenOperationException): ResponseEntity<ErrorResponse> {
         logger.error("ForbiddenOperationException", ex)
+        val response = ErrorResponse.of(ErrorCode.FORBIDDEN_ERROR, ex.message)
+        return ResponseEntity(response, HttpStatus.FORBIDDEN)
+    }
+
+    @ExceptionHandler(AccessDeniedException::class, AuthorizationDeniedException::class)
+    protected fun handleAccessDeniedException(ex: RuntimeException): ResponseEntity<ErrorResponse> {
+        logger.warn("AccessDeniedException", ex)
         val response = ErrorResponse.of(ErrorCode.FORBIDDEN_ERROR, ex.message)
         return ResponseEntity(response, HttpStatus.FORBIDDEN)
     }

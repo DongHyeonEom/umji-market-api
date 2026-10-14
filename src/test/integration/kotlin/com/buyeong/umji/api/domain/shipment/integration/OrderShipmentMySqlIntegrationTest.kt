@@ -188,7 +188,7 @@ class OrderShipmentMySqlIntegrationTest {
         )
         assertThat(completedCancellation["request_status"]).isEqualTo("CANCELLED")
         assertThat(completedCancellation["processed_at"]).isNotNull()
-        assertThat(payments.updateStatus(orderId, "REFUNDED", operatorId).paymentStatus).isEqualTo("REFUNDED")
+        assertThat(payments.updateStatus(orderId, "REFUNDED", operatorId, "환불 완료").paymentStatus).isEqualTo("REFUNDED")
         assertThat(paymentStatus(orderId)).isEqualTo("REFUNDED")
     }
 

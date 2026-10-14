@@ -26,4 +26,13 @@ data class OperationAuditEntryResponse(
 
     @field:Schema(description = "작업 발생 시각(ISO-8601)", example = "2026-10-04T09:00:00Z", format = "date-time", type = "string", required = true)
     val occurredAt: Instant,
+
+    @field:Schema(description = "허용된 업무 변경 전 값", type = "object")
+    val beforeValues: Map<String, Any?>? = null,
+
+    @field:Schema(description = "허용된 업무 변경 후 값", type = "object")
+    val afterValues: Map<String, Any?>? = null,
+
+    @field:Schema(description = "운영자가 입력한 변경 사유", type = "string")
+    val reason: String? = null,
 )

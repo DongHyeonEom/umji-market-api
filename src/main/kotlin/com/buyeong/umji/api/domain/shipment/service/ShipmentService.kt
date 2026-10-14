@@ -3,15 +3,16 @@ package com.buyeong.umji.api.domain.shipment.service
 import com.buyeong.umji.api.domain.inventory.service.InventoryService
 import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
+import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditChangeContext
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentChangeDto
-import com.buyeong.umji.api.domain.shipment.dto.ShipmentRecordDto
-import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentPackageDto
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentPackageItemDto
-import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageRequest
-import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentRecordDto
+import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
+import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageRequest
+import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentPackageEntity
@@ -29,6 +30,7 @@ class ShipmentService(
     private val tracking: OfficialCarrierTrackingGateway,
     private val notifications: NotificationEventService,
     private val brandShipping: BrandShippingService,
+    private val auditChanges: OperationAuditChangeContext = OperationAuditChangeContext(),
 ) {
     fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChangeDto {
         val carrier = carrierCode.trim()
@@ -43,6 +45,10 @@ class ShipmentService(
         require(current.status == PREPARING || current.status == IN_TRANSIT) { "발송 처리 중인 주문만 송장 정보를 등록할 수 있습니다." }
         val entity = requireNotNull(shipments.findForUpdate(orderId))
         val changed = shipments.update(entity, IN_TRANSIT, carrier, tracking, operatorId).toRecord()
+        auditChanges.capture(
+            mapOf("shippingStatus" to current.status, "carrierCode" to current.carrierCode, "trackingNumber" to current.trackingNumber),
+            mapOf("shippingStatus" to changed.status, "carrierCode" to changed.carrierCode, "trackingNumber" to changed.trackingNumber),
+        )
         notifications.record(NotificationEventType.SHIPMENT_IN_TRANSIT, orderId)
         return changed.toChange(true)
     }
@@ -54,6 +60,7 @@ class ShipmentService(
         require(current.status == IN_TRANSIT) { "배송 중인 주문만 배송 완료 처리할 수 있습니다." }
         val entity = requireNotNull(shipments.findForUpdate(orderId))
         val delivered = shipments.update(entity, DELIVERED, current.carrierCode, current.trackingNumber, operatorId).toRecord()
+        auditChanges.capture(mapOf("shippingStatus" to current.status), mapOf("shippingStatus" to delivered.status))
         notifications.record(NotificationEventType.SHIPMENT_DELIVERED, orderId)
         return delivered.toChange(true)
     }
@@ -104,15 +111,26 @@ class ShipmentService(
             status = IN_TRANSIT
         }
         parcel.items = lineSnapshots.map { (item, quantity, snapshot) ->
-                OrderShipmentPackageItemEntity().apply {
-                    shipmentPackage = parcel
-                    orderItem = item
-                    boxQuantity = quantity
-                    amountPerBoxSnapshot = snapshot.first
-                    lineShippingCostSnapshot = snapshot.second
-                }
-            }.toMutableList()
+            OrderShipmentPackageItemEntity().apply {
+                shipmentPackage = parcel
+                orderItem = item
+                boxQuantity = quantity
+                amountPerBoxSnapshot = snapshot.first
+                lineShippingCostSnapshot = snapshot.second
+            }
+        }.toMutableList()
         val saved = shipments.registerPackage(shipment, parcel, operatorId)
+        auditChanges.capture(
+            beforeValues = mapOf("shippingStatus" to shipment.status),
+            afterValues = mapOf(
+                "packageId" to saved.publicId.toString(),
+                "shippingStatus" to saved.status,
+                "carrierCode" to saved.carrierCode,
+                "trackingNumber" to saved.trackingNumber,
+                "actualShippingCost" to saved.actualShippingCost,
+                "brandId" to saved.brand?.publicId?.toString(),
+            ),
+        )
         notifications.record(NotificationEventType.SHIPMENT_IN_TRANSIT, orderId)
         return saved.toDto()
     }
@@ -125,7 +143,14 @@ class ShipmentService(
             throw org.springframework.security.access.AccessDeniedException("담당 브랜드의 송장만 변경할 수 있습니다.")
         }
         val previousStatus = parcel.shipment.status
+        val previousPackageStatus = parcel.status
         val saved = shipments.markPackageDelivered(parcel, operatorId)
+        if (previousPackageStatus != saved.status) {
+            auditChanges.capture(
+                beforeValues = mapOf("packageStatus" to previousPackageStatus, "shipmentStatus" to previousStatus),
+                afterValues = mapOf("packageStatus" to saved.status, "shipmentStatus" to saved.shipment.status),
+            )
+        }
         if (saved.shipment.status == DELIVERED && previousStatus != DELIVERED) {
             notifications.record(NotificationEventType.SHIPMENT_DELIVERED, orderId)
         }
@@ -138,13 +163,20 @@ class ShipmentService(
         return shipments.operationPackages(brandShipping.assignedBrandIds(operatorId), all).map { it.toDto() }
     }
 
-    fun updateActualCost(packageId: UUID, amount: Long, operatorId: UUID): ShipmentPackageDto {
+    fun updateActualCost(packageId: UUID, amount: Long, operatorId: UUID, reason: String): ShipmentPackageDto {
         val parcel = shipments.findPackageForUpdate(packageId) ?: throw ItemNotFoundException("송장 정보를 찾을 수 없습니다.")
         val brandId = parcel.brand?.publicId ?: throw ItemNotFoundException("브랜드가 지정된 송장을 찾을 수 없습니다.")
         if (!brandShipping.canManageBrandOrAdmin(brandId, operatorId)) {
             throw org.springframework.security.access.AccessDeniedException("담당 브랜드 송장만 수정할 수 있습니다.")
         }
-        return shipments.updateActualCost(parcel, amount, operatorId).toDto()
+        val previousCost = parcel.actualShippingCost
+        val updated = shipments.updateActualCost(parcel, amount, operatorId)
+        auditChanges.capture(
+            beforeValues = mapOf("actualShippingCost" to previousCost),
+            afterValues = mapOf("actualShippingCost" to updated.actualShippingCost),
+            reason = reason,
+        )
+        return updated.toDto()
     }
 
     private fun OrderShipmentPackageEntity.toDto() = ShipmentPackageDto(

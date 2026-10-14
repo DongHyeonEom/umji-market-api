@@ -33,7 +33,7 @@ class PaymentServiceTest : DescribeSpec({
                 payment(orderId, "PENDING_PAYMENT", "PARTIAL_PAYMENT_REVIEW_REQUIRED")
             }
 
-            service.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId).paymentStatus shouldBe "PARTIAL_PAYMENT_REVIEW_REQUIRED"
+            service.updateStatus(orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED", operatorId, "입금 확인").paymentStatus shouldBe "PARTIAL_PAYMENT_REVIEW_REQUIRED"
             verify(exactly = 1) { notifications.record(NotificationEventType.PAYMENT_STATUS_CHANGED, orderId, "PARTIAL_PAYMENT_REVIEW_REQUIRED") }
         }
 
@@ -46,7 +46,7 @@ class PaymentServiceTest : DescribeSpec({
                 payment(orderId, "PAID", "PAYMENT_CONFIRMED")
             }
 
-            service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId).orderStatus shouldBe "PAID"
+            service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId, "입금 확인").orderStatus shouldBe "PAID"
             verify(exactly = 1) { notifications.record(NotificationEventType.PAYMENT_STATUS_CHANGED, orderId, "PAYMENT_CONFIRMED") }
             verify(exactly = 0) { commissions.reverseOrder(any(), any()) }
         }
@@ -56,7 +56,7 @@ class PaymentServiceTest : DescribeSpec({
             clearMocks(notifications)
             every { payments.findForUpdate(orderId) } returns payment(orderId, "PAID", "PAYMENT_CONFIRMED")
 
-            val result = service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId)
+            val result = service.updateStatus(orderId, "PAYMENT_CONFIRMED", operatorId, "중복 요청")
 
             result.changed shouldBe false
             io.mockk.verify(exactly = 0) { payments.saveChange(any(), any(), any()) }
@@ -66,14 +66,14 @@ class PaymentServiceTest : DescribeSpec({
         it("지원하지 않는 결제 상태를 거절한다") {
             clearMocks(payments)
             shouldThrow<IllegalArgumentException> {
-                service.updateStatus(orderId, "NOT_A_STATUS", operatorId)
+                service.updateStatus(orderId, "NOT_A_STATUS", operatorId, "테스트")
             }
         }
 
         it("취소되지 않은 주문은 환불 상태로 변경할 수 없다") {
             clearMocks(payments)
             every { payments.findForUpdate(orderId) } returns payment(orderId, "PAID", "REFUND_PENDING")
-            shouldThrow<IllegalArgumentException> { service.updateStatus(orderId, "REFUNDED", operatorId) }
+            shouldThrow<IllegalArgumentException> { service.updateStatus(orderId, "REFUNDED", operatorId, "테스트") }
         }
 
         it("환불 대기 중에는 인센티브를 취소하지 않고 환불 완료 때 전체 취소한다") {
@@ -84,10 +84,10 @@ class PaymentServiceTest : DescribeSpec({
             every { payments.saveChange(pending, "REFUND_PENDING", operatorId) } returns payment(orderId, "CANCELLED", "REFUND_PENDING")
             every { payments.saveChange(any(), "REFUNDED", operatorId) } returns payment(orderId, "CANCELLED", "REFUNDED")
 
-            service.updateStatus(orderId, "REFUND_PENDING", operatorId)
+            service.updateStatus(orderId, "REFUND_PENDING", operatorId, "환불 검토")
             verify(exactly = 0) { commissions.reverseOrder(any(), any()) }
 
-            service.updateStatus(orderId, "REFUNDED", operatorId)
+            service.updateStatus(orderId, "REFUNDED", operatorId, "환불 완료")
             verify(exactly = 1) { commissions.reverseOrder(orderId, "ORDER_REFUND") }
         }
     }

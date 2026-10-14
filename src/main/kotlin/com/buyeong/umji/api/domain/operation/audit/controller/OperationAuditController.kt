@@ -47,5 +47,8 @@ class OperationAuditController(private val audit: OperationAuditService) {
         resourceId,
         requestTraceId,
         occurredAt,
+        beforeValues,
+        afterValues,
+        reason,
     )
 }

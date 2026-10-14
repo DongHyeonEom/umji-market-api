@@ -28,6 +28,6 @@ class OperationAuditService(private val audit: OperationAuditJpaEntityService) {
     }
 
     private companion object {
-        val RESOURCE_TYPES = setOf("ACCOUNT", "ACCOUNT_ROLE", "CATEGORY", "BRAND", "PRODUCT", "ORDER", "INVENTORY", "OPERATION")
+        val RESOURCE_TYPES = setOf("ACCOUNT", "ACCOUNT_ROLE", "CATEGORY", "BRAND", "PRODUCT", "ORDER", "PAYMENT", "SHIPPING", "TAX_INVOICE", "INVENTORY", "OPERATION")
     }
 }

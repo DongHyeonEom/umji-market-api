@@ -2,6 +2,7 @@ package com.buyeong.umji.api.domain.payment.service
 
 import com.buyeong.umji.api.domain.notification.dto.NotificationEventType
 import com.buyeong.umji.api.domain.notification.service.NotificationEventService
+import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditChangeContext
 import com.buyeong.umji.api.domain.payment.dto.PaymentQueueItemDto
 import com.buyeong.umji.api.domain.payment.dto.PaymentQueuePageDto
 import com.buyeong.umji.api.domain.payment.dto.PaymentRecordDto
@@ -22,6 +23,7 @@ class PaymentService(
     private val payments: OrderPaymentJpaEntityService,
     private val notifications: NotificationEventService,
     private val salesCommissions: SalesCommissionService,
+    private val auditChanges: OperationAuditChangeContext = OperationAuditChangeContext(),
 ) {
     fun queue(status: String?, page: Int, size: Int): PaymentQueuePageDto {
         require(status == null || status in PAYMENT_STATUSES) { "유효하지 않은 결제 상태입니다." }
@@ -39,7 +41,7 @@ class PaymentService(
     }
 
     @Transactional
-    fun updateStatus(orderId: UUID, status: String, operatorId: UUID): PaymentStatusChangeDto {
+    fun updateStatus(orderId: UUID, status: String, operatorId: UUID, reason: String): PaymentStatusChangeDto {
         require(status in PAYMENT_STATUSES) { "유효하지 않은 결제 상태입니다." }
         val payment = payments.findForUpdate(orderId) ?: throw ItemNotFoundException("결제를 찾을 수 없습니다.")
         val current = PaymentRecordDto(requireNotNull(payment.order.publicId), payment.order.status, payment.status)
@@ -57,6 +59,12 @@ class PaymentService(
         if (current.paymentStatus == status) {
             return PaymentStatusChangeDto(current.orderId, current.orderStatus, current.paymentStatus, false)
         }
+
+        auditChanges.capture(
+            beforeValues = mapOf("orderStatus" to current.orderStatus, "paymentStatus" to current.paymentStatus),
+            afterValues = mapOf("orderStatus" to current.orderStatus, "paymentStatus" to status),
+            reason = reason,
+        )
 
         val updatedPayment = payments.saveChange(payment, status, operatorId)
         if (status == REFUNDED) {

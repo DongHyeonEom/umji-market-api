@@ -32,6 +32,9 @@ class OperationShipmentPackageController(
         @PathVariable packageId: UUID,
         @Valid @RequestBody request: UpdateShipmentPackageCostRequest,
     ): ShipmentPackageResponse = shipments.updateActualCost(
-        packageId, request.actualShippingCost, currentAccounts.activeAccountPublicId(),
+        packageId,
+        request.actualShippingCost,
+        currentAccounts.activeAccountPublicId(),
+        request.reason,
     ).toResponse()
 }
