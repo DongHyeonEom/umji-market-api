@@ -102,6 +102,7 @@ class ShipmentService(
         val actualCost = request.actualShippingCost ?: estimatedCost.takeIf { completeRateSet }
             ?: throw IllegalArgumentException("기본 운송비가 없는 품목이 있어 실제 운송비 입력이 필요합니다.")
         require(actualCost >= 0) { "실제 운송비는 0원 이상이어야 합니다." }
+        val allocatedFreight = splitAmount(actualCost, orderItems.map { requireNotNull(it.first.id) })
 
         val parcel = OrderShipmentPackageEntity().apply {
             this.brand = brand
@@ -116,7 +117,7 @@ class ShipmentService(
                 orderItem = item
                 boxQuantity = quantity
                 amountPerBoxSnapshot = snapshot.first
-                lineShippingCostSnapshot = snapshot.second
+                lineShippingCostSnapshot = allocatedFreight.getValue(requireNotNull(item.id))
             }
         }.toMutableList()
         val saved = shipments.registerPackage(shipment, parcel, operatorId)
@@ -170,6 +171,8 @@ class ShipmentService(
             throw org.springframework.security.access.AccessDeniedException("담당 브랜드 송장만 수정할 수 있습니다.")
         }
         val previousCost = parcel.actualShippingCost
+        val freightByItemId = splitAmount(amount, parcel.items.map { requireNotNull(it.orderItem.id) })
+        parcel.items.forEach { it.lineShippingCostSnapshot = freightByItemId.getValue(requireNotNull(it.orderItem.id)) }
         val updated = shipments.updateActualCost(parcel, amount, operatorId)
         auditChanges.capture(
             beforeValues = mapOf("actualShippingCost" to previousCost),
@@ -226,7 +229,7 @@ class ShipmentService(
         val current = entity.toRecord()
         if (current.status == PREPARING) return current.toChange(false)
         require(current.status == READY_TO_SHIP) { "배송 준비 가능한 주문 상태가 아닙니다." }
-        current.reservationKeys.forEach(inventory::confirm)
+        entity.order.items.forEach { item -> item.purchaseCostSnapshot = inventory.confirmCost(item.reservationKey) }
         val preparing = shipments.update(entity, PREPARING, null, null, null).toRecord()
         notifications.record(NotificationEventType.SHIPMENT_PREPARING, orderId)
         return preparing.toChange(true)
@@ -247,6 +250,13 @@ class ShipmentService(
         changed: Boolean,
         status: String = this.status,
     ) = ShipmentChangeDto(orderId, status, carrierCode, trackingNumber, changed)
+
+    private fun splitAmount(amount: Long, orderItemIds: List<Long>): Map<Long, Long> {
+        require(orderItemIds.isNotEmpty()) { "운송비를 배분할 품목이 없습니다." }
+        val base = amount / orderItemIds.size
+        val remainder = amount % orderItemIds.size
+        return orderItemIds.sorted().mapIndexed { index, id -> id to (base + if (index < remainder) 1 else 0) }.toMap()
+    }
 
     private companion object {
         const val READY_TO_SHIP = "READY_TO_SHIP"

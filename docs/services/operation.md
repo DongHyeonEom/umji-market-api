@@ -511,3 +511,10 @@ flowchart TD
 계정과 카탈로그는 각각 `operation/account`, `operation/catalog`에 배치.<br>
 Controller가 HTTP 모델을 도메인 Service 호출로 변환하며, 도메인 Service가 영속성 service와 Repository를 호출함.<br>
 감사 로그 저장·조회·보존 정책 적용은 이 문서의 기준을 사용함.<br>
+
+## 품목별 순이익
+
+- `GET /api/operation/profits/items?from=YYYY-MM-DD&until=YYYY-MM-DD&skuId=&brandId=`
+
+`INVENTORY_READ` 권한 관리자 전용. 주문일(KST) 기준 품목·브랜드별 판매액, FIFO 사입원가 snapshot, 송장 실제 운송비 배부액을 집계. 순이익은 `판매액 - 사입원가 - 배송비`로 계산.<br>
+전체 취소 주문 제외. 사입원가 snapshot 또는 실제 배송비가 미확정인 품목은 손익 합계에서 제외하고 각각 미확정 건수로 제공.<br>

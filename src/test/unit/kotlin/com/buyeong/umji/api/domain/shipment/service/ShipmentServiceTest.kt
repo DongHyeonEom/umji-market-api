@@ -31,7 +31,7 @@ class ShipmentServiceTest : DescribeSpec({
     fun entity(status: String, carrier: String? = null, trackingNumber: String? = null) = mockk<OrderShipmentEntity>(relaxed = true) {
         every { order } returns mockk<PurchaseOrderEntity>(relaxed = true) {
             every { publicId } returns orderId
-            every { items } returns mutableListOf(mockk<OrderItemEntity> { every { reservationKey } returns reservation })
+            every { items } returns mutableListOf(mockk<OrderItemEntity>(relaxed = true) { every { reservationKey } returns reservation })
         }
         every { this@mockk.status } returns status
         every { carrierCode } returns carrier
@@ -49,7 +49,7 @@ class ShipmentServiceTest : DescribeSpec({
         every { store.update(shipment, "PREPARING", null, null, null) } returns entity("PREPARING")
         service.prepareReadyOrders() shouldBe 1
         verifyOrder {
-            inventory.confirm(reservation)
+            inventory.confirmCost(reservation)
             store.update(shipment, "PREPARING", null, null, null)
         }
         verify(exactly = 1) { notifications.record(NotificationEventType.SHIPMENT_PREPARING, orderId, null) }

@@ -71,6 +71,9 @@ interface OrderShipmentPackageRepository : JpaRepository<OrderShipmentPackageEnt
     @EntityGraph(attributePaths = ["brand", "items", "items.orderItem"])
     fun findAllByShipment_Order_PublicId(orderId: UUID): List<OrderShipmentPackageEntity>
 
+    @EntityGraph(attributePaths = ["shipment", "shipment.order", "items", "items.orderItem"])
+    fun findAllByShipment_Order_OrderedAtGreaterThanEqualAndShipment_Order_OrderedAtLessThan(from: java.time.Instant, until: java.time.Instant): List<OrderShipmentPackageEntity>
+
     @Query(
         "select distinct shipmentPackage from OrderShipmentPackageEntity shipmentPackage join fetch shipmentPackage.shipment shipment join fetch shipment.order purchaseOrder left join fetch shipmentPackage.brand left join fetch shipmentPackage.items packageItem left join fetch packageItem.orderItem where shipmentPackage.brand.publicId in :brandIds or :includeAll = true order by shipmentPackage.updatedAt desc"
     )

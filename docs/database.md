@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V52으로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V53으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -76,6 +76,7 @@
 | V50 | Organization 프로필로 이관 완료된 레거시 `business_profile` 제거 |
 | V51 | 브랜드 배송 담당자·품목/택배사 기본 운송비, 다중 송장·송장 품목 snapshot 테이블 및 `SHIPMENT_ASSIGN` permission 추가. 기존 단일 송장 정보를 package로 이관 |
 | V52 | 운영 감사 로그에 allowlist 변경 전·후 업무 값과 사유 추가, 주문일·브랜드 송장 등록일 조회 인덱스 추가 |
+| V53 | FIFO 재고 원가 lot·예약별 lot 배정·주문 품목 원가 snapshot 추가, 기존 재고 미확정 opening lot 이관 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 

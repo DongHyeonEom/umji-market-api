@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V52가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V53가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -427,6 +427,26 @@ erDiagram
         DATETIME released_at "해제 시각, nullable"
         DATETIME created_at "예약 생성 시각"
     }
+    INVENTORY_COST_LOT["INVENTORY_COST_LOT · SKU 입고 원가 FIFO lot"] {
+        BIGINT id PK "입고 lot ID 및 FIFO 순번"
+        BIGINT organization_id FK "판매 Organization, legacy nullable"
+        BIGINT sku_id FK "기준 SKU"
+        VARCHAR container_reference "컨테이너·입고 참조값"
+        INT received_quantity "입고 수량"
+        INT remaining_quantity "미출고 수량"
+        INT reserved_quantity "예약 수량"
+        BIGINT total_purchase_cost "lot 총 사입원가, 미확정 nullable"
+        BIGINT remaining_cost_amount "잔여 원가, 미확정 nullable"
+        DATETIME created_at "입고 시각"
+    }
+    STOCK_RESERVATION_LOT_ALLOCATION["STOCK_RESERVATION_LOT_ALLOCATION · 예약별 FIFO lot 배정"] {
+        BIGINT id PK "배정 ID"
+        BIGINT reservation_id FK "재고 예약 ID"
+        BIGINT lot_id FK "원가 lot ID"
+        INT quantity "예약 수량"
+        BIGINT cost_amount "출고 확정 원가, 미확정 nullable"
+        VARCHAR status "RESERVED, RELEASED, CONFIRMED, RESTORED"
+    }
     CART["CART · 계정별 장바구니"] {
         BIGINT id PK "장바구니 내부 ID"
         BINARY public_id UK "API 공개 UUID"
@@ -531,6 +551,7 @@ erDiagram
         INT quantity "주문 수량"
         INT units_per_sale "주문 당시 판매 단위당 기준 SKU 수량"
         BIGINT line_amount "주문 항목 합계"
+        BIGINT purchase_cost_snapshot "출고 확정 시 사입원가 snapshot, nullable"
         BINARY reservation_key UK "연결 재고 예약 UUID"
         VARCHAR status "주문 항목 상태"
         DATETIME created_at "생성 시각"
@@ -697,6 +718,10 @@ erDiagram
     ORGANIZATION ||--o{ INVENTORY_STOCK : owns
     ORGANIZATION ||--o{ INVENTORY_MOVEMENT : records
     ORGANIZATION ||--o{ STOCK_RESERVATION : reserves
+    ORGANIZATION o|--o{ INVENTORY_COST_LOT : owns
+    PRODUCT_SKU ||--o{ INVENTORY_COST_LOT : receives
+    STOCK_RESERVATION ||--o{ STOCK_RESERVATION_LOT_ALLOCATION : allocates
+    INVENTORY_COST_LOT ||--o{ STOCK_RESERVATION_LOT_ALLOCATION : reserves
     ACCOUNT ||--o{ CONSENT_HISTORY : records
     ACCOUNT o|--o{ FILE_ASSET : owns
     CATEGORY ||--o{ CATEGORY : parent
@@ -719,6 +744,7 @@ erDiagram
     PRODUCT_SKU ||--o{ INVENTORY_STOCK : tracks
     PRODUCT_SKU ||--o{ INVENTORY_MOVEMENT : records
     PRODUCT_SKU ||--o{ STOCK_RESERVATION : reserves
+    PRODUCT_SKU ||--o{ INVENTORY_COST_LOT : costs
     ACCOUNT ||--o| CART : owns
     CART ||--o{ CART_ITEM : contains
     PRODUCT_SKU ||--o{ CART_ITEM : selected
@@ -841,6 +867,7 @@ erDiagram
 | V50 | Organization 프로필로 이관 완료된 레거시 `business_profile` 제거 |
 | V51 | 브랜드 담당자 배정·브랜드별 SKU/택배사 운송비·다중 송장 및 송장 품목 비용 snapshot 추가 |
 | V52 | `operation_audit_log` 변경 전·후 업무 값·사유 JSON 추가 및 주문·송장 조회 인덱스 추가 |
+| V53 | FIFO 재고 원가 lot·예약별 lot 배정 및 주문 품목 원가 snapshot 추가, 기존 재고를 원가 미확정 opening lot으로 이관 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

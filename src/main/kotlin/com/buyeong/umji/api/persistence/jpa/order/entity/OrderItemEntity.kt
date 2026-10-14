@@ -63,6 +63,9 @@ class OrderItemEntity {
     @Column(name = "line_amount", nullable = false)
     var lineAmount: Long = 0
 
+    @Column(name = "purchase_cost_snapshot")
+    var purchaseCostSnapshot: Long? = null
+
     @Column(name = "reservation_key", nullable = false, unique = true)
     lateinit var reservationKey: UUID
 

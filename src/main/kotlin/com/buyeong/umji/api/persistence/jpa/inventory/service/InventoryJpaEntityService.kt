@@ -6,9 +6,13 @@ import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryMovementEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryStockEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryCostLotEntity
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationLotAllocationEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.repository.InventoryMovementRepository
 import com.buyeong.umji.api.persistence.jpa.inventory.repository.InventoryStockRepository
 import com.buyeong.umji.api.persistence.jpa.inventory.repository.StockReservationRepository
+import com.buyeong.umji.api.persistence.jpa.inventory.repository.InventoryCostLotRepository
+import com.buyeong.umji.api.persistence.jpa.inventory.repository.StockReservationLotAllocationRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -22,6 +26,8 @@ class InventoryJpaEntityService(
     private val movements: InventoryMovementRepository,
     private val reservations: StockReservationRepository,
     private val organizations: OrganizationRepository,
+    private val lots: InventoryCostLotRepository,
+    private val allocations: StockReservationLotAllocationRepository,
 ) {
     fun stock(skuId: Long): InventoryStockEntity? = stocks.findBySkuId(skuId)
     fun stock(skuId: Long, organizationId: Long?): InventoryStockEntity? = stocks.findBySkuIdAndOrganizationId(skuId, organizationId)
@@ -29,6 +35,10 @@ class InventoryJpaEntityService(
     fun movements(skuId: Long, organizationId: Long, pageable: Pageable): Page<InventoryMovementEntity> =
         movements.findAllBySkuIdAndOrganization_Id(skuId, organizationId, pageable)
     fun reservation(key: UUID): StockReservationEntity? = reservations.findByReservationKey(key)
+    fun lots(skuId: Long, organizationId: Long?): List<InventoryCostLotEntity> = lots.findBySkuAndOrganization(skuId, organizationId)
+    @Transactional fun lockedLots(skuId: Long, organizationId: Long?): List<InventoryCostLotEntity> = lots.findLockedBySkuAndOrganization(skuId, organizationId)
+    @Transactional fun lockedLot(id: Long): InventoryCostLotEntity? = lots.findLockedById(id)
+    fun allocations(reservationId: Long): List<StockReservationLotAllocationEntity> = allocations.findAllByReservation_IdOrderById(reservationId)
 
     @Transactional
     fun lockedStock(sku: ProductSkuEntity): InventoryStockEntity =
@@ -51,4 +61,6 @@ class InventoryJpaEntityService(
     @Transactional fun saveMovement(movement: InventoryMovementEntity): InventoryMovementEntity = movements.save(movement)
 
     @Transactional fun saveReservation(reservation: StockReservationEntity): StockReservationEntity = reservations.save(reservation)
+    @Transactional fun saveLot(lot: InventoryCostLotEntity): InventoryCostLotEntity = lots.save(lot)
+    @Transactional fun saveAllocation(allocation: StockReservationLotAllocationEntity): StockReservationLotAllocationEntity = allocations.save(allocation)
 }

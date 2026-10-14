@@ -45,6 +45,7 @@ class ShipmentPackageServiceTest : DescribeSpec({
             every { product } returns productEntity
         }
         return mockk<OrderItemEntity> {
+            every { id } returns if (itemId == orderItemId) 1L else 2L
             every { publicId } returns itemId
             every { sku } returns skuEntity
             every { skuName } returns "SKU"
@@ -93,7 +94,7 @@ class ShipmentPackageServiceTest : DescribeSpec({
         )
         val first = service.registerPackage(
             orderId, brandId,
-            ShipmentPackageRequest("DAESIN", "TRACK-1", actualShippingCost = 2200, items = listOf(ShipmentPackageItemRequest(orderItemId, 3))),
+            ShipmentPackageRequest("DAESIN", "TRACK-1", actualShippingCost = 2201, items = listOf(ShipmentPackageItemRequest(orderItemId, 3), ShipmentPackageItemRequest(noRateItemId, 1))),
             operatorId,
         )
         val second = service.registerPackage(
@@ -107,14 +108,14 @@ class ShipmentPackageServiceTest : DescribeSpec({
             operatorId,
         )
 
-        first.actualShippingCost shouldBe 2200L
+        first.actualShippingCost shouldBe 2201L
         second.actualShippingCost shouldBe 1800L
         manualCost.actualShippingCost shouldBe 500L
-        savedPackages.map { it.items.single().boxQuantity } shouldBe listOf(3, 2, 1)
-        savedPackages.first().items.single().amountPerBoxSnapshot shouldBe 700L
-        savedPackages.first().items.single().lineShippingCostSnapshot shouldBe 2100L
+        savedPackages.map { it.items.sumOf { line -> line.boxQuantity } } shouldBe listOf(4, 2, 1)
+        savedPackages.first().items.first().amountPerBoxSnapshot shouldBe 700L
+        savedPackages.first().items.map { it.lineShippingCostSnapshot } shouldBe listOf(1101L, 1100L)
         savedPackages[1].items.single().amountPerBoxSnapshot shouldBe 900L
-        savedPackages.last().items.single().lineShippingCostSnapshot shouldBe null
+        savedPackages.last().items.single().lineShippingCostSnapshot shouldBe 500L
         verify(exactly = 3) { shipments.registerPackage(shipment, any(), operatorId) }
     }
 

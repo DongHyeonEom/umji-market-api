@@ -5,6 +5,9 @@
 - `GET /api/operation/inventory/skus/{skuId}`
 - `PATCH /api/operation/inventory/skus/{skuId}`
 - `GET /api/operation/inventory/skus/{skuId}/movements?page=&size=`
+- `POST /api/operation/inventory/skus/{skuId}/lots`
+- `GET /api/operation/inventory/skus/{skuId}/lots?organizationId=`
+- `PUT /api/operation/inventory/lots/{lotId}/cost`
 
 ## 판매자 endpoint
 
@@ -21,6 +24,9 @@
 ```mermaid
 flowchart TD
     A[재고 요청] --> B{작업 종류}
+    B -- 입고 lot 등록 --> RECEIPT[INVENTORY_WRITE 권한·SKU/Organization·수량·총 원가 검증]
+    RECEIPT --> STOCKIN[재고 증가·원가 lot 저장·입고 이동 이력]
+    B -- 원가 입력 --> LOTPRICE[미확정 lot 조회·미출고 검증·총 사입원가 입력]
     B -- 재고 조회 --> C[SKU 존재 확인]
     C --> D[요청자 Organization과 SKU의 재고 행 조회 또는 기본 수량 반환]
     D --> D2[WHOLESALE 오퍼 입수량으로 완박스·낱개 잔량 산출]
@@ -36,7 +42,7 @@ flowchart TD
     J --> K[오퍼 Organization·SKU 재고 행 잠금]
     K --> L{가용 재고 충분}
     L -- 아니오 --> M[예약 거부]
-    L -- 예 --> N[예약 수량 갱신·예약 저장·이동 이력 저장]
+    L -- 예 --> N[FIFO lot 입력 순 예약 배정·예약 저장·이동 이력 저장]
     B -- 예약 해제 --> O[예약 조회 및 RESERVED 상태 확인]
     B -- 예약 확정 --> O
     O --> P[예약에 저장된 Organization·SKU 재고 행 잠금]
@@ -45,20 +51,25 @@ flowchart TD
     Q -- RESERVED --> S{요청 종류}
     Q -- 그 외 --> T[변경 거부]
     S -- 예약 해제 --> U[예약 수량 감소, 실재고 유지]
-    S -- 예약 확정 --> V[실재고와 예약 수량 감소]
+    S -- 예약 확정 --> VC{예약 lot 원가 확정 여부}
+    VC -- 아니오 --> CB[출고 확정 거부·배송 준비 유지]
+    VC -- 예 --> V[실재고·lot 수량 감소 및 원가 snapshot 반환]
     U --> W[예약 상태·이동 이력 저장]
     V --> W
 ```
 
 - 운영 재고 endpoint의 인가 기준은 [operation.md](operation.md)의 권한 매트릭스를 적용.<br>
 - 재고 상태, 예약 상태 및 이동 이력은 하나의 유스케이스 트랜잭션으로 처리.<br>
-- 주문 생성 시 재고 예약.<br>
-  운영자 송장 등록 시점에 해당 주문의 예약을 확정.<br>
+- 주문 생성 시 재고와 FIFO lot 수량을 함께 예약.<br>
+  배송 준비 전환 시 lot 원가를 확정하고 주문 품목별 원가 snapshot 저장.<br>
 
 - 가용 재고는 실재고에서 예약 재고를 뺀 값임.<br>
 - 운영 조정은 재고 이동 이력을 함께 기록함.<br>
 - 주문 생성은 재고를 예약하고 예약 식별자를 주문 항목에 보관함.<br>
 - 예약 확정·해제 use case는 제공됨.<br>
+- 입고 lot 총원가에는 상품대금과 수입정산·관세·부가세 등 변동 부대비용을 합산해 기록.<br>
+- 기존 재고와 수기 양수 조정은 미확정 원가 lot으로 취급. 관리자 원가 등록 전 해당 lot을 소비하는 출고 차단.<br>
+- lot 등록 ID 순 FIFO. 취소 복구 시 소비 수량·원가를 원래 lot으로 복구.<br>
 - 이미 확정된 예약의 확정 요청은 중복 차감 없이 현재 재고를 반환함.<br>
 - 입금 상태와 발송 상태는 독립적으로 관리.<br>
   미입금 주문에 만료 시각을 두지 않으며 자동 재고 해제도 수행하지 않음.<br>
