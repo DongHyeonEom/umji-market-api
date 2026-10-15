@@ -7,6 +7,7 @@ import com.buyeong.umji.api.domain.operation.order.model.toResponse
 import com.buyeong.umji.api.domain.operation.order.service.OperationOrderService
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.security.access.prepost.PreAuthorize
@@ -33,8 +34,8 @@ class OperationOrderController(
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) until: LocalDate,
         @RequestParam(required = false) @Size(max = 100) organizationName: String?,
         @RequestParam(required = false) @Size(max = 100) ordererName: String?,
-        @RequestParam(required = false) @Size(max = 40) paymentStatus: String?,
-        @RequestParam(required = false) @Size(max = 40) shipmentStatus: String?,
+        @RequestParam(required = false) @Size(max = 40) @Pattern(regexp = "WAITING_FOR_DEPOSIT|PARTIAL_PAYMENT_REVIEW_REQUIRED|PAYMENT_ISSUE_REVIEW_REQUIRED|PAYMENT_CONFIRMED|REFUND_PENDING|REFUNDED") paymentStatus: String?,
+        @RequestParam(required = false) @Size(max = 40) @Pattern(regexp = "READY_TO_SHIP|PREPARING|IN_TRANSIT|DELIVERED") shipmentStatus: String?,
         @RequestParam(required = false) @Size(max = 100) orderNumber: String?,
         @RequestParam(defaultValue = "0") @Min(0) page: Int,
         @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,

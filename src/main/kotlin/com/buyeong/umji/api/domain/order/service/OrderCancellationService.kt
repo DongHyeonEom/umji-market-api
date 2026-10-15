@@ -45,7 +45,6 @@ class OrderCancellationService(
 
     @Transactional(readOnly = true)
     fun queue(page: Int, size: Int): CancellationQueuePageDto {
-        require(page >= 0 && size in 1..100) { "페이지 값이 올바르지 않습니다." }
         return cancellations.queue(page, size)
     }
 

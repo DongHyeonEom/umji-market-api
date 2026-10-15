@@ -3,6 +3,7 @@ package com.buyeong.umji.api.domain.operation.model
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.util.UUID
 
@@ -20,7 +21,7 @@ data class CreateCategoryRequest(
     ) @field:Schema(description = "화면 표시 순서", example = "1", format = "int32", type = "integer", required = false, implementation = Int::class)
     val displayOrder: Int = 0,
 
-    @field:NotBlank
+    @field:NotBlank @field:Pattern(regexp = "DISPLAYED|HIDDEN")
     @field:Schema(description = "화면 노출 상태 코드", example = "예시 값", type = "string", required = false)
     val displayStatus: String = "HIDDEN",
 )

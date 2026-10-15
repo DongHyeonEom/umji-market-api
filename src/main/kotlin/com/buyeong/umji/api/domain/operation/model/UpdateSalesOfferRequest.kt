@@ -3,6 +3,7 @@ package com.buyeong.umji.api.domain.operation.model
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 
 @Schema(description = "채널별 SKU 판매 오퍼 수정 요청")
 data class UpdateSalesOfferRequest(
@@ -14,7 +15,7 @@ data class UpdateSalesOfferRequest(
     @field:Schema(description = "채널 정가(원)", example = "1200", type = "integer", required = false)
     val listPrice: Long? = null,
 
-    @field:NotBlank
+    @field:NotBlank @field:Pattern(regexp = "ON_SALE|STOPPED")
     @field:Schema(description = "판매 상태: ON_SALE 또는 STOPPED", example = "ON_SALE", type = "string", required = true)
     val salesStatus: String,
 

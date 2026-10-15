@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import org.springframework.http.HttpStatus
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -117,7 +118,8 @@ class CustomerAccountController(
     @GetMapping("/organizations/search")
     fun searchGroups(
         @Parameter(description = "대표자 휴대폰 번호") @RequestParam @NotBlank phone: String,
-        @Parameter(description = "검색할 Organization capability") @RequestParam(defaultValue = "BUYER") capability: String,
+        @Parameter(description = "검색할 Organization capability") @RequestParam(defaultValue = "BUYER")
+        @Pattern(regexp = "BUYER|SELLER") capability: String,
     ) = groups.search(phone, capability).map { it.membershipResponse() }
 
     @Operation(summary = "Organization등록", description = "사용자 프로필·배송지·Organization 가입 API. /organizations/invitations 경로에서 Organization등록를 수행")

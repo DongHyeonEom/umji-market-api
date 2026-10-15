@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.util.UUID
 
@@ -26,7 +27,7 @@ data class CreateProductSkuRequest(
     ) @field:Schema(description = "정가(원)", example = "1", format = "int64", type = "integer", required = false, implementation = Long::class)
     val listPrice: Long? = null,
 
-    @field:NotBlank
+    @field:NotBlank @field:Pattern(regexp = "ON_SALE|STOPPED")
     @field:Schema(description = "판매 상태 코드", example = "예시 값", type = "string", required = false)
     val salesStatus: String = "ON_SALE",
 

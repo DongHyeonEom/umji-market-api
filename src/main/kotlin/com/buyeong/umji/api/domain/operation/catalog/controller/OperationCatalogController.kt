@@ -42,6 +42,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Pattern
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -70,7 +71,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     @Operation(summary = "채널 카테고리 목록 조회", description = "판매 채널에 연결된 카테고리 트리를 조회")
     @GetMapping("/channels/{channelCode}/categories")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_READ')")
-    fun channelCategories(@PathVariable channelCode: String) =
+    fun channelCategories(@PathVariable @Pattern(regexp = "(?i)WHOLESALE|RETAIL") channelCode: String) =
         useCase.categories(channelCode).map { OperationCategoryResponse(it.id, it.parentId, it.name, it.path, it.depth, it.displayOrder, it.displayStatus) }
 
     @Operation(summary = "채널 카테고리 등록", description = "지정한 판매 채널에 전용 카테고리를 등록")
@@ -78,7 +79,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_WRITE')")
     @ResponseStatus(HttpStatus.CREATED)
     fun createChannelCategory(
-        @PathVariable channelCode: String,
+        @PathVariable @Pattern(regexp = "(?i)WHOLESALE|RETAIL") channelCode: String,
         @Valid @RequestBody request: CreateChannelCategoryRequest,
     ) = useCase.createChannelCategory(
         ChannelCategoryCommandDto(channelCode, request.name, request.parentId, request.displayOrder, request.displayStatus),
@@ -88,7 +89,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     @PutMapping("/channels/{channelCode}/products/{productId}/listing")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_WRITE')")
     fun updateChannelListing(
-        @PathVariable channelCode: String,
+        @PathVariable @Pattern(regexp = "(?i)WHOLESALE|RETAIL") channelCode: String,
         @PathVariable productId: UUID,
         @Valid @RequestBody request: UpdateChannelListingRequest,
     ) = useCase.updateChannelListing(
@@ -99,7 +100,7 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     @PutMapping("/channels/{channelCode}/skus/{skuId}/offer")
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_WRITE')")
     fun updateSalesOffer(
-        @PathVariable channelCode: String,
+        @PathVariable @Pattern(regexp = "(?i)WHOLESALE|RETAIL") channelCode: String,
         @PathVariable skuId: UUID,
         @Valid @RequestBody request: UpdateSalesOfferRequest,
     ) = useCase.updateSalesOffer(

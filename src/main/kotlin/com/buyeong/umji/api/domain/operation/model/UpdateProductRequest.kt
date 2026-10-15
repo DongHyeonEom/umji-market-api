@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.util.UUID
 
@@ -28,11 +29,11 @@ data class UpdateProductRequest(
     @field:Schema(description = "상세 설명", example = "예시 값", type = "string", required = false)
     val description: String? = null,
 
-    @field:NotBlank
+    @field:NotBlank @field:Pattern(regexp = "DISPLAYED|HIDDEN")
     @field:Schema(description = "화면 노출 상태 코드", example = "예시 값", type = "string", required = true)
     val displayStatus: String,
 
-    @field:NotBlank
+    @field:NotBlank @field:Pattern(regexp = "ON_SALE|STOPPED")
     @field:Schema(description = "판매 상태 코드", example = "예시 값", type = "string", required = true)
     val salesStatus: String,
 

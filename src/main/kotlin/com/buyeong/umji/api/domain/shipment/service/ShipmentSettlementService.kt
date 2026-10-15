@@ -17,8 +17,6 @@ class ShipmentSettlementService(
     private val brandShipping: BrandShippingService,
 ) {
     fun monthly(brandId: UUID, month: String, operatorId: UUID, page: Int, size: Int): ShipmentSettlementDto {
-        require(page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-        require(size in 1..100) { "페이지 크기는 1~100이어야 합니다." }
         val yearMonth = runCatching { YearMonth.parse(month) }.getOrElse {
             throw IllegalArgumentException("조회 월은 YYYY-MM 형식이어야 합니다.")
         }
