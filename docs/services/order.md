@@ -188,6 +188,8 @@ flowchart TD
 
 ## 주문 조회 흐름
 
+취소 요청 대기 목록의 페이지 번호·크기는 Controller Bean Validation에서 검증하며, Service는 취소 요청 존재 여부와 주문 배송 상태 등 DB 기반 업무 조건을 검증.<br>
+
 ```mermaid
 flowchart TD
     A[주문 목록 또는 상세 요청] --> B[현재 인증 계정 식별]

@@ -73,6 +73,7 @@ flowchart TD
 - `GET /api/seller/inventory/skus/{skuId}/movements?page=&size=`
 
 판매자 endpoint는 인증 계정의 활성 Organization에 `SELLER` capability가 있는지 확인. 판매 오퍼의 `ON_SALE` 설정과 주문 생성 시에는 완성·대표자 확인된 ACTIVE 사업자 프로필을 추가 검증.<br>
+판매자 채널 listing·offer 경로의 `channelCode` 형식과 요청 본문의 단순 필수값·길이·숫자 범위·상태 코드는 Controller/Request Bean Validation에서 Service 호출 전에 검증. 판매 Organization 소유권과 상태 조합은 Service 업무 검증으로 유지.<br>
 브랜드와 상품은 판매 Organization 소유. 상품 생성 시 같은 Organization의 브랜드와 채널 카테고리를 사용하며 이미지·옵션·SKU도 그 상품에 종속.<br>
 
 운영자 카탈로그 API는 소유 Organization이 없는 레거시 상품·브랜드 관리용. 신규 판매 상품·브랜드는 판매자 API에서 생성.<br>

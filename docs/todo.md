@@ -9,8 +9,8 @@
 
 ### 서비스 개발
 
-- [ ] request에서 온 형식·범위 검증을 Request 제약과 Controller `@Valid`로 처리하고 중복 Service 검증 제거
-- [ ] DB 조회 후 필수값, 상태 전이, 권한, 리소스 간 조합 검증은 Service에 유지
+- [x] 계정·카탈로그·결제·주문·감사·재고·배송 요청에서 형식·범위 검증을 Request 제약과 Controller Bean Validation으로 처리하고 중복 Service 검증 제거
+- [x] DB 조회 후 필수값, 상태 전이, 권한, 리소스 간 조합 검증은 Service에 유지
 - [x] 아키텍처와 계정·재고·파일 도메인 문서에 검증 책임 경계 반영
 
 ### 서비스 자동화 테스트 개발 및 테스트

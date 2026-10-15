@@ -356,12 +356,14 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 조회 권한은 `ADMIN_AUDIT_READ`이며 현재 `SUPER_ADMIN`에만 부여함.<br>
 일반 `ADMIN`은 로그를 조회할 수 없음.<br>
 `from`은 포함, `until`은 제외하는 UTC ISO-8601 시각 범위이며 페이지 크기는 최대 100.<br>
+`resourceType`은 지원 리소스 코드만 허용하고, 형식·페이지 범위 오류는 Controller Bean Validation에서 Service 호출 전에 400으로 거부함. 두 시각의 순서처럼 여러 요청값을 함께 비교하는 조건은 Service에서 확인함.<br>
 
 ### 입금 상태 확인
 
 `ORDER_READ` 권한 운영자는 `GET /api/operation/payments`로 기본 입금 대기·부분 입금 확인 필요 목록을 조회하고, `ORDER_WRITE` 권한 운영자는 `PATCH /api/operation/payments/{orderId}/status`로 상태를 변경함.<br>
 입금 확인 응답에는 주문자명과 연락처가 포함되며, 실제 은행 내역 확인과 부분 입금 후속 통화는 운영 절차로 수행.<br>
 상태 변경은 payment history와 운영 변경 감사 로그에 처리자·시각을 남김.<br>
+목록의 상태 코드와 페이지 범위는 Controller Bean Validation에서 검증하며, 상태 변경은 DB 조회 후 현재 결제·주문 상태에 따른 전이만 허용함.<br>
 
 ### 관리자 거래 검색·상세 조회
 

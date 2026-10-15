@@ -91,6 +91,7 @@ PG callback 멱등성 및 위변조 검증은 PG 도입 전까지 범위 외.<br
 
 - `GET /api/operation/payments?status=&page=&size=`: 입금 대기·부분 입금·일반 이슈·환불 대기 대상 목록.<br>
   상태 생략 시 미처리 입금 상태와 환불 대기 상태를 반환.<br>
+  지정 상태 코드와 페이지 범위는 Controller Bean Validation에서 검증하며, 잘못된 값은 Service 호출 전에 400으로 거부.<br>
 - `PATCH /api/operation/payments/{orderId}/status`: 운영자 입금 상태 변경.<br>
 - `GET /api/orders/checkout-options`: 구매 Organization 기본 발행 여부와 두 계좌 안내 정보 반환.<br>
 - `POST /api/orders`: `taxInvoiceRequested`로 해당 주문 발행 여부 지정.<br>
