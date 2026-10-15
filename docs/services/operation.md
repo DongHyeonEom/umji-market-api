@@ -25,8 +25,10 @@ flowchart TD
     E -- role 변경 --> M{PRODUCT·ORDER·INVENTORY·SHIPPING·SALES 운영 role인가}
     M -- 아니오 --> N[role 변경 거부]
     M -- 예 --> O[role 변경 및 실제 변경 시 token version 증가]
-    E -- 카탈로그 변경 --> P[입력·연관 리소스 검증]
-    P --> Q[카탈로그 변경 저장]
+    E -- 카탈로그 변경 --> P[Controller @Valid 필수값·형식·범위 검증]
+    P -->|실패| PERR[400 요청 검증 오류]
+    P -->|통과| P2[Service 연관 리소스·업무 상태 검증]
+    P2 --> Q[카탈로그 변경 저장]
     E -- 재고 조정 --> R[재고 검증·조정·이동 이력]
     E -- 입금 확인 --> S[결제 상태 변경·주문/재고 처리]
     E -- 배송 변경 --> SHIPAUTH[SHIPMENT_WRITE 권한 검사]

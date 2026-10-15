@@ -229,15 +229,19 @@ V42 이전 판매자 미지정 레거시 오퍼 주문은 기존 환경 설정�
 
 `GET /api/operation/orders/phone-orders/buyers?phone=...`는 정확한 휴대폰 번호로 활성 계정과 활성 구매 Organization을 찾음.<br>
 `POST /api/operation/orders/phone-orders`는 관리자 전화 접수 주문을 생성. 요청에는 공개 판매 오퍼 ID와 수량만 받고 가격은 활성 도매 오퍼에서 다시 조회.<br>
+전화 주문 요청의 필수 주소·수량 범위는 Request Bean Validation과 Controller `@Valid`에서 거부하고, 구매자·오퍼·재고·프로필 상태는 Service에서 확인.<br>
+복수 송장 등록 요청의 필수 품목·양수 박스 수량·기본 문자열 형식은 Request Bean Validation과 Controller `@Valid`에서 확인하고, 출고 수량 초과·브랜드 일치·운송비 산정은 Service에서 확인.<br>
 API 전체 장애 중에는 별도 운영 수단에 내용을 기록하고 복구 후 이 API로 사후 등록.<br>
 
 ```mermaid
 flowchart TD
     ADMIN[관리자 전화 주문 API 요청] --> AUTH[ORDER_WRITE permission 검사]
     AUTH -->|거부| DENY[403 응답]
-    AUTH -->|허용| BUYER[구매자 계정·활성 BUYER Organization 지정]
+    AUTH -->|허용| INPUT[Request Bean Validation 필수값·수량 범위 검사]
+    INPUT -->|실패| BADINPUT[400 요청 검증 오류]
+    INPUT -->|통과| BUYER[구매자 계정·활성 BUYER Organization 지정]
     BUYER --> BUYERVALID{활성 계정·활성 BUYER Organization인가}
-    BUYERVALID -->|아니오| INVALID[요청 검증 오류]
+    BUYERVALID -->|아니오| INVALID[업무 검증 오류]
     BUYERVALID -->|예| LINES[판매 오퍼와 주문 수량 입력]
     LINES --> PRICE[활성 오퍼 가격·판매 상태·입수량 재조회]
     PRICE --> STOCK[판매자별 주문 분리 및 재고 예약 가능 여부 검증]
