@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Pattern
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -35,7 +36,8 @@ class OperationPaymentController(
     @GetMapping
     @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ORDER_READ')")
     fun queue(
-        @Parameter(description = "조회할 상태 코드") @RequestParam(required = false) status: String?,
+        @Parameter(description = "조회할 상태 코드") @RequestParam(required = false)
+        @Pattern(regexp = "WAITING_FOR_DEPOSIT|PARTIAL_PAYMENT_REVIEW_REQUIRED|PAYMENT_ISSUE_REVIEW_REQUIRED|PAYMENT_CONFIRMED|REFUND_PENDING|REFUNDED") status: String?,
         @Parameter(description = "조회할 페이지 번호(0부터 시작)") @RequestParam(defaultValue = "0") @Min(0) page: Int,
         @Parameter(description = "페이지당 조회할 항목 수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
     ): OperationPaymentPageResponse = payments.queue(status, page, size).toResponse()

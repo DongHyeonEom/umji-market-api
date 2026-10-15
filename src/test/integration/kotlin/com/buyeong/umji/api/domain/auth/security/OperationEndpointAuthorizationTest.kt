@@ -380,6 +380,55 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
+    fun `invalid request bodies are rejected before domain services are called`() {
+        mockMvc.perform(
+            post("/api/operation/brands")
+                .with(authorities("PRODUCT_WRITE"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"name":"","displayStatus":"HIDDEN"}"""),
+        ).andExpect(status().isBadRequest)
+        Mockito.verifyNoInteractions(catalog)
+
+        mockMvc.perform(
+            post("/api/operation/orders/phone-orders")
+                .with(authorities("ORDER_WRITE"))
+                .with(csrf())
+                .contentType("application/json")
+                .content(
+                    """{"buyerAccountId":"${UUID.randomUUID()}","recipientName":"구매자","recipientPhone":"01012345678","postalCode":"06234","address1":"서울","items":[{"salesOfferId":"${UUID.randomUUID()}","quantity":0}]}""",
+                ),
+        ).andExpect(status().isBadRequest)
+        Mockito.verifyNoInteractions(orders)
+
+        mockMvc.perform(
+            patch("/api/operation/inventory/skus/${UUID.randomUUID()}")
+                .with(authorities("INVENTORY_WRITE"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"quantityDelta":1,"reason":"ADJUSTMENT","safetyStockQuantity":-1}"""),
+        ).andExpect(status().isBadRequest)
+        Mockito.verifyNoInteractions(inventory)
+    }
+
+    @Test
+    fun `invalid operation query values are rejected before domain services are called`() {
+        mockMvc.perform(
+            get("/api/operation/payments")
+                .param("status", "NOT_A_PAYMENT_STATUS")
+                .with(authorities("ORDER_READ")),
+        ).andExpect(status().isBadRequest)
+        Mockito.verifyNoInteractions(payments)
+
+        mockMvc.perform(
+            get("/api/operation/audit-logs")
+                .param("resourceType", "NOT_A_RESOURCE")
+                .with(authorities("ADMIN_AUDIT_READ")),
+        ).andExpect(status().isBadRequest)
+        Mockito.verifyNoInteractions(audit)
+    }
+
+    @Test
     fun `account endpoint rejects catalog permission`() {
         mockMvc.perform(get("/api/operation/accounts/roles").with(authorities("PRODUCT_READ")))
             .andExpect(status().isForbidden)

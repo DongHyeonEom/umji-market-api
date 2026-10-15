@@ -15,10 +15,7 @@ class OperationAuditService(private val audit: OperationAuditJpaEntityService) {
 
     @Transactional(readOnly = true)
     fun search(query: OperationAuditQueryDto): OperationAuditPageDto {
-        require(query.page >= 0) { "페이지 번호는 0 이상이어야 합니다." }
-        require(query.size in 1..100) { "페이지 크기는 1~100이어야 합니다." }
         require(query.from == null || query.until == null || query.from <= query.until) { "조회 시작 시각은 종료 시각보다 늦을 수 없습니다." }
-        require(query.resourceType == null || query.resourceType in RESOURCE_TYPES) { "유효하지 않은 감사 리소스 유형입니다." }
         return audit.search(query)
     }
 
@@ -27,7 +24,4 @@ class OperationAuditService(private val audit: OperationAuditJpaEntityService) {
         return audit.purgeExpired(before, batchSize)
     }
 
-    private companion object {
-        val RESOURCE_TYPES = setOf("ACCOUNT", "ACCOUNT_ROLE", "CATEGORY", "BRAND", "PRODUCT", "ORDER", "PAYMENT", "SHIPPING", "TAX_INVOICE", "INVENTORY", "OPERATION")
-    }
 }

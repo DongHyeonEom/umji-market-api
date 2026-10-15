@@ -22,7 +22,6 @@ class OperationAccountService(private val accounts: OperationAccountJpaEntitySer
     @Transactional(readOnly = true)
     fun detail(id: UUID) = accounts.find(id) ?: missing()
     fun status(id: UUID, status: String): AccountDataDto {
-        require(status in STATUSES) { "유효하지 않은 계정 상태입니다." }
         require(status != ACTIVE) { "개인정보 동의 확인 후 승인 API를 이용해야 합니다." }
         return accounts.updateStatus(id, status) ?: missing()
     }
@@ -34,7 +33,6 @@ class OperationAccountService(private val accounts: OperationAccountJpaEntitySer
     fun assignOrganization(id: UUID, organizationId: UUID): AccountDataDto = accounts.assignOrganization(id, organizationId) ?: missing()
     fun setOrganizationRepresentative(organizationId: UUID, accountId: UUID) = accounts.setOrganizationRepresentative(organizationId, accountId)
     fun consent(id: UUID, consent: ConsentCommandDto): AccountDataDto {
-        require(consent.consentMethod in METHODS) { "유효하지 않은 동의 방식입니다." }
         val account = accounts.find(id) ?: missing()
         val nextStatus = if (account.status == PENDING_CONSENT) {
             if (account.profile == null) PENDING_PROFILE else PENDING_REVIEW
@@ -68,8 +66,6 @@ class OperationAccountService(private val accounts: OperationAccountJpaEntitySer
         const val PENDING_REVIEW = "PENDING_REVIEW"
         const val PERSONAL_INFORMATION = "PERSONAL_INFORMATION"
         const val ACTIVE = "ACTIVE"
-        val STATUSES = setOf(PENDING_CONSENT, PENDING_PROFILE, PENDING_REVIEW, "ACTIVE", "SUSPENDED", "WITHDRAWN")
-        val METHODS = setOf("ONLINE", "WRITTEN")
         val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER", "SHIPPING_MANAGER", "SALES_MANAGER")
     }
 }

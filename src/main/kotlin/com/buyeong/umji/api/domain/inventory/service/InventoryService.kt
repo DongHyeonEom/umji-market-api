@@ -29,7 +29,6 @@ class InventoryService(
 ) {
     @Transactional
     fun registerCostLot(skuId: UUID, organizationPublicId: UUID, reference: String, quantity: Int, totalCost: Long): InventoryCostLotEntity {
-        require(quantity > 0 && totalCost >= 0) { "입고 수량은 1 이상, 총 사입원가는 0원 이상이어야 합니다." }
         val sku = entitySku(skuId)
         val organizationId = inventory.organizationId(organizationPublicId) ?: throw ItemNotFoundException("판매 Organization을 찾을 수 없습니다.")
         require(sku.product.organization?.id == organizationId) { "SKU와 판매 Organization이 일치하지 않습니다." }
@@ -57,7 +56,6 @@ class InventoryService(
 
     @Transactional
     fun setCostLot(lotId: Long, totalCost: Long): InventoryCostLotEntity {
-        require(totalCost >= 0) { "총 사입원가는 0원 이상이어야 합니다." }
         val lot = inventory.lockedLot(lotId) ?: throw ItemNotFoundException("재고 원가 lot을 찾을 수 없습니다.")
         require(lot.totalPurchaseCost == null) { "원가가 등록된 lot은 변경할 수 없습니다." }
         require(lot.remainingQuantity == lot.receivedQuantity) { "이미 일부 출고된 lot의 원가는 등록할 수 없습니다." }
@@ -89,7 +87,6 @@ class InventoryService(
     @Transactional
     fun adjust(skuId: UUID, quantityDelta: Int, reason: String, memo: String?, safetyStock: Int?, organizationPublicId: UUID? = null): StockViewDto {
         require(quantityDelta != 0) { "재고 조정 수량은 0일 수 없습니다." }
-        require(safetyStock == null || safetyStock >= 0) { "안전 재고는 0 이상이어야 합니다." }
         val sku = entitySku(skuId)
         val stock = inventory.lockedStock(sku, inventory.organizationId(organizationPublicId))
         stock.onHandQuantity += quantityDelta

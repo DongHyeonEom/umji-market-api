@@ -38,6 +38,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Pattern
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -46,9 +47,11 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.validation.annotation.Validated
 import java.util.UUID
 
 @RestController
+@Validated
 @RequestMapping("/api/seller")
 @Tag(name = "판매자 상품", description = "판매 Organization의 상품 오퍼 관리 API")
 class SellerCatalogController(
@@ -93,7 +96,7 @@ class SellerCatalogController(
     @Operation(summary = "판매자 채널 상품 노출 수정", description = "본인 Organization 상품의 채널별 카테고리·노출·순서 관리")
     @org.springframework.web.bind.annotation.PutMapping("/channels/{channelCode}/products/{productId}/listing")
     fun updateListing(
-        @PathVariable channelCode: String,
+        @PathVariable @Pattern(regexp = "(?i)WHOLESALE|RETAIL") channelCode: String,
         @PathVariable productId: UUID,
         @Valid @RequestBody request: UpdateChannelListingRequest,
     ): OperationCatalogResourceResponse = sellers.updateListing(
@@ -108,7 +111,7 @@ class SellerCatalogController(
     @Operation(summary = "판매 오퍼 등록·수정", description = "활성 SELLER Organization의 채널별 판매가·상태·판매 단위를 등록하거나 수정")
     @PutMapping("/channels/{channelCode}/skus/{skuId}/offer")
     fun updateOffer(
-        @PathVariable channelCode: String,
+        @PathVariable @Pattern(regexp = "(?i)WHOLESALE|RETAIL") channelCode: String,
         @PathVariable skuId: UUID,
         @Valid @RequestBody request: UpdateSalesOfferRequest,
     ): SellerSalesOfferResponse {

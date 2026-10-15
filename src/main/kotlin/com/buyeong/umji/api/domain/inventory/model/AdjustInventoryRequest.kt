@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
+import jakarta.validation.constraints.Min
 
 @Schema(description = "AdjustInventoryRequest API 데이터 모델")
 data class AdjustInventoryRequest(
@@ -33,5 +34,5 @@ data class AdjustInventoryRequest(
         required = false,
         implementation = Int::class,
     )
-    val safetyStockQuantity: Int? = null,
+    @field:Min(0) val safetyStockQuantity: Int? = null,
 )

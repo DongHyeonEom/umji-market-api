@@ -43,7 +43,6 @@ class OrganizationMembershipService(
 
     @Transactional(readOnly = true)
     fun search(phone: String, capability: String = "BUYER"): List<OrganizationSearchResultDto> {
-        require(capability == "BUYER" || capability == "SELLER") { "Organization capability는 BUYER 또는 SELLER여야 합니다." }
         return groups.search(PhoneNumberHelper.normalizeMobilePhoneNumber(phone), capability)
     }
 

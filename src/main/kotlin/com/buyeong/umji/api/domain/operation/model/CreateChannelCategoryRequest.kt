@@ -3,6 +3,7 @@ package com.buyeong.umji.api.domain.operation.model
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.util.UUID
 
@@ -19,7 +20,7 @@ data class CreateChannelCategoryRequest(
     @field:Schema(description = "채널 내 표시 순서", example = "0", type = "integer", required = false)
     val displayOrder: Int = 0,
 
-    @field:NotBlank
+    @field:NotBlank @field:Pattern(regexp = "DISPLAYED|HIDDEN")
     @field:Schema(description = "노출 상태: DISPLAYED 또는 HIDDEN", example = "HIDDEN", type = "string", required = true)
     val displayStatus: String = "HIDDEN",
 )
