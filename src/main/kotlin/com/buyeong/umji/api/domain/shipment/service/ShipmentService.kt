@@ -35,8 +35,6 @@ class ShipmentService(
     fun registerTracking(orderId: UUID, carrierCode: String, trackingNumber: String, operatorId: UUID): ShipmentChangeDto {
         val carrier = carrierCode.trim()
         val tracking = trackingNumber.trim()
-        require(carrier.isNotEmpty() && carrier.length <= MAX_CARRIER_LENGTH) { "택배사 코드는 1~80자여야 합니다." }
-        require(tracking.isNotEmpty() && tracking.length <= MAX_TRACKING_LENGTH) { "송장번호는 1~100자여야 합니다." }
         val current = shipments.findForUpdate(orderId)?.toRecord() ?: throw ItemNotFoundException("주문 배송 정보를 찾을 수 없습니다.")
         require(shipments.findForUpdate(orderId)?.packages.isNullOrEmpty()) { "개별 송장 API를 사용해야 하는 주문입니다." }
         if (current.status == IN_TRANSIT && current.carrierCode == carrier && current.trackingNumber == tracking) {
@@ -70,8 +68,6 @@ class ShipmentService(
         require(shipment.status == PREPARING || shipment.status == IN_TRANSIT) { "배송 준비 중인 주문만 송장을 등록할 수 있습니다." }
         val carrier = request.carrierCode.trim().uppercase()
         val trackingNumber = request.trackingNumber.trim()
-        require(carrier.isNotEmpty() && carrier.length <= MAX_CARRIER_LENGTH) { "택배사 코드는 1~80자여야 합니다." }
-        require(trackingNumber.isNotEmpty() && trackingNumber.length <= MAX_TRACKING_LENGTH) { "송장번호는 1~100자여야 합니다." }
         require(request.items.map { it.orderItemId }.distinct().size == request.items.size) { "송장 내 같은 품목을 중복 지정할 수 없습니다." }
 
         val orderItems = request.items.map { requested ->
@@ -100,7 +96,6 @@ class ShipmentService(
         }
         val actualCost = request.actualShippingCost ?: estimatedCost.takeIf { completeRateSet }
             ?: throw IllegalArgumentException("기본 운송비가 없는 품목이 있어 실제 운송비 입력이 필요합니다.")
-        require(actualCost >= 0) { "실제 운송비는 0원 이상이어야 합니다." }
         val allocatedFreight = splitAmount(actualCost, orderItems.map { requireNotNull(it.first.id) })
 
         val parcel = OrderShipmentPackageEntity().apply {
