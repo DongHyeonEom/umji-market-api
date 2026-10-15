@@ -5,10 +5,11 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
+import jakarta.validation.constraints.Pattern
 
 @Schema(description = "사업자 그룹 등록을 위한 사업자등록 내용")
 data class BusinessGroupRegistrationRequest(
-    @field:NotBlank @field:Size(max = 30,)
+    @field:NotBlank @field:Size(max = 30,) @field:Pattern(regexp = "\\d{3}-?\\d{2}-?\\d{5}")
     @field:Schema(description = "사업자등록번호", example = "123-45-67890", required = true)
     val businessRegistrationNumber: String,
 

@@ -211,7 +211,6 @@ class OrderService(
             ?: throw ItemNotFoundException("관리자 계정을 찾을 수 없습니다.")
 
         val checkoutLines = lines.map { requested ->
-            require(requested.quantity in 1..9999) { "상품 수량은 1개 이상 9999개 이하여야 합니다." }
             val offer = catalog.salesOffer(requested.salesOfferId)
                 ?.takeIf {
                     it.salesStatus == ON_SALE &&

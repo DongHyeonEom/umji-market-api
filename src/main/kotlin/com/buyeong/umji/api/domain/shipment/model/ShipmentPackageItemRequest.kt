@@ -7,6 +7,5 @@ import java.util.UUID
 data class ShipmentPackageItemRequest(
     @field:NotNull
     val orderItemId: UUID,
-    @field:Positive
-    val boxQuantity: Int,
+    @field:Positive val boxQuantity: Int,
 )

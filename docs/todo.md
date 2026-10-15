@@ -3,6 +3,20 @@
 현재 구현 현황은 [implementation-status.md](implementation-status.md), 도메인별 API 계약·알고리즘 흐름은 [services/README.md](services/README.md), 아키텍처 기준은 [architecture.md](architecture.md)를 기준으로 함.<br>완료된 Task와 수용 기준은 [completed-todo.md](completed-todo.md)에 보관.<br>
 각 Task에서 서비스 개발과 자동화 테스트 개발·실행을 분리해 관리함.<br>
 
+## Task 23 — HTTP 요청 입력 검증 경계 정리
+
+외부 요청의 단순 필수값·길이·형식·숫자 범위 검증을 Bean Validation으로 일관화하고 Service에는 업무 맥락 검증을 유지.<br>
+
+### 서비스 개발
+
+- [ ] request에서 온 형식·범위 검증을 Request 제약과 Controller `@Valid`로 처리하고 중복 Service 검증 제거
+- [ ] DB 조회 후 필수값, 상태 전이, 권한, 리소스 간 조합 검증은 Service에 유지
+- [x] 아키텍처와 계정·재고·파일 도메인 문서에 검증 책임 경계 반영
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [ ] 잘못된 요청이 Service 호출 전에 거부되는 API 자동화 테스트 개발 및 실행
+
 ## 진행 규칙
 
 - `[ ]`는 미완료, `[x]`는 실제 코드·문서 반영과 필요한 검증까지 완료된 상태

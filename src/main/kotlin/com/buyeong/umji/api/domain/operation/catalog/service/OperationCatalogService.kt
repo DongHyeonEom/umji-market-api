@@ -50,18 +50,12 @@ class OperationCatalogService(private val catalog: OperationCatalogJpaEntityServ
     }
     fun updateSalesOffer(command: SalesOfferCommandDto): com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferViewDto {
         val channelCode = channel(command.channelCode)
-        require(command.salePrice >= 0) { "판매 가격은 0원 이상이어야 합니다." }
-        require(command.listPrice == null || command.listPrice >= 0) { "정가는 0원 이상이어야 합니다." }
-        require(command.unitsPerSale == null || command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
         require(channelCode != "RETAIL" || command.unitsPerSale == null || command.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
         validateSales(command.salesStatus)
         return catalog.updateSalesOffer(command.copy(channelCode = channelCode)) ?: missing()
     }
     fun updateSellerSalesOffer(organizationId: UUID, command: SalesOfferCommandDto): com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferViewDto {
         val channelCode = channel(command.channelCode)
-        require(command.salePrice >= 0) { "판매 가격은 0원 이상이어야 합니다." }
-        require(command.listPrice == null || command.listPrice >= 0) { "정가는 0원 이상이어야 합니다." }
-        require(command.unitsPerSale == null || command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
         require(channelCode != "RETAIL" || command.unitsPerSale == null || command.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
         validateSales(command.salesStatus)
         return catalog.updateSellerSalesOffer(organizationId, command.copy(channelCode = channelCode)) ?: missing()
@@ -80,7 +74,6 @@ class OperationCatalogService(private val catalog: OperationCatalogJpaEntityServ
     fun sellerBrands(organizationId: UUID, page: Int, size: Int) = catalog.sellerBrands(organizationId, page, size)
     fun createSellerBrand(organizationId: UUID, command: BrandCommandDto): CatalogResourceDto {
         validateDisplay(command.displayStatus)
-        require(command.name.isNotBlank() && command.name.length <= 100) { "브랜드명은 1자 이상 100자 이하여야 합니다." }
         return catalog.createSellerBrand(organizationId, command.copy(name = command.name.trim()))
     }
     fun sellerProducts(organizationId: UUID, page: Int, size: Int) = catalog.sellerProducts(organizationId, page, size)

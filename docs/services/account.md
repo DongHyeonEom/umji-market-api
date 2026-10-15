@@ -14,6 +14,7 @@
 구매자 공급받는자 및 판매자 공급자 세금계산서 정보는 `organization_business_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 Organization 구성원이 공유.<br>
 활성 Organization 구성원은 현재 Organization의 세금계산서 정보를 조회할 수 있고, 대표자와 `ADMIN_ACCOUNT_MANAGE` 운영자만 수정 가능. 개인 Organization은 세금계산서 프로필을 완성하거나 발행 요청할 수 없음.<br>
 세금계산서 프로필 요청은 `OrganizationTaxInvoiceProfileService → OrganizationTaxInvoiceJpaEntityService` 흐름으로 처리.<br>
+배송지·세금계산서 요청의 필수값, 길이, 이메일 형식은 Request 모델의 Bean Validation과 Controller `@Valid`에서 확인하며, Service는 Organization scope와 권한을 확인.<br>
 공급받는자 정보 완성 기준은 활성 `BUSINESS` 그룹과 사업자등록번호·상호·성명·사업자주소·업태·종목 입력. 이메일은 선택 항목.<br>
 주문별 발행 선택은 주문에 저장하고 기본 발행 선택은 구매 Organization 구성원이 공유. 기본값 변경은 대표자만 가능하며, 발행을 요청한 주문에는 주문 시점의 Organization 세금계산서 정보를 snapshot하고 이후 프로필 변경은 기존 주문을 변경하지 않음.<br>
 

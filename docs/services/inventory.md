@@ -19,6 +19,8 @@
 
 ## 동작
 
+입고 lot 수량·원가와 원가 입력 요청의 숫자 범위는 Request 모델의 Bean Validation과 Controller `@Valid`에서 확인. Service는 SKU·Organization 일치, lot 상태 및 예약 재고와의 정합성을 확인.<br>
+
 ### 알고리즘 흐름
 
 ```mermaid

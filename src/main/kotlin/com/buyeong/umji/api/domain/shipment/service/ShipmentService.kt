@@ -77,7 +77,6 @@ class ShipmentService(
         val orderItems = request.items.map { requested ->
             val item = shipment.order.items.firstOrNull { it.publicId == requested.orderItemId }
                 ?: throw ItemNotFoundException("주문 품목을 찾을 수 없습니다.")
-            require(requested.boxQuantity > 0) { "박스 수량은 1 이상이어야 합니다." }
             require(shipments.allocatedBoxQuantity(requested.orderItemId) + requested.boxQuantity <= item.quantity) {
                 "이미 다른 송장에 등록된 수량을 초과했습니다."
             }

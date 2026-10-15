@@ -46,6 +46,10 @@ HTTP 계약 모델과 내부 데이터 전달 객체의 위치·명명 기준.<b
 중첩 data class, 한 파일에 서로 다른 역할의 Request·Response를 함께 선언하는 방식은 사용하지 않음.<br>
 공통 오류 응답 등 도메인에 속하지 않는 공통 객체는 `api/model` 또는 `api/dto`에 둠.<br>
 
+요청 모델의 필수값·문자열 길이·숫자 범위·기본 형식은 Jakarta Bean Validation 제약으로 선언하고 Controller 입력에 `@Valid`를 적용함.<br>
+Service 검증은 DB 조회 결과, 권한, 현재 상태, 재고 및 여러 입력 필드의 조합처럼 업무 맥락이 필요한 규칙에 사용함.<br>
+`require`/`requireNotNull`은 HTTP 입력 형식 검증을 대신하지 않으며, DB entity의 영속 필수값 확인에는 사용 가능함.<br>
+
 ## 패키지 구조
 
 서비스 도메인과 영속성 구현은 `com.buyeong.umji.api` 아래에서 별도 영역으로 관리함.<br>
