@@ -412,6 +412,23 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
+    fun `invalid operation query values are rejected before domain services are called`() {
+        mockMvc.perform(
+            get("/api/operation/payments")
+                .param("status", "NOT_A_PAYMENT_STATUS")
+                .with(authorities("ORDER_READ")),
+        ).andExpect(status().isBadRequest)
+        Mockito.verifyNoInteractions(payments)
+
+        mockMvc.perform(
+            get("/api/operation/audit-logs")
+                .param("resourceType", "NOT_A_RESOURCE")
+                .with(authorities("ADMIN_AUDIT_READ")),
+        ).andExpect(status().isBadRequest)
+        Mockito.verifyNoInteractions(audit)
+    }
+
+    @Test
     fun `account endpoint rejects catalog permission`() {
         mockMvc.perform(get("/api/operation/accounts/roles").with(authorities("PRODUCT_READ")))
             .andExpect(status().isForbidden)
