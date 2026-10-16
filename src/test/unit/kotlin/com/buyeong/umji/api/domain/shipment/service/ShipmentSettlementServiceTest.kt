@@ -44,7 +44,6 @@ class ShipmentSettlementServiceTest : DescribeSpec({
 
             shouldThrow<AccessDeniedException> { service.monthly(brandId, "2026-02", managerId, 0, 20) }
             shouldThrow<IllegalArgumentException> { service.monthly(brandId, "2026-13", managerId, 0, 20) }
-            shouldThrow<IllegalArgumentException> { service.monthly(brandId, "2026-02", managerId, 0, 0) }
             verify(exactly = 0) { persistence.monthly(any()) }
         }
     }

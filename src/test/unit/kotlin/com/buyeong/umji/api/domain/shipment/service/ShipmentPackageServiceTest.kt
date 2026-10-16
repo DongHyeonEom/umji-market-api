@@ -11,18 +11,20 @@ import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentPackageEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentPackageItemEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
-import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
 import java.util.UUID
 
 class ShipmentPackageServiceTest : DescribeSpec({
@@ -89,21 +91,32 @@ class ShipmentPackageServiceTest : DescribeSpec({
         }
 
         val service = ShipmentService(
-            shipments, mockk<InventoryService>(relaxed = true), mockk<OfficialCarrierTrackingGateway>(relaxed = true),
-            mockk<NotificationEventService>(relaxed = true), brandShipping,
+            shipments,
+            mockk<InventoryService>(relaxed = true),
+            mockk<OfficialCarrierTrackingGateway>(relaxed = true),
+            mockk<NotificationEventService>(relaxed = true),
+            brandShipping,
         )
         val first = service.registerPackage(
-            orderId, brandId,
-            ShipmentPackageRequest("DAESIN", "TRACK-1", actualShippingCost = 2201, items = listOf(ShipmentPackageItemRequest(orderItemId, 3), ShipmentPackageItemRequest(noRateItemId, 1))),
+            orderId,
+            brandId,
+            ShipmentPackageRequest(
+                "DAESIN",
+                "TRACK-1",
+                actualShippingCost = 2201,
+                items = listOf(ShipmentPackageItemRequest(orderItemId, 3), ShipmentPackageItemRequest(noRateItemId, 1))
+            ),
             operatorId,
         )
         val second = service.registerPackage(
-            orderId, brandId,
+            orderId,
+            brandId,
             ShipmentPackageRequest("DAESIN", "TRACK-2", items = listOf(ShipmentPackageItemRequest(orderItemId, 2))),
             operatorId,
         )
         val manualCost = service.registerPackage(
-            orderId, brandId,
+            orderId,
+            brandId,
             ShipmentPackageRequest("DAESIN", "TRACK-3", actualShippingCost = 500, items = listOf(ShipmentPackageItemRequest(noRateItemId, 1))),
             operatorId,
         )
@@ -117,6 +130,59 @@ class ShipmentPackageServiceTest : DescribeSpec({
         savedPackages[1].items.single().amountPerBoxSnapshot shouldBe 900L
         savedPackages.last().items.single().lineShippingCostSnapshot shouldBe 500L
         verify(exactly = 3) { shipments.registerPackage(shipment, any(), operatorId) }
+    }
+
+    it("복수 브랜드 주문을 브랜드별 송장으로 분리하고 각 기본 운송비를 적용한다") {
+        val otherBrandId = UUID.randomUUID()
+        val otherSkuId = UUID.randomUUID()
+        val otherOrderItemId = UUID.randomUUID()
+        val firstItem = orderItem()
+        val secondItem = orderItem(otherBrandId, otherSkuId, otherOrderItemId)
+        val orderEntity = mockk<PurchaseOrderEntity>(relaxed = true) {
+            every { publicId } returns orderId
+            every { items } returns mutableListOf(firstItem, secondItem)
+        }
+        val shipment = mockk<OrderShipmentEntity>(relaxed = true) {
+            every { status } returns "PREPARING"
+            every { order } returns orderEntity
+        }
+        every { shipments.findForUpdate(orderId) } returns shipment
+        every { shipments.allocatedBoxQuantity(any()) } returns 0
+        every { brandShipping.canManageBrandOrAdmin(any(), operatorId) } returns true
+        every { brandShipping.rate(brandId, skuId, "DAESIN") } returns BrandShippingRateDto(brandId, skuId, "SKU", "DAESIN", 700)
+        every { brandShipping.rate(otherBrandId, otherSkuId, "DAESIN") } returns BrandShippingRateDto(otherBrandId, otherSkuId, "SKU", "DAESIN", 900)
+        every { shipments.registerPackage(shipment, any(), operatorId) } answers {
+            secondArg<OrderShipmentPackageEntity>().apply {
+                this.shipment = shipment
+                publicId = UUID.randomUUID()
+            }
+        }
+        val service = ShipmentService(
+            shipments,
+            mockk<InventoryService>(relaxed = true),
+            mockk<OfficialCarrierTrackingGateway>(relaxed = true),
+            mockk<NotificationEventService>(relaxed = true),
+            brandShipping,
+        )
+
+        val firstPackage = service.registerPackage(
+            orderId,
+            brandId,
+            ShipmentPackageRequest("DAESIN", "TRACK-A", items = listOf(ShipmentPackageItemRequest(orderItemId, 1))),
+            operatorId,
+        )
+        val secondPackage = service.registerPackage(
+            orderId,
+            otherBrandId,
+            ShipmentPackageRequest("DAESIN", "TRACK-B", items = listOf(ShipmentPackageItemRequest(otherOrderItemId, 2))),
+            operatorId,
+        )
+
+        firstPackage.brandId shouldBe brandId
+        firstPackage.actualShippingCost shouldBe 700L
+        secondPackage.brandId shouldBe otherBrandId
+        secondPackage.actualShippingCost shouldBe 1800L
+        verify(exactly = 2) { shipments.registerPackage(shipment, any(), operatorId) }
     }
 
     it("다른 브랜드 품목이 섞인 송장은 등록하지 않는다") {
@@ -135,19 +201,72 @@ class ShipmentPackageServiceTest : DescribeSpec({
         every { shipments.allocatedBoxQuantity(any()) } returns 0
 
         val service = ShipmentService(
-            shipments, mockk<InventoryService>(relaxed = true), mockk<OfficialCarrierTrackingGateway>(relaxed = true),
-            mockk<NotificationEventService>(relaxed = true), brandShipping,
+            shipments,
+            mockk<InventoryService>(relaxed = true),
+            mockk<OfficialCarrierTrackingGateway>(relaxed = true),
+            mockk<NotificationEventService>(relaxed = true),
+            brandShipping,
         )
         shouldThrow<IllegalArgumentException> {
             service.registerPackage(
-                orderId, brandId,
-                ShipmentPackageRequest("DAESIN", "TRACK-2", 1000, listOf(
-                    ShipmentPackageItemRequest(orderItemId, 1), ShipmentPackageItemRequest(secondItem, 1),
-                )),
+                orderId,
+                brandId,
+                ShipmentPackageRequest(
+                    "DAESIN",
+                    "TRACK-2",
+                    1000,
+                    listOf(
+                        ShipmentPackageItemRequest(orderItemId, 1),
+                        ShipmentPackageItemRequest(secondItem, 1),
+                    )
+                ),
                 operatorId,
             )
         }
         verify(exactly = 0) { shipments.registerPackage(any(), any(), any()) }
+    }
+
+    it("실제 운송비 변경을 저장하고 품목 snapshot에 원 단위 차액을 반영한다") {
+        val firstItem = orderItem()
+        val secondItemId = UUID.randomUUID()
+        val secondItem = orderItem(itemSkuId = UUID.randomUUID(), itemId = secondItemId)
+        val order = mockk<PurchaseOrderEntity> { every { publicId } returns orderId }
+        val shipment = mockk<OrderShipmentEntity>()
+        every { shipment.order } returns order
+        val firstLine = OrderShipmentPackageItemEntity().apply {
+            orderItem = firstItem
+            boxQuantity = 1
+        }
+        val secondLine = OrderShipmentPackageItemEntity().apply {
+            orderItem = secondItem
+            boxQuantity = 1
+        }
+        val parcel = OrderShipmentPackageEntity().apply {
+            publicId = UUID.randomUUID()
+            this.shipment = shipment
+            brand = mockk<BrandEntity> { every { publicId } returns brandId }
+            carrierCode = "DAESIN"
+            trackingNumber = "TRACK-COST"
+            items = mutableListOf(firstLine, secondLine)
+        }
+        every { shipments.findPackageForUpdate(requireNotNull(parcel.publicId)) } returns parcel
+        every { brandShipping.canManageBrandOrAdmin(brandId, operatorId) } returns true
+        every { shipments.updateActualCost(parcel, 101L, operatorId) } answers {
+            firstArg<OrderShipmentPackageEntity>().apply { actualShippingCost = 101L }
+        }
+
+        val service = ShipmentService(
+            shipments,
+            mockk<InventoryService>(relaxed = true),
+            mockk<OfficialCarrierTrackingGateway>(relaxed = true),
+            mockk<NotificationEventService>(relaxed = true),
+            brandShipping,
+        )
+        val result = service.updateActualCost(requireNotNull(parcel.publicId), 101L, operatorId, "택배사 실청구")
+
+        result.actualShippingCost shouldBe 101L
+        parcel.items.map { it.lineShippingCostSnapshot } shouldBe listOf(51L, 50L)
+        verify(exactly = 1) { shipments.updateActualCost(parcel, 101L, operatorId) }
     }
 
     it("배정되지 않은 브랜드 담당자는 송장을 등록하지 못한다") {
@@ -165,12 +284,16 @@ class ShipmentPackageServiceTest : DescribeSpec({
         every { brandShipping.canManageBrandOrAdmin(brandId, operatorId) } returns false
 
         val service = ShipmentService(
-            shipments, mockk<InventoryService>(relaxed = true), mockk<OfficialCarrierTrackingGateway>(relaxed = true),
-            mockk<NotificationEventService>(relaxed = true), brandShipping,
+            shipments,
+            mockk<InventoryService>(relaxed = true),
+            mockk<OfficialCarrierTrackingGateway>(relaxed = true),
+            mockk<NotificationEventService>(relaxed = true),
+            brandShipping,
         )
         shouldThrow<AccessDeniedException> {
             service.registerPackage(
-                orderId, brandId,
+                orderId,
+                brandId,
                 ShipmentPackageRequest("DAESIN", "TRACK-3", 1000, listOf(ShipmentPackageItemRequest(orderItemId, 1))),
                 operatorId,
             )
@@ -181,8 +304,11 @@ class ShipmentPackageServiceTest : DescribeSpec({
 
     it("관리자는 전체 송장을 조회하고 배송 담당자는 배정 브랜드로 조회 범위가 제한된다") {
         val service = ShipmentService(
-            shipments, mockk<InventoryService>(relaxed = true), mockk<OfficialCarrierTrackingGateway>(relaxed = true),
-            mockk<NotificationEventService>(relaxed = true), brandShipping,
+            shipments,
+            mockk<InventoryService>(relaxed = true),
+            mockk<OfficialCarrierTrackingGateway>(relaxed = true),
+            mockk<NotificationEventService>(relaxed = true),
+            brandShipping,
         )
         val assignedBrands = setOf(brandId)
         every { brandShipping.assignedBrandIds(operatorId) } returns assignedBrands
@@ -190,13 +316,17 @@ class ShipmentPackageServiceTest : DescribeSpec({
 
         try {
             SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
-                operatorId, "", listOf(SimpleGrantedAuthority("SHIPMENT_ASSIGN")),
+                operatorId,
+                "",
+                listOf(SimpleGrantedAuthority("SHIPMENT_ASSIGN")),
             )
             service.operationPackages(operatorId)
             verify { shipments.operationPackages(assignedBrands, true) }
 
             SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
-                operatorId, "", listOf(SimpleGrantedAuthority("SHIPMENT_READ")),
+                operatorId,
+                "",
+                listOf(SimpleGrantedAuthority("SHIPMENT_READ")),
             )
             service.operationPackages(operatorId)
             verify { shipments.operationPackages(assignedBrands, false) }
