@@ -44,4 +44,7 @@ data class OperationProductResponse(
         schema = Schema(implementation = OperationProductSkuResponse::class),
     ) @field:Schema(description = "상품 SKU 목록", example = "[]", type = "array", required = true)
     val skus: List<OperationProductSkuResponse> = emptyList(),
+
+    @field:Schema(description = "상품 도매 단가 적용 기준 수량(박스)", example = "3", required = true)
+    val wholesaleMinimumQuantity: Int = 5,
 )

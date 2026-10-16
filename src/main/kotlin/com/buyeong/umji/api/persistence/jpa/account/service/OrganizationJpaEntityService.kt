@@ -41,15 +41,9 @@ class OrganizationJpaEntityService(
     fun activeBuyerForAccountPublicId(accountPublicId: UUID): OrganizationEntity? =
         activeForAccountPublicId(accountPublicId)?.takeIf { hasCapability(requireNotNull(it.publicId), BUYER) }
 
-    fun allowedSalesChannelForAccountPublicId(accountPublicId: UUID): String {
-        val organization = activeBuyerForAccountPublicId(accountPublicId)
+    fun buyerTypeForAccountPublicId(accountPublicId: UUID): String =
+        activeBuyerForAccountPublicId(accountPublicId)?.buyerType
             ?: throw ItemNotFoundException("활성 구매 Organization을 찾을 수 없습니다.")
-        return when (organization.buyerType) {
-            WHOLESALE_BUSINESS -> WHOLESALE
-            GENERAL_BUSINESS, INDIVIDUAL_BUYER -> RETAIL
-            else -> throw IllegalStateException("지원하지 않는 Organization 구매 유형입니다.")
-        }
-    }
 
     fun commercePolicy(organizationPublicId: UUID): OrganizationEntity? =
         groups.findByPublicId(organizationPublicId)?.takeIf {
@@ -260,7 +254,5 @@ class OrganizationJpaEntityService(
         const val INDIVIDUAL_BUYER = "INDIVIDUAL"
         const val WHOLESALE_BUSINESS = "WHOLESALE_BUSINESS"
         const val GENERAL_BUSINESS = "GENERAL_BUSINESS"
-        const val WHOLESALE = "WHOLESALE"
-        const val RETAIL = "RETAIL"
     }
 }

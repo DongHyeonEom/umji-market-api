@@ -11,6 +11,7 @@ import com.buyeong.umji.api.domain.operation.catalog.dto.ProductCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.ProductStatusCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferViewDto
+import com.buyeong.umji.api.domain.operation.catalog.dto.SkuPricingCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SkuCommandDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.catalog.service.OperationCatalogJpaEntityService
@@ -47,14 +48,16 @@ class OperationCatalogService(private val catalog: OperationCatalogJpaEntityServ
     }
     fun updateSalesOffer(command: SalesOfferCommandDto): com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferViewDto {
         val channelCode = channel(command.channelCode)
-        require(channelCode != "RETAIL" || command.unitsPerSale == null || command.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
         return catalog.updateSalesOffer(command.copy(channelCode = channelCode)) ?: missing()
     }
     fun updateSellerSalesOffer(organizationId: UUID, command: SalesOfferCommandDto): com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferViewDto {
         val channelCode = channel(command.channelCode)
-        require(channelCode != "RETAIL" || command.unitsPerSale == null || command.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
         return catalog.updateSellerSalesOffer(organizationId, command.copy(channelCode = channelCode)) ?: missing()
     }
+    fun updateSkuPricing(command: SkuPricingCommandDto) =
+        catalog.updateSkuPricing(command) ?: missing()
+    fun updateSellerSkuPricing(organizationId: UUID, command: SkuPricingCommandDto) =
+        catalog.updateSellerSkuPricing(organizationId, command) ?: missing()
     fun createBrand(
         command: BrandCommandDto,
     ): CatalogResourceDto {

@@ -27,6 +27,12 @@ class SalesOfferEntity : DomainPublicEntity() {
     @Column(name = "sale_price", nullable = false)
     var salePrice: Long = 0
 
+    @Column(name = "retail_sale_price", nullable = false)
+    var retailSalePrice: Long = 0
+
+    @Column(name = "wholesale_sale_price", nullable = false)
+    var wholesaleSalePrice: Long = 0
+
     @Column(name = "list_price")
     var listPrice: Long? = null
 

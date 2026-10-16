@@ -38,4 +38,7 @@ class ProductEntity : DomainSoftDeletableEntity() {
 
     @Column(name = "display_order", nullable = false)
     var displayOrder: Int = 0
+
+    @Column(name = "wholesale_minimum_quantity", nullable = false)
+    var wholesaleMinimumQuantity: Int = 5
 }

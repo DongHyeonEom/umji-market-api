@@ -14,12 +14,18 @@ data class ProductSummaryResponse(
     @field:Schema(description = "Brand Name 정보", example = "예시 값", type = "string", required = true)
     val brandName: String?,
 
-    @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", type = "string", required = true)
+    @field:Schema(description = "통합 카탈로그 기본 채널 호환값", example = "WHOLESALE", type = "string", required = true)
     val channelCode: String = "WHOLESALE",
 
-    @field:Schema(description = "채널 최저 판매 단위 가격(원). WHOLESALE은 박스당 가격", example = "12000", type = "integer", required = false)
+    @field:Schema(description = "SKU 중 가장 낮은 소매 판매 단위 가격(원)", example = "15000", type = "integer", required = false)
     val startingPrice: Long? = null,
+
+    @field:Schema(description = "SKU 중 가장 낮은 도매 판매 단위 가격(원)", example = "12000", type = "integer", required = false)
+    val startingWholesalePrice: Long? = null,
 
     @field:Schema(description = "시작 판매가 오퍼의 판매 단위당 입수 수량", example = "12", type = "integer", required = true, implementation = Int::class)
     val startingUnitsPerSale: Int = 1,
+
+    @field:Schema(description = "도매 단가 적용 기준 수량(박스)", example = "3", type = "integer", required = true)
+    val wholesaleMinimumQuantity: Int = 5,
 )

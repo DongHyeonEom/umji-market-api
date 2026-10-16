@@ -30,6 +30,9 @@ import com.buyeong.umji.api.domain.operation.model.UpdateChannelListingRequest
 import com.buyeong.umji.api.domain.operation.model.UpdateProductRequest
 import com.buyeong.umji.api.domain.operation.model.UpdateSalesOfferRequest
 import com.buyeong.umji.api.domain.seller.model.SellerSalesOfferResponse
+import com.buyeong.umji.api.domain.operation.model.UpdateSkuPricingRequest
+import com.buyeong.umji.api.domain.operation.model.SkuPricingResponse
+import com.buyeong.umji.api.domain.operation.catalog.dto.SkuPricingCommandDto
 import com.buyeong.umji.api.domain.seller.model.SellerSkuPageResponse
 import com.buyeong.umji.api.domain.seller.model.SellerSkuResponse
 import com.buyeong.umji.api.domain.seller.service.SellerCatalogService
@@ -136,6 +139,21 @@ class SellerCatalogController(
         )
     }
 
+    @Operation(summary = "SKU 소매·도매 가격 설정", description = "판매자 SKU별 소매가·도매가와 상품별 도매 기준 수량을 설정")
+    @PutMapping("/skus/{skuId}/pricing")
+    fun updateSkuPricing(
+        @PathVariable skuId: UUID,
+        @Valid @RequestBody request: UpdateSkuPricingRequest,
+    ): SkuPricingResponse = SkuPricingResponse.from(
+        sellers.updateSkuPricing(
+            currentAccounts.activeAccountPublicId(),
+            SkuPricingCommandDto(
+                skuId, request.retailSalePrice, request.wholesaleSalePrice,
+                request.wholesaleMinimumQuantity, request.salesStatus, request.unitsPerSale,
+            ),
+        ),
+    )
+
     @Operation(summary = "판매 가능 공용 SKU 조회", description = "활성 SELLER Organization이 오퍼를 등록할 수 있는 공개 상태 상품의 SKU를 조회")
     @GetMapping("/skus")
     fun skus(
@@ -199,6 +217,12 @@ class SellerCatalogController(
         id, categoryId, brandId, name, description, displayStatus, salesStatus, displayOrder,
         images.map { OperationProductImageResponse(it.id, it.storageKey, it.altText, it.displayOrder) },
         options.map { OperationProductOptionResponse(it.id, it.name, it.displayOrder, it.values.map { v -> OperationProductOptionValueResponse(v.id, v.value, v.displayOrder) }) },
-        skus.map { OperationProductSkuResponse(it.id, it.skuCode, it.name, it.salePrice, it.listPrice, it.salesStatus, it.optionValueIds) },
+        skus.map {
+            OperationProductSkuResponse(
+                it.id, it.skuCode, it.name, it.salePrice, it.listPrice, it.salesStatus,
+                it.optionValueIds, it.retailSalePrice, it.wholesaleSalePrice, it.unitsPerSale,
+            )
+        },
+        wholesaleMinimumQuantity,
     )
 }

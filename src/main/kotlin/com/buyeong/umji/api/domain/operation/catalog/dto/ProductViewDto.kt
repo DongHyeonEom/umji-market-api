@@ -14,4 +14,5 @@ data class ProductViewDto(
     val images: List<ImageViewDto> = emptyList(),
     val options: List<OptionViewDto> = emptyList(),
     val skus: List<SkuViewDto> = emptyList(),
+    val wholesaleMinimumQuantity: Int = 5,
 )

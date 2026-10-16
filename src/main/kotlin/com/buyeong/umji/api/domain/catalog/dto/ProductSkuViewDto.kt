@@ -8,6 +8,8 @@ data class ProductSkuViewDto(
     val name: String,
     val salePrice: Long,
     val listPrice: Long?,
+    val retailSalePrice: Long = salePrice,
+    val wholesaleSalePrice: Long = salePrice,
     val salesOfferId: UUID? = null,
     val unitsPerSale: Int = 1,
     val sellerOrganizationId: UUID? = null,

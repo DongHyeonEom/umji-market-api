@@ -18,6 +18,8 @@ import com.buyeong.umji.api.domain.operation.catalog.dto.ProductStatusCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.ProductViewDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferViewDto
+import com.buyeong.umji.api.domain.operation.catalog.dto.SkuPricingCommandDto
+import com.buyeong.umji.api.domain.operation.catalog.dto.SkuPricingViewDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SkuCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SkuViewDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
@@ -142,12 +144,67 @@ class OperationCatalogJpaEntityService(
         val sku = catalog.sku(command.skuId) ?: return null
         val offer = offers.findFirstBySalesChannel_IdAndProductSku_IdAndOrganizationIsNull(requireNotNull(channel.id), requireNotNull(sku.id))
             ?: return null
-        offer.salePrice = command.salePrice
-        offer.listPrice = command.listPrice
-        offer.salesStatus = command.salesStatus
-        offer.unitsPerSale = command.unitsPerSale ?: offer.unitsPerSale
-        require(command.channelCode != RETAIL || offer.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
-        return offers.save(offer).toView()
+        return updateLegacyOfferPrice(sku, null, channel.code, offer, command)
+    }
+
+    fun updateSkuPricing(command: SkuPricingCommandDto): SkuPricingViewDto? {
+        val sku = catalog.sku(command.skuId) ?: return null
+        val organization = sku.product.organization
+        require(command.wholesaleMinimumQuantity in MIN_WHOLESALE_QUANTITY..MAX_WHOLESALE_QUANTITY) {
+            "도매 적용 기준 수량은 1~5박스여야 합니다."
+        }
+        require(command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
+        sku.product.wholesaleMinimumQuantity = command.wholesaleMinimumQuantity
+        return saveSkuPricing(sku, organization, command)
+    }
+
+    fun updateSellerSkuPricing(organizationPublicId: UUID, command: SkuPricingCommandDto): SkuPricingViewDto? {
+        val organization = organizations.findByPublicId(organizationPublicId) ?: return null
+        val sku = catalog.sku(command.skuId) ?: return null
+        require(sku.product.organization?.id == organization.id) { "판매 Organization 소유 상품의 SKU만 가격을 설정할 수 있습니다." }
+        require(sku.salesStatus == ON_SALE && sku.product.salesStatus == ON_SALE && sku.product.displayStatus == DISPLAYED) {
+            "노출·판매 가능한 상품의 SKU만 가격을 설정할 수 있습니다."
+        }
+        require(command.wholesaleMinimumQuantity in MIN_WHOLESALE_QUANTITY..MAX_WHOLESALE_QUANTITY) {
+            "도매 적용 기준 수량은 1~5박스여야 합니다."
+        }
+        require(command.unitsPerSale > 0) { "판매 단위 입수 수량은 1 이상이어야 합니다." }
+        sku.product.wholesaleMinimumQuantity = command.wholesaleMinimumQuantity
+        return saveSkuPricing(sku, organization, command)
+    }
+
+    private fun saveSkuPricing(
+        sku: com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity,
+        organization: com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity?,
+        command: SkuPricingCommandDto,
+    ): SkuPricingViewDto {
+        val updated = listOf(WHOLESALE, RETAIL).map { channelCode ->
+            val channel = channel(channelCode)
+            val offer = if (organization == null) {
+                offers.findFirstBySalesChannel_IdAndProductSku_IdAndOrganizationIsNull(requireNotNull(channel.id), requireNotNull(sku.id))
+            } else {
+                offers.findBySalesChannel_IdAndProductSku_IdAndOrganization_Id(
+                    requireNotNull(channel.id), requireNotNull(sku.id), requireNotNull(organization.id),
+                )
+            } ?: SalesOfferEntity().apply {
+                salesChannel = channel
+                productSku = sku
+                this.organization = organization
+            }
+            offer.salePrice = if (channelCode == WHOLESALE) command.wholesaleSalePrice else command.retailSalePrice
+            offer.retailSalePrice = command.retailSalePrice
+            offer.wholesaleSalePrice = command.wholesaleSalePrice
+            offer.salesStatus = command.salesStatus
+            offer.unitsPerSale = command.unitsPerSale
+            offers.save(offer)
+        }
+        val wholesaleOffer = updated.first { it.salesChannel.code == WHOLESALE }
+        return SkuPricingViewDto(
+            requireNotNull(sku.publicId), requireNotNull(sku.product.publicId),
+            command.retailSalePrice, command.wholesaleSalePrice,
+            sku.product.wholesaleMinimumQuantity, command.salesStatus, command.unitsPerSale,
+            requireNotNull(wholesaleOffer.publicId), organization?.publicId,
+        )
     }
 
     fun updateSellerSalesOffer(organizationPublicId: UUID, command: SalesOfferCommandDto): SalesOfferViewDto? {
@@ -168,12 +225,44 @@ class OperationCatalogJpaEntityService(
             productSku = sku
             this.organization = organization
         }
-        offer.salePrice = command.salePrice
-        offer.listPrice = command.listPrice
-        offer.salesStatus = command.salesStatus
-        offer.unitsPerSale = command.unitsPerSale ?: offer.unitsPerSale
-        require(command.channelCode != RETAIL || offer.unitsPerSale == 1) { "RETAIL 오퍼의 판매 단위 입수 수량은 1이어야 합니다." }
-        return offers.save(offer).toView()
+        return updateLegacyOfferPrice(sku, organization, channel.code, offer, command)
+    }
+
+    private fun updateLegacyOfferPrice(
+        sku: com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity,
+        organization: com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity?,
+        channelCode: String,
+        selectedOffer: SalesOfferEntity,
+        command: SalesOfferCommandDto,
+    ): SalesOfferViewDto {
+        fun existing(code: String) = if (organization == null) {
+            offers.findFirstBySalesChannel_IdAndProductSku_IdAndOrganizationIsNull(requireNotNull(channel(code).id), requireNotNull(sku.id))
+        } else {
+            offers.findBySalesChannel_IdAndProductSku_IdAndOrganization_Id(
+                requireNotNull(channel(code).id), requireNotNull(sku.id), requireNotNull(organization.id),
+            )
+        }
+        val retail = existing(RETAIL)
+        val wholesale = existing(WHOLESALE)
+        val boxUnits = wholesale?.unitsPerSale ?: selectedOffer.unitsPerSale
+        val retailPrice = if (channelCode == RETAIL) {
+            Math.multiplyExact(command.salePrice, boxUnits.toLong())
+        } else {
+            retail?.retailSalePrice ?: retail?.salePrice ?: sku.salePrice
+        }
+        val wholesalePrice = if (channelCode == WHOLESALE) command.salePrice else wholesale?.wholesaleSalePrice ?: wholesale?.salePrice ?: sku.salePrice
+        saveSkuPricing(
+            sku,
+            organization,
+            SkuPricingCommandDto(
+                requireNotNull(sku.publicId), retailPrice, wholesalePrice,
+                sku.product.wholesaleMinimumQuantity, command.salesStatus,
+                if (channelCode == WHOLESALE) command.unitsPerSale ?: selectedOffer.unitsPerSale else boxUnits,
+            ),
+        )
+        val canonical = existing(channelCode) ?: selectedOffer
+        canonical.listPrice = command.listPrice
+        return offers.save(canonical).toView()
     }
     fun createBrand(
         command: BrandCommandDto,
@@ -389,6 +478,12 @@ class OperationCatalogJpaEntityService(
 
     private fun ProductEntity.toView(details: Boolean = false): ProductViewDto {
         val pid = requireNotNull(id)
+        val pricingOffers = if (details) {
+            offers.findAllBySalesChannel_IdAndProductSku_Product_Id(requireNotNull(channel(WHOLESALE).id), pid)
+                .associateBy { it.productSku.id }
+        } else {
+            emptyMap()
+        }
         return ProductViewDto(
             requireNotNull(publicId), requireNotNull(category.publicId), brand?.publicId, name, description, displayStatus, salesStatus, displayOrder,
             if (details) catalog.images(pid).map { ImageViewDto(requireNotNull(it.publicId), it.storageKey, it.altText, it.displayOrder) } else emptyList(),
@@ -412,17 +507,21 @@ class OperationCatalogJpaEntityService(
                         requireNotNull(s.publicId),
                         s.skuCode,
                         s.name,
-                        s.salePrice,
+                        pricingOffers[s.id]?.retailSalePrice ?: s.salePrice,
                         s.listPrice,
                         s.salesStatus,
                         s.optionValues.mapTo(linkedSetOf()) {
                             requireNotNull(it.publicId)
                         },
+                        pricingOffers[s.id]?.retailSalePrice ?: s.salePrice,
+                        pricingOffers[s.id]?.wholesaleSalePrice ?: s.salePrice,
+                        pricingOffers[s.id]?.unitsPerSale ?: 1,
                     )
                 }
             } else {
                 emptyList()
             },
+            wholesaleMinimumQuantity,
         )
     }
 
@@ -431,5 +530,7 @@ class OperationCatalogJpaEntityService(
         const val DISPLAYED = "DISPLAYED"
         const val WHOLESALE = "WHOLESALE"
         const val RETAIL = "RETAIL"
+        const val MIN_WHOLESALE_QUANTITY = 1
+        const val MAX_WHOLESALE_QUANTITY = 5
     }
 }

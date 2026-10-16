@@ -7,6 +7,7 @@ import com.buyeong.umji.api.domain.operation.catalog.dto.BrandCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.ChannelListingCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.ProductCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferCommandDto
+import com.buyeong.umji.api.domain.operation.catalog.dto.SkuPricingCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
 import com.buyeong.umji.api.domain.seller.dto.SellerSkuResponseDto
 import com.buyeong.umji.api.exception.ClientBadRequestException
@@ -78,6 +79,16 @@ class SellerCatalogService(
                 organizationId,
                 SalesOfferCommandDto(channelCode, skuId, salePrice, listPrice, salesStatus, unitsPerSale),
             )
+        }
+
+    @Transactional
+    fun updateSkuPricing(accountId: UUID, command: SkuPricingCommandDto) =
+        sellerOrganization(accountId).let { organizationId ->
+            if (command.salesStatus == "ON_SALE" && !businessProfiles.isSellerBusinessProfileReady(organizationId)) {
+                throw ClientBadRequestException("판매하려면 확인이 완료된 사업자 Organization 프로필이 필요합니다.")
+            }
+            verifyOwnedSku(organizationId, command.skuId)
+            catalog.updateSellerSkuPricing(organizationId, command)
         }
 
     @Transactional(readOnly = true)
