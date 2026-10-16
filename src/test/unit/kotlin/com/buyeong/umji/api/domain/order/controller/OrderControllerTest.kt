@@ -2,6 +2,7 @@ package com.buyeong.umji.api.domain.order.controller
 
 import com.buyeong.umji.api.domain.auth.service.CurrentAccountService
 import com.buyeong.umji.api.domain.order.dto.OrderPageDto
+import com.buyeong.umji.api.domain.order.model.CreateOrderRequest
 import com.buyeong.umji.api.domain.order.service.CustomerOrderListingService
 import com.buyeong.umji.api.domain.order.service.OrderService
 import io.kotest.core.spec.style.DescribeSpec
@@ -10,6 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verifyOrder
 import java.util.UUID
+import kotlin.reflect.full.memberProperties
 
 class OrderControllerTest : DescribeSpec({
     val customerId = UUID.randomUUID()
@@ -29,5 +31,10 @@ class OrderControllerTest : DescribeSpec({
             currentAccounts.activeAccountPublicId()
             customerOrders.list(customerId, 0, 20)
         }
+    }
+
+    it("주문 생성 요청은 가격 입력을 받지 않아 클라이언트 가격을 신뢰하지 않는다") {
+        CreateOrderRequest::class.memberProperties.map { it.name }.toSet() shouldBe
+            setOf("shippingAddressId", "taxInvoiceRequested", "updateDefaultTaxInvoicePreference")
     }
 })
