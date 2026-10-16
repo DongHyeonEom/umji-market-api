@@ -26,6 +26,9 @@ class OrganizationEntity {
     @Column(name = "organization_type", nullable = false)
     lateinit var organizationType: String
 
+    @Column(name = "buyer_type", nullable = false, length = 30)
+    var buyerType: String = "GENERAL_BUSINESS"
+
     @Column(name = "display_name", nullable = false)
     lateinit var displayName: String
 
@@ -38,6 +41,9 @@ class OrganizationEntity {
 
     @Column(name = "default_tax_invoice_requested", nullable = false)
     var defaultTaxInvoiceRequested: Boolean = false
+
+    @Column(name = "payment_before_shipment_required", nullable = false)
+    var paymentBeforeShipmentRequired: Boolean = false
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()

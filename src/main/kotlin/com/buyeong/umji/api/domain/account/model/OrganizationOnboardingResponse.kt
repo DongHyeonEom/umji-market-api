@@ -24,7 +24,9 @@ data class OrganizationOnboardingResponse(
     val invitations: List<OrganizationInvitationResponse>,
 )
 
-fun OrganizationSummaryDto.toResponse() = OrganizationResponse(id, type, name, representative, capabilities)
-fun OrganizationSearchResultDto.toResponse() = SearchOrganizationResponse(id, type, name, capabilities)
+fun OrganizationSummaryDto.toResponse() = OrganizationResponse(
+    id, type, name, representative, capabilities, buyerType, paymentBeforeShipmentRequired,
+)
+fun OrganizationSearchResultDto.toResponse() = SearchOrganizationResponse(id, type, name, capabilities, buyerType)
 fun OrganizationInvitationDto.toResponse() = OrganizationInvitationResponse(id, organizationId, organizationName, invitedPhone)
 fun OrganizationJoinRequest.toResponse() = OrganizationJoinRequestResponse(id, organizationId, organizationName, requesterName, requesterPhone, requestedAt)

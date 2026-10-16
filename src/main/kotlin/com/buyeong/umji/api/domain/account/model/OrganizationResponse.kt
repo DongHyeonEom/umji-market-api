@@ -19,4 +19,10 @@ data class OrganizationResponse(
 
     @field:Schema(description = "Organization capability 목록", example = "[\"BUYER\"]", required = true)
     val capabilities: Set<String>,
+
+    @field:Schema(description = "구매 정책 유형", example = "GENERAL_BUSINESS", required = true)
+    val buyerType: String,
+
+    @field:Schema(description = "전액 입금 전 배송 준비 제한 여부", example = "false", required = true)
+    val paymentBeforeShipmentRequired: Boolean,
 )

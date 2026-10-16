@@ -41,6 +41,47 @@ class OrganizationJpaEntityService(
     fun activeBuyerForAccountPublicId(accountPublicId: UUID): OrganizationEntity? =
         activeForAccountPublicId(accountPublicId)?.takeIf { hasCapability(requireNotNull(it.publicId), BUYER) }
 
+    fun allowedSalesChannelForAccountPublicId(accountPublicId: UUID): String {
+        val organization = activeBuyerForAccountPublicId(accountPublicId)
+            ?: throw ItemNotFoundException("활성 구매 Organization을 찾을 수 없습니다.")
+        return when (organization.buyerType) {
+            WHOLESALE_BUSINESS -> WHOLESALE
+            GENERAL_BUSINESS, INDIVIDUAL_BUYER -> RETAIL
+            else -> throw IllegalStateException("지원하지 않는 Organization 구매 유형입니다.")
+        }
+    }
+
+    fun commercePolicy(organizationPublicId: UUID): OrganizationEntity? =
+        groups.findByPublicId(organizationPublicId)?.takeIf {
+            it.status == ACTIVE && capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(it.id), BUYER)
+        }
+
+    @Transactional
+    fun updateCommercePolicy(
+        organizationPublicId: UUID,
+        buyerType: String,
+        paymentBeforeShipmentRequired: Boolean,
+    ): OrganizationEntity {
+        val organization = groups.findByPublicId(organizationPublicId)
+            ?: throw ItemNotFoundException("Organization을 찾을 수 없습니다.")
+        val locked = groups.findLockedById(requireNotNull(organization.id))
+            ?.takeIf { it.status == ACTIVE }
+            ?: throw ItemNotFoundException("활성 Organization을 찾을 수 없습니다.")
+        require(capabilities.existsByOrganization_IdAndCapabilityCode(requireNotNull(locked.id), BUYER)) {
+            "구매 capability가 있는 Organization만 구매 정책을 설정할 수 있습니다."
+        }
+        require(
+            when (buyerType) {
+                WHOLESALE_BUSINESS, GENERAL_BUSINESS -> locked.organizationType == BUSINESS
+                INDIVIDUAL_BUYER -> locked.organizationType == INDIVIDUAL
+                else -> false
+            },
+        ) { "구매 유형과 법적 Organization 유형이 일치하지 않습니다." }
+        locked.buyerType = buyerType
+        locked.paymentBeforeShipmentRequired = paymentBeforeShipmentRequired
+        return groups.saveAndFlush(locked)
+    }
+
     fun defaultTaxInvoiceRequestedForAccount(accountPublicId: UUID): Boolean =
         activeBuyerForAccountPublicId(accountPublicId)?.defaultTaxInvoiceRequested ?: false
 
@@ -108,6 +149,7 @@ class OrganizationJpaEntityService(
         val group = groups.saveAndFlush(
             OrganizationEntity().apply {
                 organizationType = if (profileData == null) INDIVIDUAL else BUSINESS
+                buyerType = if (profileData == null) INDIVIDUAL_BUYER else GENERAL_BUSINESS
                 displayName = profileData?.businessName ?: account.name
                 status = ACTIVE
                 representativeAccount = account
@@ -215,5 +257,10 @@ class OrganizationJpaEntityService(
         const val ACTIVE = "ACTIVE"
         const val BUSINESS = "BUSINESS"
         const val INDIVIDUAL = "INDIVIDUAL"
+        const val INDIVIDUAL_BUYER = "INDIVIDUAL"
+        const val WHOLESALE_BUSINESS = "WHOLESALE_BUSINESS"
+        const val GENERAL_BUSINESS = "GENERAL_BUSINESS"
+        const val WHOLESALE = "WHOLESALE"
+        const val RETAIL = "RETAIL"
     }
 }

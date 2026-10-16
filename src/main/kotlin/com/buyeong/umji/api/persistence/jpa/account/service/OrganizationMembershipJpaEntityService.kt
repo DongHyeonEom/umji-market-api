@@ -50,6 +50,7 @@ class OrganizationMembershipJpaEntityService(
         val group = groups.saveAndFlush(
             OrganizationEntity().apply {
                 organizationType = INDIVIDUAL
+                buyerType = INDIVIDUAL
                 displayName = name
                 status = ACTIVE
                 representativeAccount = account
@@ -92,6 +93,7 @@ class OrganizationMembershipJpaEntityService(
         val group = groups.saveAndFlush(
             OrganizationEntity().apply {
                 this.organizationType = organizationType
+                buyerType = if (organizationType == INDIVIDUAL) INDIVIDUAL else GENERAL_BUSINESS
                 displayName = business?.businessName?.trim() ?: account.name
                 status = ACTIVE
                 representativeAccount = account
@@ -142,6 +144,7 @@ class OrganizationMembershipJpaEntityService(
                 organization.organizationType,
                 organization.displayName,
                 capabilities.findAllByOrganization_Id(requireNotNull(organization.id)).mapTo(linkedSetOf()) { it.capabilityCode },
+                organization.buyerType,
             )
         }
 
@@ -297,6 +300,8 @@ class OrganizationMembershipJpaEntityService(
             displayName,
             representativeAccount?.id == account.id,
             capabilities.findAllByOrganization_Id(requireNotNull(id)).mapTo(linkedSetOf()) { it.capabilityCode },
+            buyerType,
+            paymentBeforeShipmentRequired,
         )
 
     private fun OrganizationInvitationEntity.toModel() = OrganizationInvitationDto(
@@ -328,5 +333,6 @@ class OrganizationMembershipJpaEntityService(
         const val INACTIVE = "INACTIVE"
         const val BUYER = "BUYER"
         const val SELLER = "SELLER"
+        const val GENERAL_BUSINESS = "GENERAL_BUSINESS"
     }
 }

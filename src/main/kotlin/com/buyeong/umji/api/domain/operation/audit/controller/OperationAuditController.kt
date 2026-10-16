@@ -32,7 +32,7 @@ class OperationAuditController(private val audit: OperationAuditService) {
     fun search(
         @Parameter(description = "조회할 운영자 공개 식별자(UUID)") @RequestParam(required = false) actorId: UUID?,
         @Parameter(description = "조회할 리소스 유형 코드") @RequestParam(required = false)
-        @Pattern(regexp = "ACCOUNT|ACCOUNT_ROLE|CATEGORY|BRAND|PRODUCT|ORDER|PAYMENT|SHIPPING|TAX_INVOICE|INVENTORY|OPERATION") resourceType: String?,
+        @Pattern(regexp = "ACCOUNT|ACCOUNT_ROLE|ORGANIZATION|CATEGORY|BRAND|PRODUCT|ORDER|PAYMENT|SHIPPING|TAX_INVOICE|INVENTORY|OPERATION") resourceType: String?,
         @Parameter(description = "검색 시작 시각(ISO-8601)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) from: Instant?,
         @Parameter(description = "검색 종료 시각(ISO-8601)") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) until: Instant?,
         @Parameter(description = "조회할 페이지 번호(0부터 시작)") @RequestParam(defaultValue = "0") @Min(0) page: Int,

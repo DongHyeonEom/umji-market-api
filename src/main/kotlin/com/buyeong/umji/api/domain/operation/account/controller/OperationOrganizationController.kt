@@ -4,6 +4,10 @@ import com.buyeong.umji.api.domain.account.model.OrganizationTaxInvoiceProfileRe
 import com.buyeong.umji.api.domain.account.model.SetOrganizationRepresentativeRequest
 import com.buyeong.umji.api.domain.account.service.OrganizationTaxInvoiceProfileService
 import com.buyeong.umji.api.domain.operation.account.service.OperationAccountService
+import com.buyeong.umji.api.domain.operation.account.service.OrganizationCommercePolicyService
+import com.buyeong.umji.api.domain.operation.model.OrganizationCommercePolicyResponse
+import com.buyeong.umji.api.domain.operation.model.UpdateOrganizationCommercePolicyRequest
+import com.buyeong.umji.api.domain.operation.model.toResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -24,6 +28,7 @@ import com.buyeong.umji.api.domain.account.model.toResponse as taxInvoiceProfile
 class OperationOrganizationController(
     private val accounts: OperationAccountService,
     private val taxInvoiceProfiles: OrganizationTaxInvoiceProfileService,
+    private val commercePolicies: OrganizationCommercePolicyService,
 ) {
     @Operation(summary = "Organization수정", description = "Organization 대표자 지정 등 그룹 운영 API. /{organizationId}/representative 경로에서 Organization수정를 수행")
     @PutMapping("/{organizationId}/representative")
@@ -46,4 +51,17 @@ class OperationOrganizationController(
         @Parameter(description = "Organization 공개 식별자(UUID)") @PathVariable organizationId: UUID,
         @Valid @RequestBody request: OrganizationTaxInvoiceProfileRequest,
     ) = taxInvoiceProfiles.updateForGroup(organizationId, request.toCommand()).taxInvoiceProfileResponse()
+
+    @Operation(summary = "Organization 구매 정책 변경", description = "구매 유형과 선결제 출고 제한 설정을 변경")
+    @PutMapping("/{organizationId}/commerce-policy")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'ADMIN_ACCOUNT_MANAGE')")
+    fun updateCommercePolicy(
+        @Parameter(description = "Organization 공개 식별자(UUID)") @PathVariable organizationId: UUID,
+        @Valid @RequestBody request: UpdateOrganizationCommercePolicyRequest,
+    ): OrganizationCommercePolicyResponse = commercePolicies.update(
+        organizationId,
+        request.buyerType,
+        request.paymentBeforeShipmentRequired,
+        request.reason,
+    ).toResponse()
 }

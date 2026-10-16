@@ -16,4 +16,7 @@ data class SearchOrganizationResponse(
 
     @field:Schema(description = "Organization capability 목록", example = "[\"BUYER\"]", required = true)
     val capabilities: Set<String>,
+
+    @field:Schema(description = "Organization 구매 정책 유형", example = "GENERAL_BUSINESS", required = true)
+    val buyerType: String,
 )
