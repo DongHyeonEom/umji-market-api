@@ -65,6 +65,7 @@ class PaymentServiceTest : DescribeSpec({
 
         it("지원하지 않는 결제 상태를 거절한다") {
             clearMocks(payments)
+            every { payments.findForUpdate(orderId) } returns payment(orderId, "PENDING_PAYMENT", "WAITING_FOR_DEPOSIT")
             shouldThrow<IllegalArgumentException> {
                 service.updateStatus(orderId, "NOT_A_STATUS", operatorId, "테스트")
             }

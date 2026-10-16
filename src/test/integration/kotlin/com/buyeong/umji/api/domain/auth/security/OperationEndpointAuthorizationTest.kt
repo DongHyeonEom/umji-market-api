@@ -22,6 +22,7 @@ import com.buyeong.umji.api.domain.notification.service.NotificationDeviceTokenS
 import com.buyeong.umji.api.domain.operation.account.controller.OperationAccountController
 import com.buyeong.umji.api.domain.operation.account.controller.OperationOrganizationController
 import com.buyeong.umji.api.domain.operation.account.service.OperationAccountService
+import com.buyeong.umji.api.domain.operation.account.service.OrganizationCommercePolicyService
 import com.buyeong.umji.api.domain.operation.audit.controller.OperationAuditController
 import com.buyeong.umji.api.domain.operation.audit.dto.OperationAuditPageDto
 import com.buyeong.umji.api.domain.operation.audit.service.OperationAuditService
@@ -109,6 +110,9 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var accounts: OperationAccountService
+
+    @MockitoBean
+    private lateinit var commercePolicies: OrganizationCommercePolicyService
 
     @MockitoBean
     private lateinit var salesAssignments: SalesAssignmentService
@@ -353,6 +357,17 @@ class OperationEndpointAuthorizationTest(
                 .with(csrf())
                 .contentType("application/json")
                 .content("""{"quantityDelta":1,"reason":"ADJUSTMENT"}"""),
+        ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `inventory cost lot registration rejects read only permission`() {
+        mockMvc.perform(
+            post("/api/operation/inventory/skus/${UUID.randomUUID()}/lots")
+                .with(authorities("INVENTORY_READ"))
+                .with(csrf())
+                .contentType("application/json")
+                .content("""{"organizationId":"${UUID.randomUUID()}","containerReference":"CONTAINER-1","quantity":1,"totalPurchaseCost":100}"""),
         ).andExpect(status().isForbidden)
     }
 
