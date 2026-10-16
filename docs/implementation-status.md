@@ -10,6 +10,7 @@ DB 현황은 [database.md](database.md)를 기준으로 함.<br>
 판매자 카탈로그·영업 배정·인센티브를 포함한 세부 기능과 흐름은 [서비스 문서](services/README.md)의 도메인별 기준을 따름.<br>
 관리자 거래 검색과 브랜드별 송장 등록 월 운송비 집계·근거 조회, 주요 운영 변경의 사유·전후 값 감사 기록 제공.<br>
 컨테이너 입고 lot FIFO 원가 snapshot, 원가 미확정 출고 차단, 품목별 순이익 조회 API 제공.<br>
+구매 Organization 유형별 WHOLESALE·RETAIL 채널 제한, 도매 최소 5박스 주문 검증, Organization 선결제 출고 제한 API와 결제 전 배송 준비 보류 제공.<br>
 
 ## 미구현 범위
 

@@ -34,6 +34,8 @@ flowchart TD
     E -- 배송 변경 --> SHIPAUTH[SHIPMENT_WRITE 권한 검사]
     SHIPAUTH --> SHIP[송장 등록 또는 배송완료 상태 보정]
     E -- Organization·공통 프로필 관리 --> ORG[Organization profile·capability·구성원 관계 검증 및 저장]
+    E -- Organization 구매 정책 --> COMMERCE[ADMIN_ACCOUNT_MANAGE 권한·요청 사유·유형 조합 검증]
+    COMMERCE --> COMMERCE_SAVE[Organization 행 잠금 후 구매 유형·선결제 출고 설정 저장]
 
     F --> T[업무 변경 트랜잭션]
     H --> T
@@ -41,6 +43,7 @@ flowchart TD
     BGMEMBER --> T
     BGREP --> T
     ORG --> T
+    COMMERCE_SAVE --> T
     L --> T
     O --> T
     Q --> T
@@ -61,6 +64,7 @@ endpoint별 권한, 실제 감사 대상, 개인정보 제외, role bootstrap과
 모든 조회 요청이 감사 로그를 생성하는 것은 아니며, 정의된 성공 변경 요청만 기록.<br>
 
 관리자 endpoint는 `/api/operation/**` 아래에 있음.<br>
+`PUT /api/operation/organizations/{organizationId}/commerce-policy`는 `ADMIN_ACCOUNT_MANAGE` 권한으로 도매 업체/일반 업체/일반인 구매 유형과 선결제 출고 제한 여부를 변경. 유형·설정의 이전·이후 값과 필수 사유를 운영 감사에 기록.<br>
 `REQUIRED` 모드에서는 Access Token의 permission claim으로 endpoint별 인가를 적용함.<br>
 MFA 대상 관리자 role은 Access Token에 MFA 완료 claim이 있어야 permission 인가를 통과함.<br>
 관리자 TOTP 초기화는 `ADMIN_ACCOUNT_MANAGE` 권한이 필요하며 대상 계정 token version·refresh session 무효화와 운영 감사 기록을 수행함.<br>
@@ -337,9 +341,10 @@ Organization과 세금계산서 정보 조회·수정은 `ADMIN_ACCOUNT_MANAGE` 
 
 ### 운영 변경 감사 로그
 
-운영자 계정·role, 카테고리·브랜드·상품 및 SKU, 관리자 재고 조정의 성공한 변경 요청을 기록함.<br>
+운영자 계정·role, Organization 구매 정책, 카테고리·브랜드·상품 및 SKU, 관리자 재고 조정의 성공한 변경 요청을 기록함.<br>
 감사 로그에는 운영자 공개 UUID, endpoint method·route template, 대상 리소스 공개 UUID, 요청 trace ID, UTC 발생 시각을 공통 저장함.<br>
 Task 22 대상 변경(결제 상태, 송장·배송 상태, 실제 운송비, 세금계산서 수기 결과)은 업무 변경 전·후 allowlist 값과 입력 사유를 추가 저장함.<br>
+Organization 구매 정책 변경은 구매 유형·선결제 제한 여부의 전후 값과 필수 사유를 `ORGANIZATION` resource type으로 저장함.<br>
 요청 본문 전체를 저장하지 않으며 이름·전화번호·이메일·사업자 정보·주소·동의 근거·인증 정보는 상세 감사 값에서 제외함.<br>
 로컬 `BYPASS` 요청처럼 인증 subject가 없는 경우 운영자 UUID는 nullable로 기록됨.<br>
 role 변경 시 제한된 role code를 action 값에 포함함.<br>
@@ -356,7 +361,7 @@ role 변경 시 제한된 role code를 action 값에 포함함.<br>
 조회 권한은 `ADMIN_AUDIT_READ`이며 현재 `SUPER_ADMIN`에만 부여함.<br>
 일반 `ADMIN`은 로그를 조회할 수 없음.<br>
 `from`은 포함, `until`은 제외하는 UTC ISO-8601 시각 범위이며 페이지 크기는 최대 100.<br>
-`resourceType`은 지원 리소스 코드만 허용하고, 형식·페이지 범위 오류는 Controller Bean Validation에서 Service 호출 전에 400으로 거부함. 두 시각의 순서처럼 여러 요청값을 함께 비교하는 조건은 Service에서 확인함.<br>
+`resourceType`은 `ACCOUNT`, `ACCOUNT_ROLE`, `ORGANIZATION`, `CATEGORY`, `BRAND`, `PRODUCT`, `ORDER`, `PAYMENT`, `SHIPPING`, `TAX_INVOICE`, `INVENTORY`, `OPERATION`만 허용하고, 형식·페이지 범위 오류는 Controller Bean Validation에서 Service 호출 전에 400으로 거부함. 두 시각의 순서처럼 여러 요청값을 함께 비교하는 조건은 Service에서 확인함.<br>
 
 ### 입금 상태 확인
 
