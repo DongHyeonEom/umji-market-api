@@ -3,6 +3,33 @@
 현재 구현 현황은 [implementation-status.md](implementation-status.md), 도메인별 API 계약·알고리즘 흐름은 [services/README.md](services/README.md), 아키텍처 기준은 [architecture.md](architecture.md)를 기준으로 함.<br>완료된 Task와 수용 기준은 [completed-todo.md](completed-todo.md)에 보관.<br>
 각 Task에서 서비스 개발과 자동화 테스트 개발·실행을 분리해 관리함.<br>
 
+## Task 24 — Organization 결제·가격 정책
+
+구매 Organization별 선결제 출고 제한과 구매자 유형별 판매 채널·가격 적용 기준 추가.<br>
+법적 사업자 유형(`BUSINESS`·`INDIVIDUAL`)과 구매 가격 정책 유형을 분리해 관리.<br>
+
+### 서비스 개발
+
+- [ ] Organization별 전액 입금 전 출고 제한 설정을 저장하고, 설정된 Organization 주문은 결제 확인 전 배송 준비·재고 확정을 보류
+- [ ] 구매 Organization 유형을 도매 업체·일반 업체·일반인으로 구분하고 현재 Organization 조회 및 운영 관리 흐름에 반영
+- [ ] 도매 업체는 5박스 이상일 때 도매 채널·가격을 적용하고, 기준 미달 수량의 도매 주문을 거부
+- [ ] 일반 업체와 일반인은 5박스 이상 주문에서도 소매 채널·가격을 적용
+- [ ] 주문 생성·장바구니 검증·가격 snapshot이 Organization 유형과 수량 정책을 일관되게 적용
+- [ ] 계좌이체 전액·부분 입금 및 결제 이슈 상태에서 출고 제한 해제 조건을 일관되게 적용
+- [ ] Organization·카탈로그·주문·결제 흐름도, Flyway migration, `database.md`, `database-erd.md`, 구현 현황 갱신
+
+### 구현 전 설계 결정
+
+- [ ] 도매 업체 지정·변경 권한과 기존 BUSINESS Organization의 초기 구매 유형 결정
+- [ ] 출고 제한이 적용되는 배송 상태 전이 지점과 조직 설정 변경 시 기존 미출고 주문에 적용할 기준 결정
+- [ ] 일반 업체·일반인의 소매 오퍼 조회·구매 가능 범위와 도매 업체의 도매 오퍼 접근 기준 결정
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [ ] 조직별 선결제 설정, 결제 전 배송 준비 차단, 전액 입금 후 재개 및 부분 입금 유지 테스트 개발·실행
+- [ ] 도매 업체의 5박스 경계값·가격 snapshot과 일반 업체·일반인의 수량 무관 소매 가격 테스트 개발·실행
+- [ ] 장바구니·주문 API의 채널·가격 위변조 및 조직 유형 불일치 차단 테스트 개발·실행
+
 ## Task 23 — HTTP 요청 입력 검증 경계 정리
 
 외부 요청의 단순 필수값·길이·형식·숫자 범위 검증을 Bean Validation으로 일관화하고 Service에는 업무 맥락 검증을 유지.<br>
