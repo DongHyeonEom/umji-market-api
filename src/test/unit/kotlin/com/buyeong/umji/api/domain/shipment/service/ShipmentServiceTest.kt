@@ -7,7 +7,9 @@ import com.buyeong.umji.api.domain.shipment.dto.ShipmentTrackingCandidateDto
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
 import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderItemEntity
+import com.buyeong.umji.api.persistence.jpa.order.entity.OrderPaymentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.OrderShipmentEntity
 import com.buyeong.umji.api.persistence.jpa.order.entity.PurchaseOrderEntity
 import com.buyeong.umji.api.persistence.jpa.order.service.OrderShipmentJpaEntityService
@@ -28,14 +30,28 @@ class ShipmentServiceTest : DescribeSpec({
     val service = ShipmentService(store, inventory, tracking, notifications, brandShipping)
     val orderId = UUID.randomUUID()
     val reservation = UUID.randomUUID()
-    fun entity(status: String, carrier: String? = null, trackingNumber: String? = null) = mockk<OrderShipmentEntity>(relaxed = true) {
-        every { order } returns mockk<PurchaseOrderEntity>(relaxed = true) {
-            every { publicId } returns orderId
-            every { items } returns mutableListOf(mockk<OrderItemEntity>(relaxed = true) { every { reservationKey } returns reservation })
+    fun entity(
+        status: String,
+        carrier: String? = null,
+        trackingNumber: String? = null,
+        paymentBeforeShipmentRequired: Boolean = false,
+        paymentStatus: String = "WAITING_FOR_DEPOSIT",
+    ): OrderShipmentEntity {
+        val organization = mockk<OrganizationEntity>(relaxed = true)
+        every { organization.paymentBeforeShipmentRequired } returns paymentBeforeShipmentRequired
+        val payment = mockk<OrderPaymentEntity>(relaxed = true)
+        every { payment.status } returns paymentStatus
+        val order = mockk<PurchaseOrderEntity>(relaxed = true)
+        every { order.publicId } returns orderId
+        every { order.items } returns mutableListOf(mockk<OrderItemEntity>(relaxed = true) { every { reservationKey } returns reservation })
+        every { order.organization } returns organization
+        every { order.payment } returns payment
+        return mockk<OrderShipmentEntity>(relaxed = true) {
+            every { this@mockk.order } returns order
+            every { this@mockk.status } returns status
+            every { carrierCode } returns carrier
+            every { this@mockk.trackingNumber } returns trackingNumber
         }
-        every { this@mockk.status } returns status
-        every { carrierCode } returns carrier
-        every { this@mockk.trackingNumber } returns trackingNumber
     }
 
     beforeTest {
@@ -52,6 +68,44 @@ class ShipmentServiceTest : DescribeSpec({
             inventory.confirmCost(reservation)
             store.update(shipment, "PREPARING", null, null, null)
         }
+        verify(exactly = 1) { notifications.record(NotificationEventType.SHIPMENT_PREPARING, orderId, null) }
+    }
+
+    it("선결제 조직은 미결제와 부분 입금 상태에서 출고 준비와 재고 확정을 보류한다") {
+        listOf("WAITING_FOR_DEPOSIT", "PARTIAL_PAYMENT_REVIEW_REQUIRED").forEach { paymentStatus ->
+            val shipment = entity(
+                "READY_TO_SHIP",
+                paymentBeforeShipmentRequired = true,
+                paymentStatus = paymentStatus,
+            )
+            every { store.findForUpdate(orderId) } returns shipment
+
+            val result = service.prepareOrder(orderId)
+
+            result.status shouldBe "READY_TO_SHIP"
+            result.changed shouldBe false
+        }
+
+        verify(exactly = 0) { inventory.confirmCost(any()) }
+        verify(exactly = 0) { store.update(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { notifications.record(NotificationEventType.SHIPMENT_PREPARING, any(), any()) }
+    }
+
+    it("선결제 조직의 전액 입금 확인 후 다음 배송 준비에서 출고를 재개한다") {
+        val shipment = entity(
+            "READY_TO_SHIP",
+            paymentBeforeShipmentRequired = true,
+            paymentStatus = "PAYMENT_CONFIRMED",
+        )
+        every { store.findForUpdate(orderId) } returns shipment
+        every { store.update(shipment, "PREPARING", null, null, null) } returns entity("PREPARING")
+
+        val result = service.prepareOrder(orderId)
+
+        result.status shouldBe "PREPARING"
+        result.changed shouldBe true
+        verify(exactly = 1) { inventory.confirmCost(reservation) }
+        verify(exactly = 1) { store.update(shipment, "PREPARING", null, null, null) }
         verify(exactly = 1) { notifications.record(NotificationEventType.SHIPMENT_PREPARING, orderId, null) }
     }
 
