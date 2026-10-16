@@ -223,6 +223,9 @@ class ShipmentService(
         val current = entity.toRecord()
         if (current.status == PREPARING) return current.toChange(false)
         require(current.status == READY_TO_SHIP) { "배송 준비 가능한 주문 상태가 아닙니다." }
+        if (entity.order.organization.paymentBeforeShipmentRequired && entity.order.payment.status != PAYMENT_CONFIRMED) {
+            return current.toChange(false)
+        }
         entity.order.items.forEach { item -> item.purchaseCostSnapshot = inventory.confirmCost(item.reservationKey) }
         val preparing = shipments.update(entity, PREPARING, null, null, null).toRecord()
         notifications.record(NotificationEventType.SHIPMENT_PREPARING, orderId)
@@ -257,6 +260,7 @@ class ShipmentService(
         const val PREPARING = "PREPARING"
         const val IN_TRANSIT = "IN_TRANSIT"
         const val DELIVERED = "DELIVERED"
+        const val PAYMENT_CONFIRMED = "PAYMENT_CONFIRMED"
         const val MAX_CARRIER_LENGTH = 80
         const val MAX_TRACKING_LENGTH = 100
     }

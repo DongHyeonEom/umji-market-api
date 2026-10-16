@@ -2,9 +2,10 @@
 
 ## 주문·입금·배송 정책 흐름
 
-입금 확인과 물건 발송은 독립된 운영 작업.<br>
+입금 확인과 물건 발송은 기본적으로 독립된 운영 작업.<br>
+구매 Organization의 `paymentBeforeShipmentRequired=true`인 경우 전액 입금 확인 전 배송 준비 상태 전환과 예약 재고 확정을 보류. 결제 확인은 여전히 배송 상태를 직접 바꾸지 않으며 다음 배송 준비 배치가 처리.<br>
 주문은 활성 구매자 그룹 소속 계정만 생성 가능. 미소속 계정은 [계정 문서](account.md)의 개인·사업자 그룹 등록을 먼저 완료.<br>
-입금 상태 변경만으로 발송 상태가 바뀌지 않으며, 배송 준비 전환도 입금 확인을 선행 조건으로 요구하지 않음.<br>
+입금 상태 변경만으로 발송 상태가 바뀌지 않음. 선결제 출고 제한이 꺼진 Organization은 기존처럼 배송 준비에 입금 확인을 요구하지 않음.<br>
 아래 흐름은 확정된 정책과 이번 구현 범위.<br>
 입금 확정은 결제 상태와 주문 결제 상태만 변경하며, 배송 상태는 별도 관리.<br>
 재고는 주문 시 예약하고, 운영자가 등록한 휴무일과 주말을 제외한 평일 15:00(KST)에 배송 준비 상태로 전환하며 확정.<br>
@@ -22,7 +23,11 @@ flowchart TD
     subgraph CHECKOUT[사용자 주문·계좌 안내]
         C01[인증된 사용자] --> C01A{활성 구매자 그룹 소속인가}
         C01A -- 아니오 --> C01B[개인·사업자 그룹 등록 흐름으로 이동]
-        C01A -- 예 --> C02[Organization 기본 발행 설정·사업자 세금계산서 정보 조회]
+        C01A -- 예 --> BUYERTYPE{구매 Organization 유형}
+        BUYERTYPE -- 도매 업체 --> WHOLESALE[WHOLESALE 채널만 허용]
+        BUYERTYPE -- 일반 업체·일반인 --> RETAIL[RETAIL 채널만 허용]
+        WHOLESALE --> C02[Organization 기본 발행 설정·사업자 세금계산서 정보 조회]
+        RETAIL --> C02
         C02 --> C03[그룹 공용 배송지 선택 및 발행 여부 토글]
         C03 --> C04{발행 요청 여부}
         C04 -- 아니오 --> C05[일반 계좌 안내]
@@ -35,7 +40,11 @@ flowchart TD
         C09 -- 유지 --> C11[주문과 함께 배송지·선택값 전달]
         C10 --> C12[서버에서 그룹 범위·프로필 완성 여부 재검사]
         C11 --> C12
-        C12 --> C13{주문·판매 Organization 사업자 프로필·세금계산서 정보 유효}
+        C12 --> CHANNELVALID{요청 카트 채널이 Organization 허용 채널과 일치}
+        CHANNELVALID -- 아니오 --> C14[주문 거부·장바구니 유지]
+        CHANNELVALID -- 예 --> MINBOX{도매 업체 또는 소매 채널}
+        MINBOX -- 도매·합계 5박스 미만 --> C14
+        MINBOX -- 도매·합계 5박스 이상 또는 소매 --> C13{주문·판매 Organization 사업자 프로필·세금계산서 정보 유효}
         C13 -- 아니오 --> C14[주문 거부·장바구니 유지]
         C13 -- 예 --> UNITCHECK{판매 수량 × 입수 수량이 정수 범위 안인가}
         UNITCHECK -- 아니오 --> C14[요청 거부·장바구니 유지]
@@ -60,7 +69,12 @@ flowchart TD
         M --> N[배송 상태 READY_TO_SHIP 및 재고 예약]
         N --> CUTOFF{주말·등록 휴무일이 아닌 평일 15시 도달}
         CUTOFF -- 아니오 --> N
-        CUTOFF -- 예 --> CONFIRM[예약 재고 확정 및 PREPARING 전환]
+        CUTOFF -- 예 --> PAYMENTGATE{Organization 선결제 출고 제한 켜짐}
+        PAYMENTGATE -- 아니오 --> CONFIRM[예약 재고 확정 및 PREPARING 전환]
+        PAYMENTGATE -- 예 --> PAYMENTCHECK{전액 입금 확인}
+        PAYMENTCHECK -- 아니오 --> HOLD[READY_TO_SHIP 유지·예약 재고 유지]
+        HOLD --> CUTOFF
+        PAYMENTCHECK -- 예 --> CONFIRM
         CONFIRM --> P[배송 담당자가 출고 준비]
         P --> Q[배송 담당자가 택배사·송장번호 입력]
         Q --> AUTHSHIP[SHIPMENT_WRITE 권한 검사]
@@ -158,11 +172,12 @@ flowchart TD
 ```
 
 입금 및 배송 상태는 각 운영 작업에서 별도로 갱신.<br>
-주말과 운영자 등록 휴무일을 제외한 평일 15:00(KST)에 `READY_TO_SHIP` 주문을 `PREPARING`으로 변경하고 재고 예약을 확정.<br>
+주말과 운영자 등록 휴무일을 제외한 평일 15:00(KST)에 `READY_TO_SHIP` 주문을 검사. 구매 Organization의 선결제 출고 제한이 켜져 있으면 결제 상태가 `PAYMENT_CONFIRMED`인 주문만 `PREPARING`으로 변경하고 재고 예약을 확정. 미결제·부분 입금·일반 이슈 상태는 `READY_TO_SHIP`과 예약 재고를 유지하며 다음 배치에서 재검사.<br>
+선결제 설정은 Organization의 현재 값으로 평가. 설정 변경은 이미 생성된 미출고 주문에도 즉시 반영.<br>
 송장 등록 시 배송 정보와 `IN_TRANSIT`을 저장. 같은 송장 정보의 중복 등록은 상태 변경 없이 기존 배송 정보를 반환.<br>
 배송 준비 전환 시 예약된 FIFO 입고 lot 원가를 확정하고 주문 품목별 사입원가 snapshot 저장. 미확정 원가가 포함된 주문은 `PREPARING`으로 전환되지 않음.<br>
 송장별 실제 운송비를 해당 송장의 품목 행 수로 균등 배분하고 품목 배송비 snapshot에 저장. 나머지 원은 품목 행 ID 오름차순 배정하며 실제 비용 수정 때 재배분.<br>
-배송 처리에는 입금 확인을 요구하지 않음.<br>
+선결제 제한이 없는 Organization의 배송 처리는 입금 확인을 요구하지 않음.<br>
 대신택배·경동택배·천일택배를 우선 지원 대상으로 하며, 택배사 코드별 공식 배송 조회 화면을 주문 응답의 WebView 링크로 제공.<br>
 별도 배송 조회 중계 서버가 없는 현재 구조에서는 `GET /api/orders`가 고객의 `IN_TRANSIT` 송장을 먼저 조회하고, 상태 반영 후 주문 목록 반환.<br>
 고객이 주문 목록의 송장 조회 링크를 선택하면 택배사 공식 조회 페이지를 WebView로 표시. 상태 조회는 목록 진입 시 서버가 수행하고, 링크는 택배사 상세 조회 화면 제공에 사용.<br>
@@ -210,6 +225,8 @@ flowchart TD
 그룹 주문을 공유하는 구성원은 해당 주문의 배송지 snapshot을 조회할 수 있음.<br>
 `POST /api/orders` request의 `shippingAddressId`는 필수 UUID 필드.<br>
 주문 항목에는 상품명, SKU명·코드, 판매가, 판매 수량, 판매 단위 입수 수량을 snapshot으로 저장함. WHOLESALE 수량은 박스 수이며 재고 예약 수량은 박스 수와 snapshot 입수 수량의 곱.<br>
+구매 Organization 유형은 `buyer_type`으로 관리. `WHOLESALE_BUSINESS`는 WHOLESALE 오퍼만, `GENERAL_BUSINESS`·`INDIVIDUAL`은 RETAIL 오퍼만 주문 가능하며 API 요청 채널과 오퍼를 주문 생성 시 다시 검증.<br>
+WHOLESALE 주문의 최소 5박스 기준은 판매자별 주문 분리 전에 장바구니 전체 판매 수량 합계로 검증. 관리자 전화 주문도 동일한 구매 유형·수량 기준 적용.<br>
 장바구니 상품을 판매 Organization별로 묶어 주문을 분리 생성. 한 주문은 하나의 판매 Organization 상품만 포함.<br>
 각 주문 생성 시 해당 판매자의 SKU 재고를 예약하고 모든 주문 저장이 성공한 뒤 장바구니 항목을 초기화.<br>
 판매자별 주문 저장·재고 예약·장바구니 초기화·주문 생성 outbox 기록은 하나의 주문 생성 트랜잭션에 포함. 어느 판매자의 재고 예약이나 outbox 기록이 실패하면 전체 주문 생성이 롤백되어 장바구니와 기존 재고 상태가 유지.<br>
@@ -259,7 +276,7 @@ flowchart TD
     SAVE -. 하위 작업 실패 .-> ROLLBACK[주문·재고·부가 이벤트 전체 rollback]
 ```
 
-계정은 기존 활성 BUYER Organization 구성원으로 제한. 활성 WHOLESALE 오퍼 가격·재고를 적용하고 주문 상태는 `PENDING_PAYMENT`. 서버 전체 장애에서는 별도 기록 후 복구된 API로 사후 등록.<br>
+계정은 기존 활성 BUYER Organization 구성원으로 제한. Organization 구매 유형에 허용된 채널의 오퍼 가격·재고를 적용하며 도매 주문에는 장바구니 전체 5박스 최소 수량을 적용. 주문 상태는 `PENDING_PAYMENT`. 서버 전체 장애에서는 별도 기록 후 복구된 API로 사후 등록.<br>
 
 ## 사업자 주문 귀속·조회 정책
 

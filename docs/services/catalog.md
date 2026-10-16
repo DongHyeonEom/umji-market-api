@@ -5,7 +5,9 @@
 판매 Organization이 브랜드와 상품을 소유하고, 상품의 SKU·이미지·옵션은 해당 상품에 종속. 판매 채널은 `WHOLESALE`·`RETAIL`로 분리.<br>
 판매 채널별 카테고리는 별도 계층으로 관리하고, `channel_product_listing`이 상품의 채널 카테고리·노출·순서를 보유.<br>
 채널별 상품 판매는 `sales_offer`가 판매 Organization·실물 SKU·채널·판매가·정가·판매 상태·판매 단위당 입수 수량을 보유. 같은 실물 SKU를 여러 판매 Organization이 각각 판매할 수 있고 가격·판매 상태는 서로 독립.<br>
-클라이언트가 채널을 명시. 기존 API 호출은 호환성을 위해 `WHOLESALE` 기본값 사용. 구매자 그룹 유형으로 판매 채널을 추정하지 않음.<br>
+구매자의 활성 Organization 유형으로 허용 채널을 결정. 도매 업체는 `WHOLESALE`, 일반 업체와 일반인은 `RETAIL`만 조회·장바구니·주문 가능.<br>
+카탈로그의 선택적 `channel`은 호환 입력으로 유지하되, Organization 허용 채널과 다르면 거부. 미지정 시 허용 채널 적용.<br>
+도매 구매는 장바구니의 박스 수량 합계가 5 이상이어야 주문 가능. 상품별 최소 수량이 아니라 한 장바구니 전체의 박스 합계 기준.<br>
 오퍼는 실물 SKU 하나와 해당 채널의 판매 단위를 연결. `WHOLESALE` 오퍼는 박스 입수 수량을 보유하고 `RETAIL` 오퍼는 낱개 단위(입수 수량 1)를 사용.<br>
 
 ## 공개 조회
@@ -14,17 +16,21 @@
 
 ```mermaid
 flowchart TD
-    REQUEST[카탈로그 조회·채널 입력] --> CHANNEL{WHOLESALE 또는 RETAIL}
-    CHANNEL -- 누락 --> DEFAULT[기존 호환 WHOLESALE 기본값]
-    CHANNEL -- 유효 --> ACTION{조회 종류}
-    DEFAULT --> ACTION
+    REQUEST[카탈로그 조회·선택 채널] --> AUTH[인증 계정의 활성 BUYER Organization 조회]
+    AUTH --> TYPE{Organization 구매 유형}
+    TYPE -- WHOLESALE_BUSINESS --> WHOLESALE[허용 채널 WHOLESALE]
+    TYPE -- GENERAL_BUSINESS 또는 INDIVIDUAL --> RETAIL[허용 채널 RETAIL]
+    WHOLESALE --> CHANNEL{요청 채널 생략 또는 허용 채널과 일치}
+    RETAIL --> CHANNEL
+    CHANNEL -- 아니오 --> DENY[요청 거부]
+    CHANNEL -- 예 --> ACTION{조회 종류}
     ACTION -- 카테고리 --> CATEGORIES[채널별 노출 카테고리 조회]
     ACTION -- 상품 목록 --> LISTING[채널별 노출 상품·활성 판매자 오퍼 조회]
     ACTION -- 상품 상세 --> DETAIL[채널·상품 공개 식별자로 상세 조회]
     DETAIL --> FOUND{노출 listing 및 판매 오퍼 존재}
     FOUND -- 없음 --> MISSING[미발견 오류]
     FOUND -- 있음 --> COMMON[소유 Organization 상품·실물 SKU 정보 결합]
-    CATEGORIES --> RESPONSE[채널·카테고리·오퍼 응답]
+    CATEGORIES --> RESPONSE[허용 채널·카테고리·오퍼 응답]
     LISTING --> RESPONSE
     COMMON --> RESPONSE
 ```
@@ -32,11 +38,13 @@ flowchart TD
 - 공개 조회 조건과 응답 구성은 `CatalogService`가 적용하고 `CatalogJpaEntityService`가 조회함. 상품은 소유 Organization에 속한 활성 판매 오퍼가 있는 경우에만 공개 카탈로그에 표시.<br>
 - 관리자 카탈로그 변경 흐름은 [operation.md](operation.md)의 관리자 카탈로그 흐름을 기준으로 함.<br>
 
-- `GET /api/categories?channel=WHOLESALE|RETAIL`
-- `GET /api/products?channel=WHOLESALE|RETAIL&page=&size=`
-- `GET /api/products/{productId}?channel=WHOLESALE|RETAIL`
+- `GET /api/categories?channel=WHOLESALE|RETAIL` (선택)
+- `GET /api/products?channel=WHOLESALE|RETAIL&page=&size=` (channel 선택)
+- `GET /api/products/{productId}?channel=WHOLESALE|RETAIL` (선택)
 
-공개 조회는 요청 채널의 노출 listing과 판매 가능한 오퍼가 있는 조직 소유 상품·SKU만 반환함.<br>
+조회는 활성 구매 Organization 유형의 허용 채널에 한정. 요청 채널 불일치 또는 활성 구매 Organization 부재는 거부.<br>
+요청 채널 생략은 Organization 허용 채널로 해석.<br>
+노출 listing과 판매 가능한 오퍼가 있는 조직 소유 상품·SKU만 반환함.<br>
 조회 응답의 판매가·정가·상태는 해당 채널과 판매 Organization의 오퍼 기준. 판매 Organization별 재고 원장은 `organization_id + sku_id`로 구분하고, 같은 Organization의 채널별 오퍼는 해당 재고를 공유.<br>
 
 ## 관리자 관리
@@ -104,9 +112,13 @@ flowchart TD
     SAVEBOX --> CATALOG[공개 카탈로그에 가격·입수 수량 표시]
     SAVEUNIT --> CATALOG
     CATALOG --> BUYER[구매자가 박스 또는 낱개 수량 입력]
-    BUYER --> CART[장바구니에 오퍼·판매 수량 저장]
-    CART --> CHECKOUT[주문 시 가격·판매 수량·입수 수량 snapshot]
-    CHECKOUT --> RESERVE[판매 수량 × snapshot 입수 수량을 오퍼 판매 Organization의 SKU 재고로 예약]
+    BUYER --> POLICY{활성 Organization의 허용 채널과 일치}
+    POLICY -- 아니오 --> REJECTBUY[추가·주문 거부]
+    POLICY -- 예 --> CART[장바구니에 오퍼·판매 수량 저장]
+    CART --> CHECKOUT{도매 구매 장바구니 전체 5박스 이상}
+    CHECKOUT -- 아니오 --> REJECTBUY
+    CHECKOUT -- 예 또는 소매 --> SNAP[주문 시 가격·판매 수량·입수 수량 snapshot]
+    SNAP --> RESERVE[판매 수량 × snapshot 입수 수량을 오퍼 판매 Organization의 SKU 재고로 예약]
     RESERVE --> ORDER[주문 응답은 가격·판매 수량·입수 수량 표시]
 ```
 

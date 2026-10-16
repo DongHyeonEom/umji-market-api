@@ -11,6 +11,9 @@
 최초 가입 계정은 그룹 onboarding 조회에서 현재 그룹과 전화번호가 일치하는 대기 초대를 확인하고, 초대 수락 후에만 그룹에 연결.<br>
 그룹이 없는 계정은 개인 조직을 만들거나 휴대폰 번호로 구매 조직을 찾아 가입 요청 가능. 구매자와 판매자는 각각 Organization을 만들고 여러 계정을 구성원으로 연결 가능. 그룹 이동 전 주문의 귀속은 유지.<br>
 그룹 조회·등록·초대·가입 요청 흐름은 `OrganizationMembershipService → OrganizationMembershipJpaEntityService`로 처리.<br>
+현재 Organization 응답은 구매 유형(`WHOLESALE_BUSINESS`·`GENERAL_BUSINESS`·`INDIVIDUAL`)과 선결제 출고 제한 설정을 포함.<br>
+구매 유형은 법적 Organization 유형과 별도 속성. 신규·기존 BUSINESS는 `GENERAL_BUSINESS`, INDIVIDUAL은 `INDIVIDUAL`로 시작하고, 도매 업체 전환은 `ADMIN_ACCOUNT_MANAGE` 운영자만 가능.<br>
+선결제 출고 제한은 `PAYMENT_CONFIRMED` 전 배송 준비와 예약 재고 확정을 보류하는 설정. 설정 변경은 해당 Organization의 미출고 주문에도 배송 준비 시점부터 적용.<br>
 구매자 공급받는자 및 판매자 공급자 세금계산서 정보는 `organization_business_profile`을 단일 원본으로 사용하며, 사업자등록번호·상호·성명·사업자주소·업태·종목은 필수. 이메일은 선택이며 Organization 구성원이 공유.<br>
 활성 Organization 구성원은 현재 Organization의 세금계산서 정보를 조회할 수 있고, 대표자와 `ADMIN_ACCOUNT_MANAGE` 운영자만 수정 가능. 개인 Organization은 세금계산서 프로필을 완성하거나 발행 요청할 수 없음.<br>
 세금계산서 프로필 요청은 `OrganizationTaxInvoiceProfileService → OrganizationTaxInvoiceJpaEntityService` 흐름으로 처리.<br>
@@ -95,6 +98,7 @@ flowchart TD
 - `GET /api/account/organizations/join-requests`
 - `POST /api/account/organizations/join-requests/{requestId}/response`
 - `PUT /api/operation/organizations/{organizationId}/representative`
+- `PUT /api/operation/organizations/{organizationId}/commerce-policy` (`ADMIN_ACCOUNT_MANAGE`)
 
 모든 endpoint는 Access Token의 subject가 가리키는 활성 계정을 사용. 계정 ID를 요청에서 받지 않음.<br>
 배송지 목록·수정 범위는 인증 계정이 속한 활성 구매자 그룹으로 제한.<br>
@@ -115,6 +119,26 @@ Organization은 여러 계정을 구성원으로 가질 수 있고, 계정은 �
 운영자는 계정을 사업자 그룹에 명시적으로 연결하며 사업자번호만으로 그룹을 자동 병합하지 않음.<br>
 구성원 초대·가입 요청·역할과 그룹 프로필 관리 흐름은 이 문서의 단일 기준. 주문 소유권, 실제 주문자와 주문 조회 범위는 [주문 문서](order.md)를 기준으로 함.<br>
 현재 DB 테이블과 관계는 [database-erd.md](../database-erd.md)를 기준으로 함.<br>
+
+## 구매 Organization 정책 조회·운영 변경
+
+현재 Organization 조회에는 `buyerType`과 `paymentBeforeShipmentRequired`를 포함. 구매 유형은 장바구니·주문·카탈로그의 허용 판매 채널을 결정하고, 결제 제한 설정은 배송 준비 배치가 평가.<br>
+운영자는 `ADMIN_ACCOUNT_MANAGE` 권한으로 `PUT /api/operation/organizations/{organizationId}/commerce-policy`를 호출해 구매 유형과 선결제 출고 제한 여부를 함께 변경. 구매 유형은 BUSINESS Organization에 `WHOLESALE_BUSINESS` 또는 `GENERAL_BUSINESS`, INDIVIDUAL Organization에 `INDIVIDUAL`만 허용.<br>
+운영 변경 사유와 이전·이후 정책값을 감사 기록에 저장. 현재 Organization 조회 흐름과 운영 변경 흐름은 다음과 같음.<br>
+
+```mermaid
+flowchart TD
+    CURRENT[GET /api/account/organizations/current] --> AUTH[인증 계정·활성 구성원 조회]
+    AUTH --> ORG[Organization 구매 유형·선결제 설정 조회]
+    ORG --> VIEW[buyerType·paymentBeforeShipmentRequired 응답]
+    UPDATE[PUT /api/operation/organizations/{id}/commerce-policy] --> PERM[ADMIN_ACCOUNT_MANAGE 권한 검사]
+    PERM --> VALID{조직 상태·유형 조합·사유 유효}
+    VALID -- 아니오 --> REJECT[요청 거부]
+    VALID -- 예 --> LOCK[Organization 행 잠금]
+    LOCK --> SAVE[구매 유형·선결제 설정 저장]
+    SAVE --> AUDIT[이전·이후 값·사유 감사 기록]
+    AUDIT --> RESULT[정책 응답]
+```
 
 ## 대표자·일반구성원 접근 권한
 

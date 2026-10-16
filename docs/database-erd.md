@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V53가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V54가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -135,10 +135,12 @@ erDiagram
         BIGINT id PK "구매자 그룹 내부 ID"
         BINARY public_id UK "API 공개 UUID"
         VARCHAR organization_type "BUSINESS 또는 INDIVIDUAL"
+        VARCHAR buyer_type "WHOLESALE_BUSINESS·GENERAL_BUSINESS·INDIVIDUAL 구매 정책 유형"
         VARCHAR display_name "그룹 표시명"
         BIGINT representative_account_id FK "현재 대표 계정, nullable"
         VARCHAR status "그룹 상태"
         BOOLEAN default_tax_invoice_requested "Organization 기본 세금계산서 발행 여부"
+        BOOLEAN payment_before_shipment_required "전액 입금 전 배송 준비 제한 여부"
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
@@ -868,6 +870,7 @@ erDiagram
 | V51 | 브랜드 담당자 배정·브랜드별 SKU/택배사 운송비·다중 송장 및 송장 품목 비용 snapshot 추가 |
 | V52 | `operation_audit_log` 변경 전·후 업무 값·사유 JSON 추가 및 주문·송장 조회 인덱스 추가 |
 | V53 | FIFO 재고 원가 lot·예약별 lot 배정 및 주문 품목 원가 snapshot 추가, 기존 재고를 원가 미확정 opening lot으로 이관 |
+| V54 | Organization 구매 유형과 전액 입금 전 배송 준비 제한 설정 추가 및 기존 Organization 유형 backfill |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

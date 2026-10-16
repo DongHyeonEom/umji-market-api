@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V53으로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V54으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -77,6 +77,7 @@
 | V51 | 브랜드 배송 담당자·품목/택배사 기본 운송비, 다중 송장·송장 품목 snapshot 테이블 및 `SHIPMENT_ASSIGN` permission 추가. 기존 단일 송장 정보를 package로 이관 |
 | V52 | 운영 감사 로그에 allowlist 변경 전·후 업무 값과 사유 추가, 주문일·브랜드 송장 등록일 조회 인덱스 추가 |
 | V53 | FIFO 재고 원가 lot·예약별 lot 배정·주문 품목 원가 snapshot 추가, 기존 재고 미확정 opening lot 이관 |
+| V54 | Organization 구매 유형과 전액 입금 전 배송 준비 제한 설정 추가. 기존 BUSINESS는 `GENERAL_BUSINESS`, INDIVIDUAL은 `INDIVIDUAL`로 초기화 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -125,6 +126,8 @@
   그룹 이동 시 이전 소속은 `LEFT`로 종료하고 새 활성 소속을 추가. 주문의 과거 그룹 귀속은 변경하지 않음.<br>
 - `organization.default_tax_invoice_requested`는 구매 Organization의 기본 세금계산서 발행 여부이며 구성원이 공유함.<br>
   대표자만 주문 흐름에서 기본값을 갱신할 수 있고, 주문별 선택은 `purchase_order.tax_invoice_requested`에 별도 저장함.<br>
+- `organization.buyer_type`은 법적 Organization 유형과 별도의 구매 정책 유형(`WHOLESALE_BUSINESS`, `GENERAL_BUSINESS`, `INDIVIDUAL`). 신규·기존 BUSINESS는 `GENERAL_BUSINESS`, INDIVIDUAL은 `INDIVIDUAL`로 초기화하며 도매 전환은 `ADMIN_ACCOUNT_MANAGE` 운영 권한으로 처리.<br>
+- `organization.payment_before_shipment_required`가 참이면 평일 배송 준비 배치가 현재 Organization 설정과 주문 결제 상태를 검사. 전액 입금(`PAYMENT_CONFIRMED`)이 아닌 주문은 `READY_TO_SHIP`과 재고 예약을 유지.<br>
 - `organization.representative_account_id`는 현재 대표 계정이며 반드시 활성 구성원이어야 함.<br>
   대표자 지정·변경은 운영자 권한으로만 수행. 개인 그룹 최초 생성자는 대표자로 지정됨.<br>
 - `organization_invitation`은 대표자가 전화번호로 보낸 초대 이력이며, 초대 대상 계정이 수락해야 그룹 소속 변경.<br>
@@ -142,6 +145,7 @@
   판매자 오퍼가 연결된 주문의 공급자는 SELLER Organization 프로필이며 주문은 판매자별로 분리. 소유자 미지정 레거시 오퍼만 기존 환경 설정 공급자를 사용.<br>
   행의 존재가 발행 요청 여부이며, 일반 주문에는 세금계산서 전용 행이 없음.<br>
 - `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. RETAIL은 1, WHOLESALE은 박스 입수 수량으로 사용.<br>
+- 구매 주문·장바구니·카탈로그 채널은 구매 Organization 유형에서 결정. 도매 업체는 WHOLESALE과 장바구니 전체 5박스 이상, 일반 업체·일반인은 RETAIL을 사용.<br>
 - 판매자는 `SELLER` capability의 BUSINESS Organization과 완성·확인된 ACTIVE `organization_business_profile`이 있어야 판매 오퍼를 ON_SALE로 등록하고 주문을 받을 수 있음. 사업자 프로필은 법적 정보이고 카탈로그 소유 FK는 Organization을 직접 참조.<br>
 - `inventory_movement`와 `stock_reservation`은 재고 원장과 같은 `organization_id + sku_id` 범위를 저장. 주문 예약·해제·확정·복구는 주문 항목의 판매 오퍼 Organization에 귀속.<br>
 - `order_item.quantity`와 `unit_price`는 판매 단위 기준이며 `units_per_sale`은 주문 시점 snapshot. 재고 예약 수량은 두 수량의 곱.<br>

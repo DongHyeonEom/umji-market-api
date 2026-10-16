@@ -8,4 +8,6 @@ data class OrganizationSummaryDto(
     val name: String,
     val representative: Boolean,
     val capabilities: Set<String> = setOf("BUYER"),
+    val buyerType: String = "GENERAL_BUSINESS",
+    val paymentBeforeShipmentRequired: Boolean = false,
 )

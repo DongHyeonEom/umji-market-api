@@ -2,6 +2,7 @@ package com.buyeong.umji.api.domain.cart.model
 
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.Pattern
 import java.util.UUID
 
 @Schema(description = "AddCartItemRequest API 데이터 모델")
@@ -17,8 +18,9 @@ data class AddCartItemRequest(
     @field:Schema(description = "채널별 판매 오퍼 공개 식별자(UUID)", example = "550e8400-e29b-41d4-a716-446655440000", format = "uuid", type = "string")
     val salesOfferId: UUID? = null,
 
-    @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", required = true)
-    val channelCode: String = "WHOLESALE",
+    @field:Pattern(regexp = "WHOLESALE|RETAIL")
+    @field:Schema(description = "판매 채널 코드. Organization 허용 채널은 생략 가능", example = "WHOLESALE", required = false)
+    val channelCode: String? = null,
 
     @field:Min(1)
     @field:Schema(description = "판매 단위 수량. WHOLESALE은 박스 수, RETAIL은 낱개 수", example = "2", format = "int32", type = "integer", required = true, implementation = Int::class)

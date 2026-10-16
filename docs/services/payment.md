@@ -39,6 +39,8 @@ stateDiagram-v2
 입금 확인 상태 변경은 배송 상태를 자동 변경하지 않는 것이 확정된 정책.<br>
 `PAYMENT_CONFIRMED` 전이는 주문을 `PAID`로 변경.<br>
 재고 예약은 공휴일 제외 평일 15:00 배송 준비 전환 배치에서 확정.<br>
+구매 Organization의 `paymentBeforeShipmentRequired`가 참이면 배치에서 `PAYMENT_CONFIRMED` 여부를 확인. 미결제·부분 입금·일반 이슈 상태 주문은 배송·재고를 유지하고, 전액 입금 확인 후 다음 배송 준비 배치에서 진행.<br>
+결제 API는 배송 상태를 직접 변경하지 않음. 출고 제한은 배송 준비 흐름에서 Organization 설정과 전액 결제 상태를 함께 검사.<br>
 입금 확인 완료 이후 일반 입금 상태로 되돌리는 전이는 거부. 취소된 주문은 `REFUND_PENDING`으로 변경하고 운영자가 실제 계좌 환불 후 `REFUNDED`로 처리.<br>
 `PAYMENT_ISSUE_REVIEW_REQUIRED`는 세부 내용 없이 표시하는 공통 이슈 상태.<br>
 부분 입금 외 발생 내용은 현재 기록하거나 사용자에게 표시하지 않음.<br>
