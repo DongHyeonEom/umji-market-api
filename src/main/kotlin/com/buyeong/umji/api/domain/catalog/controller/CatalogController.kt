@@ -41,18 +41,23 @@ class CatalogController(
     fun products(
         @Parameter(description = "조회할 페이지 번호(0부터 시작)") @RequestParam(defaultValue = "0") @Min(0) page: Int,
         @Parameter(description = "페이지당 조회할 항목 수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) size: Int,
-        @Parameter(description = "판매 채널 코드. 누락 시 Organization 허용 채널") @RequestParam(required = false) channel: String?,
+        @Parameter(description = "레거시 호환 파라미터. 통합 카탈로그에서는 가격·목록을 분기하지 않음") @RequestParam(required = false) channel: String?,
     ): ProductPageResponse = catalogService.products(page, size, currentAccounts.activeAccountPublicId(), channel).toResponse()
 
     @Operation(summary = "상품조회", description = "앱 카테고리·상품·SKU 조회 API. /products/{productId} 경로에서 상품조회를 수행")
     @GetMapping("/products/{productId}")
     fun product(
         @Parameter(description = "상품 공개 식별자(UUID)") @PathVariable productId: UUID,
-        @Parameter(description = "판매 채널 코드. 누락 시 Organization 허용 채널") @RequestParam(required = false) channel: String?,
+        @Parameter(description = "레거시 호환 파라미터. 통합 카탈로그에서는 가격·목록을 분기하지 않음") @RequestParam(required = false) channel: String?,
     ): ProductDetailResponse = catalogService.product(productId, currentAccounts.activeAccountPublicId(), channel).toResponse()
 
     private fun ProductPageViewDto.toResponse() = ProductPageResponse(
-        items.map { ProductSummaryResponse(it.id, it.name, it.brandName, it.channelCode, it.startingPrice, it.startingUnitsPerSale) },
+        items.map {
+            ProductSummaryResponse(
+                it.id, it.name, it.brandName, it.channelCode, it.startingPrice,
+                it.startingWholesalePrice, it.startingUnitsPerSale, it.wholesaleMinimumQuantity,
+            )
+        },
         page,
         size,
         totalElements,
@@ -65,7 +70,13 @@ class CatalogController(
         description,
         categoryName,
         brandName,
-        skus.map { ProductSkuResponse(it.id, it.code, it.name, it.salePrice, it.listPrice, it.salesOfferId, it.unitsPerSale, it.sellerOrganizationId) },
+        skus.map {
+            ProductSkuResponse(
+                it.id, it.code, it.name, it.salePrice, it.retailSalePrice, it.wholesaleSalePrice,
+                it.listPrice, it.salesOfferId, it.unitsPerSale, it.sellerOrganizationId,
+            )
+        },
         channelCode,
+        wholesaleMinimumQuantity,
     )
 }

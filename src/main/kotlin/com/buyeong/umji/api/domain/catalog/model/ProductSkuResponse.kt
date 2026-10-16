@@ -14,8 +14,14 @@ data class ProductSkuResponse(
     @field:Schema(description = "이름 또는 표시 이름", example = "홍길동", type = "string", required = true)
     val name: String,
 
-    @field:Schema(description = "판매 단위 1개의 가격(원). WHOLESALE은 박스당 가격", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class)
+    @field:Schema(description = "판매 단위 1개의 기본 가격(소매가, 원)", example = "15000", format = "int64", type = "integer", required = true, implementation = Long::class)
     val salePrice: Long,
+
+    @field:Schema(description = "판매 단위당 소매 가격(원)", example = "15000", type = "integer", required = true)
+    val retailSalePrice: Long = salePrice,
+
+    @field:Schema(description = "판매 단위당 도매 가격(원)", example = "12000", type = "integer", required = true)
+    val wholesaleSalePrice: Long = salePrice,
 
     @field:Schema(description = "정가(원)", example = "1", format = "int64", type = "integer", required = true, implementation = Long::class)
     val listPrice: Long?,

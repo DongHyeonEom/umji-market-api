@@ -28,4 +28,13 @@ data class OperationProductSkuResponse(
         schema = Schema(implementation = UUID::class),
     ) @field:Schema(description = "SKU에 연결할 상품 옵션 값 공개 식별자(UUID) 목록", example = "[]", type = "array", required = true)
     val optionValueIds: Set<UUID> = emptySet(),
+
+    @field:Schema(description = "판매 단위당 소매 가격(원)", example = "15000", required = true)
+    val retailSalePrice: Long = salePrice,
+
+    @field:Schema(description = "판매 단위당 도매 가격(원)", example = "12000", required = true)
+    val wholesaleSalePrice: Long = salePrice,
+
+    @field:Schema(description = "판매 단위당 기준 SKU 입수 수량", example = "12", required = true)
+    val unitsPerSale: Int = 1,
 )

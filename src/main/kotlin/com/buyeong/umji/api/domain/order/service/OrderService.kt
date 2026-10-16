@@ -110,7 +110,6 @@ class OrderService(
             )
         }
         val cart = checkoutCart.cart(accountPublicId)
-        val allowedChannel = organizations.allowedSalesChannelForAccountPublicId(accountPublicId)
         val lines = cart.items.map {
             com.buyeong.umji.api.domain.order.dto.CheckoutLineDto(
                 it.skuId, it.skuCode, it.productName, it.skuName, it.unitPrice, it.quantity, it.salesStatus,
@@ -119,11 +118,7 @@ class OrderService(
         }
         require(lines.isNotEmpty()) { "장바구니가 비어 있습니다." }
         require(lines.all { it.salesStatus == ON_SALE }) { "판매 중지된 SKU가 포함되어 있습니다." }
-        require(lines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
-        require(lines.all { it.channelCode == allowedChannel }) { "구매 Organization에 허용된 판매 채널이 아닙니다." }
-        require(allowedChannel != WHOLESALE || lines.sumOf { it.quantity.toLong() } >= WHOLESALE_MINIMUM_BOXES) {
-            "도매 주문은 장바구니 전체 수량이 5박스 이상이어야 합니다."
-        }
+        require(lines.all { it.channelCode == WHOLESALE }) { "통합 카탈로그 오퍼만 주문할 수 있습니다." }
         require(lines.mapNotNull { it.sellerOrganizationId }.distinct().all(taxInvoiceBuyers::isSellerBusinessProfileReady)) {
             "판매자의 확인된 사업자 Organization 프로필이 없어 주문할 수 없습니다."
         }
@@ -211,43 +206,44 @@ class OrderService(
             ?: throw ItemNotFoundException("활성 구매자 계정을 찾을 수 없습니다.")
         val buyerOrganization = taxInvoiceBuyers.forAccount(buyerPublicId)
         require(buyerOrganization != null) { "활성 구매 Organization에 속한 계정만 전화 주문할 수 있습니다." }
-        val allowedChannel = organizations.allowedSalesChannelForAccountPublicId(buyerPublicId)
+        val buyerType = organizations.buyerTypeForAccountPublicId(buyerPublicId)
         accounts.findByPublicId(creatorPublicId)
             ?.takeIf { it.status == "ACTIVE" }
             ?: throw ItemNotFoundException("관리자 계정을 찾을 수 없습니다.")
 
-        val checkoutLines = lines.map { requested ->
+        val requestedOffers = lines.map { requested ->
             val offer = catalog.salesOffer(requested.salesOfferId)
                 ?.takeIf {
                     it.salesStatus == ON_SALE &&
-                        it.salesChannel.code == allowedChannel &&
                         it.productSku.salesStatus == ON_SALE &&
                         it.productSku.product.salesStatus == ON_SALE &&
                         it.productSku.product.displayStatus == DISPLAYED &&
                         it.productSku.product.deletedAt == null
                 }
                 ?: throw ItemNotFoundException("판매 중인 상품 오퍼를 찾을 수 없습니다.")
+            requested to offer
+        }
+        val quantityByProduct = requestedOffers.groupBy { it.second.productSku.product.id }
+            .mapValues { (_, productOffers) -> productOffers.sumOf { it.first.quantity.toLong() } }
+        val checkoutLines = requestedOffers.map { (requested, offer) ->
             val sku = offer.productSku
+            val wholesaleApplied = buyerType == WHOLESALE_BUSINESS &&
+                (quantityByProduct[sku.product.id] ?: 0L) >= sku.product.wholesaleMinimumQuantity
             CheckoutLineDto(
                 skuId = requireNotNull(sku.publicId),
                 skuCode = sku.skuCode,
                 productName = sku.product.name,
                 skuName = sku.name,
-                unitPrice = offer.salePrice,
+                unitPrice = if (wholesaleApplied) offer.wholesaleSalePrice else offer.retailSalePrice,
                 quantity = requested.quantity,
                 salesStatus = sku.salesStatus,
                 salesOfferId = requireNotNull(offer.publicId),
-                channelCode = offer.salesChannel.code,
+                channelCode = WHOLESALE,
                 unitsPerSale = offer.unitsPerSale,
                 sellerOrganizationId = offer.organization?.publicId,
             )
         }
         require(checkoutLines.map { it.salesOfferId }.distinct().size == checkoutLines.size) { "같은 상품 오퍼는 한 줄로 합산해야 합니다." }
-        require(checkoutLines.map { it.channelCode }.distinct().size == 1) { "한 주문에는 하나의 판매 채널 상품만 포함할 수 있습니다." }
-        require(checkoutLines.all { it.channelCode == allowedChannel }) { "구매 Organization에 허용된 판매 채널이 아닙니다." }
-        require(allowedChannel != WHOLESALE || checkoutLines.sumOf { it.quantity.toLong() } >= WHOLESALE_MINIMUM_BOXES) {
-            "도매 전화 주문은 전체 수량이 5박스 이상이어야 합니다."
-        }
         require(checkoutLines.mapNotNull { it.sellerOrganizationId }.distinct().all(taxInvoiceBuyers::isSellerBusinessProfileReady)) {
             "판매자의 확인된 사업자 Organization 프로필이 없어 주문할 수 없습니다."
         }
@@ -330,7 +326,7 @@ class OrderService(
         const val RESERVED = "RESERVED"
         const val ON_SALE = "ON_SALE"
         const val WHOLESALE = "WHOLESALE"
-        const val WHOLESALE_MINIMUM_BOXES = 5
+        const val WHOLESALE_BUSINESS = "WHOLESALE_BUSINESS"
         const val DISPLAYED = "DISPLAYED"
     }
 }

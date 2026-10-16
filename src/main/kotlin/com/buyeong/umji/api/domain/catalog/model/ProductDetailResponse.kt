@@ -28,4 +28,7 @@ data class ProductDetailResponse(
 
     @field:Schema(description = "판매 채널 코드", example = "WHOLESALE", type = "string", required = true)
     val channelCode: String = "WHOLESALE",
+
+    @field:Schema(description = "도매 단가 적용 기준 수량(박스)", example = "3", type = "integer", required = true)
+    val wholesaleMinimumQuantity: Int = 5,
 )

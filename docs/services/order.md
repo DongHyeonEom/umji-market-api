@@ -23,11 +23,7 @@ flowchart TD
     subgraph CHECKOUT[사용자 주문·계좌 안내]
         C01[인증된 사용자] --> C01A{활성 구매자 그룹 소속인가}
         C01A -- 아니오 --> C01B[개인·사업자 그룹 등록 흐름으로 이동]
-        C01A -- 예 --> BUYERTYPE{구매 Organization 유형}
-        BUYERTYPE -- 도매 업체 --> WHOLESALE[WHOLESALE 채널만 허용]
-        BUYERTYPE -- 일반 업체·일반인 --> RETAIL[RETAIL 채널만 허용]
-        WHOLESALE --> C02[Organization 기본 발행 설정·사업자 세금계산서 정보 조회]
-        RETAIL --> C02
+        C01A -- 예 --> C02[Organization 구매 유형·기본 발행 설정·사업자 세금계산서 정보 조회]
         C02 --> C03[그룹 공용 배송지 선택 및 발행 여부 토글]
         C03 --> C04{발행 요청 여부}
         C04 -- 아니오 --> C05[일반 계좌 안내]
@@ -40,11 +36,12 @@ flowchart TD
         C09 -- 유지 --> C11[주문과 함께 배송지·선택값 전달]
         C10 --> C12[서버에서 그룹 범위·프로필 완성 여부 재검사]
         C11 --> C12
-        C12 --> CHANNELVALID{요청 카트 채널이 Organization 허용 채널과 일치}
-        CHANNELVALID -- 아니오 --> C14[주문 거부·장바구니 유지]
-        CHANNELVALID -- 예 --> MINBOX{도매 업체 또는 소매 채널}
-        MINBOX -- 도매·합계 5박스 미만 --> C14
-        MINBOX -- 도매·합계 5박스 이상 또는 소매 --> C13{주문·판매 Organization 사업자 프로필·세금계산서 정보 유효}
+        C12 --> PRICING[현재 Organization 유형·장바구니 상품별 SKU 수량·가격 설정 조회]
+        PRICING --> TIER{도매 업체이며 해당 상품 합계가 상품 기준 수량 이상}
+        TIER -- 예 --> WHOLESALE[해당 상품 각 SKU 도매가 선택]
+        TIER -- 아니오 --> RETAIL[해당 상품 각 SKU 소매가 선택]
+        WHOLESALE --> C13{주문·판매 Organization 사업자 프로필·세금계산서 정보 유효}
+        RETAIL --> C13
         C13 -- 아니오 --> C14[주문 거부·장바구니 유지]
         C13 -- 예 --> UNITCHECK{판매 수량 × 입수 수량이 정수 범위 안인가}
         UNITCHECK -- 아니오 --> C14[요청 거부·장바구니 유지]
@@ -224,9 +221,10 @@ flowchart TD
 수령인명·연락처·우편번호·기본 주소·상세 주소를 주문 시점 snapshot으로 저장. 이후 그룹 배송지의 수정·삭제와 무관하게 주문에 남음.<br>
 그룹 주문을 공유하는 구성원은 해당 주문의 배송지 snapshot을 조회할 수 있음.<br>
 `POST /api/orders` request의 `shippingAddressId`는 필수 UUID 필드.<br>
-주문 항목에는 상품명, SKU명·코드, 판매가, 판매 수량, 판매 단위 입수 수량을 snapshot으로 저장함. WHOLESALE 수량은 박스 수이며 재고 예약 수량은 박스 수와 snapshot 입수 수량의 곱.<br>
-구매 Organization 유형은 `buyer_type`으로 관리. `WHOLESALE_BUSINESS`는 WHOLESALE 오퍼만, `GENERAL_BUSINESS`·`INDIVIDUAL`은 RETAIL 오퍼만 주문 가능하며 API 요청 채널과 오퍼를 주문 생성 시 다시 검증.<br>
-WHOLESALE 주문의 최소 5박스 기준은 판매자별 주문 분리 전에 장바구니 전체 판매 수량 합계로 검증. 관리자 전화 주문도 동일한 구매 유형·수량 기준 적용.<br>
+주문 항목에는 상품명, SKU명·코드, 적용 단가, 판매 수량, 판매 단위 입수 수량을 snapshot으로 저장. 재고 예약 수량은 판매 수량과 snapshot 입수 수량의 곱.<br>
+도매 업체 주문에서 상품별 수량은 같은 상품에 속한 장바구니 SKU 수량의 합계. 해당 상품의 `wholesale_minimum_quantity` 이상이면 모든 해당 SKU에 도매 단가를 적용하고, 미달이면 소매 단가 적용.<br>
+일반 업체와 일반인은 모든 상품에 소매 단가 적용. 상품별 기준은 주문을 차단하지 않으며 가격만 결정. 주문 생성 시 장바구니 수량·현재 가격 설정·구매 Organization 유형을 서버에서 재계산하며 요청의 채널·단가는 사용하지 않음.<br>
+관리자 전화 주문도 구매 유형·상품별 수량·가격 정책을 적용.<br>
 장바구니 상품을 판매 Organization별로 묶어 주문을 분리 생성. 한 주문은 하나의 판매 Organization 상품만 포함.<br>
 각 주문 생성 시 해당 판매자의 SKU 재고를 예약하고 모든 주문 저장이 성공한 뒤 장바구니 항목을 초기화.<br>
 판매자별 주문 저장·재고 예약·장바구니 초기화·주문 생성 outbox 기록은 하나의 주문 생성 트랜잭션에 포함. 어느 판매자의 재고 예약이나 outbox 기록이 실패하면 전체 주문 생성이 롤백되어 장바구니와 기존 재고 상태가 유지.<br>
@@ -276,7 +274,7 @@ flowchart TD
     SAVE -. 하위 작업 실패 .-> ROLLBACK[주문·재고·부가 이벤트 전체 rollback]
 ```
 
-계정은 기존 활성 BUYER Organization 구성원으로 제한. Organization 구매 유형에 허용된 채널의 오퍼 가격·재고를 적용하며 도매 주문에는 장바구니 전체 5박스 최소 수량을 적용. 주문 상태는 `PENDING_PAYMENT`. 서버 전체 장애에서는 별도 기록 후 복구된 API로 사후 등록.<br>
+계정은 기존 활성 BUYER Organization 구성원으로 제한. 같은 카탈로그를 이용하며 도매 업체는 상품별 기준 수량 충족 여부에 따라 도매 단가 또는 소매 단가를 적용. 주문 상태는 `PENDING_PAYMENT`. 서버 전체 장애에서는 별도 기록 후 복구된 API로 사후 등록.<br>
 
 ## 사업자 주문 귀속·조회 정책
 

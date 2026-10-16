@@ -36,6 +36,9 @@ import com.buyeong.umji.api.domain.operation.model.UpdateChannelListingRequest
 import com.buyeong.umji.api.domain.operation.model.UpdateProductRequest
 import com.buyeong.umji.api.domain.operation.model.UpdateProductStatusRequest
 import com.buyeong.umji.api.domain.operation.model.UpdateSalesOfferRequest
+import com.buyeong.umji.api.domain.operation.model.UpdateSkuPricingRequest
+import com.buyeong.umji.api.domain.operation.model.SkuPricingResponse
+import com.buyeong.umji.api.domain.operation.catalog.dto.SkuPricingCommandDto
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -106,6 +109,21 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
     ) = useCase.updateSalesOffer(
         SalesOfferCommandDto(channelCode, skuId, request.salePrice, request.listPrice, request.salesStatus, request.unitsPerSale),
     ).toResponse()
+
+    @Operation(summary = "SKU 소매·도매 가격 설정", description = "SKU별 소매가·도매가와 상품별 도매 기준 수량을 설정")
+    @PutMapping("/skus/{skuId}/pricing")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'PRODUCT_WRITE')")
+    fun updateSkuPricing(
+        @PathVariable skuId: UUID,
+        @Valid @RequestBody request: UpdateSkuPricingRequest,
+    ) = SkuPricingResponse.from(
+        useCase.updateSkuPricing(
+            SkuPricingCommandDto(
+                skuId, request.retailSalePrice, request.wholesaleSalePrice,
+                request.wholesaleMinimumQuantity, request.salesStatus, request.unitsPerSale,
+            ),
+        ),
+    )
 
     @Operation(summary = "브랜드 목록 조회", description = "브랜드 목록 조회 기능을 수행하고 요청 조건에 따른 결과를 반환")
     @GetMapping("/brands")
@@ -221,6 +239,12 @@ class OperationCatalogController(private val useCase: OperationCatalogService) {
         options.map {
             OperationProductOptionResponse(it.id, it.name, it.displayOrder, it.values.map { v -> OperationProductOptionValueResponse(v.id, v.value, v.displayOrder) })
         },
-        skus.map { OperationProductSkuResponse(it.id, it.skuCode, it.name, it.salePrice, it.listPrice, it.salesStatus, it.optionValueIds) },
+        skus.map {
+            OperationProductSkuResponse(
+                it.id, it.skuCode, it.name, it.salePrice, it.listPrice, it.salesStatus,
+                it.optionValueIds, it.retailSalePrice, it.wholesaleSalePrice, it.unitsPerSale,
+            )
+        },
+        wholesaleMinimumQuantity,
     )
 }

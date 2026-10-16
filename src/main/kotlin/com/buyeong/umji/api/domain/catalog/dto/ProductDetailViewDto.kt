@@ -10,4 +10,5 @@ data class ProductDetailViewDto(
     val brandName: String?,
     val skus: List<ProductSkuViewDto>,
     val channelCode: String = "WHOLESALE",
+    val wholesaleMinimumQuantity: Int = 5,
 )

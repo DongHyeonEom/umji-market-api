@@ -8,5 +8,7 @@ data class ProductSummaryViewDto(
     val brandName: String?,
     val channelCode: String = "WHOLESALE",
     val startingPrice: Long? = null,
+    val startingWholesalePrice: Long? = null,
     val startingUnitsPerSale: Int = 1,
+    val wholesaleMinimumQuantity: Int = 5,
 )

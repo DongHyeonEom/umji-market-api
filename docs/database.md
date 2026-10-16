@@ -78,6 +78,7 @@
 | V52 | 운영 감사 로그에 allowlist 변경 전·후 업무 값과 사유 추가, 주문일·브랜드 송장 등록일 조회 인덱스 추가 |
 | V53 | FIFO 재고 원가 lot·예약별 lot 배정·주문 품목 원가 snapshot 추가, 기존 재고 미확정 opening lot 이관 |
 | V54 | Organization 구매 유형과 전액 입금 전 배송 준비 제한 설정 추가. 기존 BUSINESS는 `GENERAL_BUSINESS`, INDIVIDUAL은 `INDIVIDUAL`로 초기화 |
+| V55 | 상품별 도매 기준 수량·SKU 소매/도매 단가 추가, 기존 소매 단가를 판매 단위로 환산하고 장바구니 참조를 통합 오퍼로 backfill |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -144,8 +145,11 @@
   수기 발행은 `MANUALLY_ISSUED` 상태와 승인번호·발행일·공급가액·세액·합계·처리자 정보를 저장. `purchase_order_tax_invoice_event`는 수기 발행 이벤트를 append-only로 보존하고 승인번호 unique 제약으로 중복 등록을 방지.<br>
   판매자 오퍼가 연결된 주문의 공급자는 SELLER Organization 프로필이며 주문은 판매자별로 분리. 소유자 미지정 레거시 오퍼만 기존 환경 설정 공급자를 사용.<br>
   행의 존재가 발행 요청 여부이며, 일반 주문에는 세금계산서 전용 행이 없음.<br>
-- `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. RETAIL은 1, WHOLESALE은 박스 입수 수량으로 사용.<br>
-- 구매 주문·장바구니·카탈로그 채널은 구매 Organization 유형에서 결정. 도매 업체는 WHOLESALE과 장바구니 전체 5박스 이상, 일반 업체·일반인은 RETAIL을 사용.<br>
+- `sales_offer.units_per_sale`은 판매 단위당 기준 SKU 수량이며 양수. 주문 재고 수량은 주문 수량과 해당 snapshot의 입수 수량을 곱해 계산.<br>
+- `product.wholesale_minimum_quantity`는 상품에 속한 SKU 합계에 적용하는 도매 할인 기준 수량으로 1~5박스 범위.<br>
+- V55에서 `product.wholesale_minimum_quantity`는 1~5 범위 check 적용. 양쪽 가격은 0 이상 check 적용.<br>
+- `sales_offer.retail_sale_price`·`wholesale_sale_price`는 판매 SKU별 판매 단위 가격. 도매 구매 Organization의 같은 상품 SKU 수량 합계가 상품 기준 이상일 때만 도매 단가 적용.<br>
+- 기존 `WHOLESALE`·`RETAIL` 카탈로그 채널은 구매 화면 분리 및 구매자 유형 판정에 사용하지 않음. 카탈로그는 통합하고 구매 가격은 조직 유형·상품별 장바구니 수량으로 계산.<br>
 - 판매자는 `SELLER` capability의 BUSINESS Organization과 완성·확인된 ACTIVE `organization_business_profile`이 있어야 판매 오퍼를 ON_SALE로 등록하고 주문을 받을 수 있음. 사업자 프로필은 법적 정보이고 카탈로그 소유 FK는 Organization을 직접 참조.<br>
 - `inventory_movement`와 `stock_reservation`은 재고 원장과 같은 `organization_id + sku_id` 범위를 저장. 주문 예약·해제·확정·복구는 주문 항목의 판매 오퍼 Organization에 귀속.<br>
 - `order_item.quantity`와 `unit_price`는 판매 단위 기준이며 `units_per_sale`은 주문 시점 snapshot. 재고 예약 수량은 두 수량의 곱.<br>
