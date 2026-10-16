@@ -3,27 +3,6 @@
 현재 구현 현황은 [implementation-status.md](implementation-status.md), 도메인별 API 계약·알고리즘 흐름은 [services/README.md](services/README.md), 아키텍처 기준은 [architecture.md](architecture.md)를 기준으로 함.<br>완료된 Task와 수용 기준은 [completed-todo.md](completed-todo.md)에 보관.<br>
 각 Task에서 서비스 개발과 자동화 테스트 개발·실행을 분리해 관리함.<br>
 
-## Task 24 — Organization 선결제 출고·구매자 유형
-
-구매 Organization별 선결제 출고 제한과 법적 유형과 분리된 구매자 유형 관리.<br>
-법적 사업자 유형(`BUSINESS`·`INDIVIDUAL`)과 구매 가격 정책 유형을 분리해 관리.<br>
-
-### 서비스 개발
-
-- [x] Organization별 전액 입금 전 출고 제한 설정을 저장하고, 설정된 Organization 주문은 결제 확인 전 배송 준비·재고 확정을 보류
-- [x] 구매 Organization 유형을 도매 업체·일반 업체·일반인으로 구분하고 현재 Organization 조회 및 운영 관리 흐름에 반영
-- [x] Organization 구매 유형을 도매 업체·일반 업체·일반인으로 관리하고 운영자 설정 API 적용
-- [x] Organization·배송·계정 정책 흐름도와 Flyway migration, DB·구현 문서 갱신
-
-### 확정 설계 결정
-
-- [x] 구매 가격 유형은 법적 `organization_type`과 분리. `BUSINESS`는 `GENERAL_BUSINESS`, `INDIVIDUAL`은 `INDIVIDUAL`로 migration 초기화. 도매 업체 전환은 `ADMIN_ACCOUNT_MANAGE` 권한 운영자만 수행
-- [x] 배송 준비 배치 시점의 현재 Organization 선결제 설정을 적용. 설정 변경은 해당 Organization의 미출고 주문에도 즉시 반영
-
-### 서비스 자동화 테스트 개발 및 테스트
-
-- [ ] 조직별 선결제 설정, 결제 전 배송 준비 차단, 전액 입금 후 재개 및 부분 입금 유지 테스트 개발·실행
-
 ## Task 23 — HTTP 요청 입력 검증 경계 정리
 
 외부 요청의 단순 필수값·길이·형식·숫자 범위 검증을 Bean Validation으로 일관화하고 Service에는 업무 맥락 검증을 유지.<br>

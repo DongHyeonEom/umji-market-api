@@ -3,6 +3,27 @@
 모든 수용 기준이 완료된 Task의 체크리스트 보관소.<br>
 진행 중 Task는 [todo.md](todo.md)에 유지하고, 모든 수용 기준이 완료된 시점에 이 문서로 이동.<br>
 
+## Task 24 — Organization 선결제 출고·구매자 유형
+
+Organization별 구매 가격 유형과 선결제 출고 제한을 관리하고 배송 준비 시 현재 결제·조직 정책을 적용.<br>
+
+### 서비스 개발
+
+- [x] Organization별 전액 입금 전 출고 제한 설정과 결제 확인 전 배송 준비·재고 확정 보류 구현
+- [x] 구매 Organization 유형을 도매 업체·일반 업체·일반인으로 구분하고 조회·운영 관리 API에 반영
+- [x] Organization·배송·계정 정책 흐름도, Flyway migration, DB·구현 문서 갱신
+
+### 확정 설계 결정
+
+- [x] 구매 유형은 법적 `organization_type`과 분리. `BUSINESS`는 `GENERAL_BUSINESS`, `INDIVIDUAL`은 `INDIVIDUAL`로 초기화하며 도매 전환은 `ADMIN_ACCOUNT_MANAGE` 운영자만 수행
+- [x] 배송 준비 배치 시점의 Organization 현재 선결제 설정 적용. 설정 변경은 해당 Organization의 미출고 주문에도 적용
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [x] 선결제 제한 설정의 Organization별 저장 및 다른 Organization과의 격리 테스트 개발·실행
+- [x] 미결제·부분 입금에서 배송 준비·재고 원가 확정 차단 테스트 개발·실행
+- [x] 전액 입금 확인 후 배송 준비 및 재고 원가 확정 재개 테스트 개발·실행
+
 ## Task 25 — 단일 카탈로그 상품별 수량 도매 가격
 
 동일 상품에서 구매자 유형과 상품별 SKU 수량 기준으로 소매가·도매가를 적용하고 주문 품목에 가격 snapshot 저장.<br>
