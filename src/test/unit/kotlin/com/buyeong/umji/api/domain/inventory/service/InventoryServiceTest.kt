@@ -1,8 +1,11 @@
 package com.buyeong.umji.api.domain.inventory.service
 
+import com.buyeong.umji.api.persistence.jpa.account.entity.OrganizationEntity
+import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.ProductSkuEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryCostLotEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryStockEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationEntity
 import com.buyeong.umji.api.persistence.jpa.inventory.service.InventoryJpaEntityService
@@ -71,6 +74,53 @@ class InventoryServiceTest : DescribeSpec({
         }
     }
 
+    describe("원가 lot 관리") {
+        it("판매 Organization 입고 원가 lot과 재고 입고 이력을 함께 기록한다") {
+            val organizationId = UUID.randomUUID()
+            val organization = mockk<OrganizationEntity>()
+            every { organization.id } returns 12L
+            val product = mockk<ProductEntity>()
+            every { product.organization } returns organization
+            every { skuEntity.product } returns product
+            every { inventory.organizationId(organizationId) } returns 12L
+            every { inventory.organization(organizationId) } returns organization
+            every { inventory.lockedStock(skuEntity, 12L) } returns stock(4, 0)
+
+            val lot = service.registerCostLot(skuId, organizationId, "  CONTAINER-1  ", 3, 4200L)
+
+            lot.organization shouldBe organization
+            lot.containerReference shouldBe "CONTAINER-1"
+            lot.receivedQuantity shouldBe 3
+            lot.remainingQuantity shouldBe 3
+            lot.totalPurchaseCost shouldBe 4200L
+            lot.remainingCostAmount shouldBe 4200L
+            verify(exactly = 1) {
+                inventory.saveMovement(match { it.movementType == "RECEIPT" && it.quantityDelta == 3 && it.referenceType == "COST_LOT" })
+            }
+        }
+
+        it("미확정 opening lot에 최초 원가를 등록하고 일부 출고 lot은 거부한다") {
+            val openingLot = InventoryCostLotEntity().apply {
+                id = 51L
+                receivedQuantity = 8
+                remainingQuantity = 8
+            }
+            every { inventory.lockedLot(51L) } returns openingLot
+
+            service.setCostLot(51L, 8000L).totalPurchaseCost shouldBe 8000L
+            openingLot.remainingCostAmount shouldBe 8000L
+
+            val consumedLot = InventoryCostLotEntity().apply {
+                receivedQuantity = 8
+                remainingQuantity = 7
+            }
+            every { inventory.lockedLot(52L) } returns consumedLot
+
+            shouldThrow<IllegalArgumentException> { service.setCostLot(52L, 8000L) }
+            consumedLot.totalPurchaseCost shouldBe null
+        }
+    }
+
     describe("재고 예약") {
         it("가용 재고보다 많은 수량은 예약하지 못한다") {
             val key = UUID.randomUUID()
@@ -82,10 +132,14 @@ class InventoryServiceTest : DescribeSpec({
         it("수량 예약을 lot 등록 순서대로 FIFO 배정한다") {
             val key = UUID.randomUUID()
             val first = com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryCostLotEntity().apply {
-                this.sku = skuEntity; receivedQuantity = 2; remainingQuantity = 2
+                this.sku = skuEntity
+                receivedQuantity = 2
+                remainingQuantity = 2
             }
             val second = com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryCostLotEntity().apply {
-                this.sku = skuEntity; receivedQuantity = 3; remainingQuantity = 3
+                this.sku = skuEntity
+                receivedQuantity = 3
+                remainingQuantity = 3
             }
             every { inventory.reservation(key) } returns null
             every { inventory.lockedStock(skuEntity, null) } returns stock(5, 0)
@@ -121,13 +175,26 @@ class InventoryServiceTest : DescribeSpec({
 
         it("예약된 FIFO lot의 원가를 출고 snapshot에 확정한다") {
             val key = UUID.randomUUID()
-            val reservation = StockReservationEntity().apply { id = 41L; reservationKey = key; sku = skuEntity; quantity = 2; status = "RESERVED" }
+            val reservation = StockReservationEntity().apply {
+                id = 41L
+                reservationKey = key
+                sku = skuEntity
+                quantity = 2
+                status = "RESERVED"
+            }
             val lot = com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryCostLotEntity().apply {
-                this.sku = skuEntity; receivedQuantity = 2; remainingQuantity = 2; reservedQuantity = 2
-                totalPurchaseCost = 101; remainingCostAmount = 101
+                this.sku = skuEntity
+                receivedQuantity = 2
+                remainingQuantity = 2
+                reservedQuantity = 2
+                totalPurchaseCost = 101
+                remainingCostAmount = 101
             }
             val allocation = com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationLotAllocationEntity().apply {
-                this.reservation = reservation; this.lot = lot; quantity = 2; status = "RESERVED"
+                this.reservation = reservation
+                this.lot = lot
+                quantity = 2
+                status = "RESERVED"
             }
             val entity = stock(2, 2)
             every { inventory.reservation(key) } returns reservation
@@ -148,12 +215,22 @@ class InventoryServiceTest : DescribeSpec({
 
         it("예약 FIFO lot 원가가 미확정이면 출고 확정을 거부한다") {
             val key = UUID.randomUUID()
-            val reservation = StockReservationEntity().apply { id = 42L; reservationKey = key; sku = skuEntity; quantity = 1; status = "RESERVED" }
+            val reservation = StockReservationEntity().apply {
+                id = 42L
+                reservationKey = key
+                sku = skuEntity
+                quantity = 1
+                status = "RESERVED"
+            }
             val lot = com.buyeong.umji.api.persistence.jpa.inventory.entity.InventoryCostLotEntity().apply {
-                this.sku = skuEntity; remainingQuantity = 1; reservedQuantity = 1
+                this.sku = skuEntity
+                remainingQuantity = 1
+                reservedQuantity = 1
             }
             val allocation = com.buyeong.umji.api.persistence.jpa.inventory.entity.StockReservationLotAllocationEntity().apply {
-                this.reservation = reservation; this.lot = lot; quantity = 1
+                this.reservation = reservation
+                this.lot = lot
+                quantity = 1
             }
             every { inventory.reservation(key) } returns reservation
             every { inventory.allocations(42L) } returns listOf(allocation)
