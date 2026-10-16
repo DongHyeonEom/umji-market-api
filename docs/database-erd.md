@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V54가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V55가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -292,6 +292,7 @@ erDiagram
         VARCHAR display_status "노출 상태"
         VARCHAR sales_status "판매 상태"
         INT display_order "노출 순서"
+        INT wholesale_minimum_quantity "도매 적용 기준 수량, 1~5박스"
         DATETIME deleted_at "소프트 삭제 시각, nullable"
         BIGINT deleted_by "삭제 처리자 ID, nullable"
         BIGINT version "낙관적 잠금 버전"
@@ -332,13 +333,15 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    SALES_OFFER["SALES_OFFER · 판매 Organization별 채널 SKU 가격·판매 조건"] {
+    SALES_OFFER["SALES_OFFER · 판매 Organization별 SKU 가격·판매 조건"] {
         BIGINT id PK "판매 오퍼 ID"
         BINARY public_id UK "API 공개 UUID"
         BIGINT sales_channel_id FK,UK "판매 채널 ID, Organization·채널·SKU 복합 UK"
         BIGINT organization_id FK,UK "판매 Organization ID, 레거시 오퍼는 nullable"
         BIGINT product_sku_id FK,UK "공용 SKU ID, Organization·채널·SKU 복합 UK"
-        BIGINT sale_price "채널 판매가"
+        BIGINT sale_price "레거시 채널 판매가"
+        BIGINT retail_sale_price "소매 판매 단가"
+        BIGINT wholesale_sale_price "도매 판매 단가"
         INT units_per_sale "판매 단위당 기준 SKU 수량"
         BIGINT list_price "채널 정가, nullable"
         VARCHAR sales_status "채널 판매 상태"
@@ -871,6 +874,7 @@ erDiagram
 | V52 | `operation_audit_log` 변경 전·후 업무 값·사유 JSON 추가 및 주문·송장 조회 인덱스 추가 |
 | V53 | FIFO 재고 원가 lot·예약별 lot 배정 및 주문 품목 원가 snapshot 추가, 기존 재고를 원가 미확정 opening lot으로 이관 |
 | V54 | Organization 구매 유형과 전액 입금 전 배송 준비 제한 설정 추가 및 기존 Organization 유형 backfill |
+| V55 | 상품 도매 기준 수량과 SKU 소매·도매 단가 추가, 소매 단가를 통합 판매 단위로 환산하고 장바구니 오퍼 참조 backfill |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

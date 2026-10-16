@@ -29,6 +29,8 @@ flowchart TD
     P -->|실패| PERR[400 요청 검증 오류]
     P -->|통과| P2[Service 연관 리소스·업무 상태 검증]
     P2 --> Q[카탈로그 변경 저장]
+    Q --> PRICING[상품·SKU 가격 변경: 소매가·도매가·상품 기준 수량 검증]
+    PRICING --> PRICING_SAVE[판매 Organization 소유권·1~5박스 기준 검증 후 가격 저장]
     E -- 재고 조정 --> R[재고 검증·조정·이동 이력]
     E -- 입금 확인 --> S[결제 상태 변경·주문/재고 처리]
     E -- 배송 변경 --> SHIPAUTH[SHIPMENT_WRITE 권한 검사]
@@ -47,6 +49,7 @@ flowchart TD
     L --> T
     O --> T
     Q --> T
+    PRICING_SAVE --> T
     R --> T
     S --> T
     SHIP --> T
