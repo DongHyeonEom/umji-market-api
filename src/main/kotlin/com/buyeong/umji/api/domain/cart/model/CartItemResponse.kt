@@ -23,8 +23,20 @@ data class CartItemResponse(
     @field:Schema(description = "수량", example = "1", format = "int32", type = "integer", required = true, implementation = Int::class)
     val quantity: Int,
 
-    @field:Schema(description = "판매 단위 1개의 현재 가격(원). WHOLESALE은 박스당 가격", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class)
+    @field:Schema(description = "상품별 수량 정책을 적용한 판매 단위 1개의 현재 가격(원)", example = "12000", format = "int64", type = "integer", required = true, implementation = Long::class)
     val currentSalePrice: Long,
+
+    @field:Schema(description = "판매 단위당 소매 가격(원)", example = "15000", required = true)
+    val retailSalePrice: Long,
+
+    @field:Schema(description = "판매 단위당 도매 가격(원)", example = "12000", required = true)
+    val wholesaleSalePrice: Long,
+
+    @field:Schema(description = "상품 도매 기준 수량(박스)", example = "3", required = true)
+    val wholesaleMinimumQuantity: Int,
+
+    @field:Schema(description = "현재 적용 가격 유형", example = "WHOLESALE", required = true)
+    val pricingTier: String,
     @field:Schema(description = "판매 상태 코드", example = "예시 값", type = "string", required = true)
     val salesStatus: String,
 

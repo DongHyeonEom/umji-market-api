@@ -27,39 +27,41 @@ class CartService(
     private val organizations: OrganizationJpaEntityService,
 ) {
     @Transactional(readOnly = true)
-    fun cart(accountId: UUID): CartViewDto = load(accountId, lock = false)?.toView() ?: CartViewDto(emptyList())
+    fun cart(accountId: UUID): CartViewDto =
+        (load(accountId, lock = false) ?: CartStateDto(accountId, emptyList())).toView(organizations.buyerTypeForAccountPublicId(accountId))
 
     @Transactional
     fun add(accountId: UUID, command: AddCartItemCommandDto): CartViewDto {
         require((command.skuId != null) xor (command.salesOfferId != null)) { "SKU ID 또는 판매 오퍼 ID 중 하나만 지정해야 합니다." }
-        val allowedChannel = organizations.allowedSalesChannelForAccountPublicId(accountId)
-        require(command.channelCode == null || command.channelCode.uppercase() == allowedChannel) { "구매 Organization에 허용된 판매 채널이 아닙니다." }
-        val offer = command.salesOfferId?.let(catalog::salesOffer)
-            ?: command.skuId?.let { catalog.salesOffer(allowedChannel, it) }
+        organizations.buyerTypeForAccountPublicId(accountId)
+        require(command.channelCode == null || command.channelCode.uppercase() in setOf(WHOLESALE, RETAIL)) { "유효하지 않은 판매 채널입니다." }
+        val requestedOffer = command.salesOfferId?.let(catalog::salesOffer)
+            ?: command.skuId?.let { catalog.salesOffer(WHOLESALE, it) }
             ?: throw ItemNotFoundException("판매 오퍼를 찾을 수 없습니다.")
+        val selectedSkuId = requireNotNull(requestedOffer.productSku.publicId)
+        val offer = requestedOffer.organization?.publicId?.let { catalog.salesOffer(WHOLESALE, selectedSkuId, it) }
+            ?: catalog.salesOffer(WHOLESALE, selectedSkuId)
+            ?: requestedOffer
         val sku = offer.toSellable()
-        require(sku.channelCode == allowedChannel) { "구매 Organization에 허용된 판매 채널의 오퍼가 아닙니다." }
+        require(sku.channelCode == WHOLESALE) { "통합 카탈로그 판매 오퍼를 찾을 수 없습니다." }
         require(sku.salesStatus == ON_SALE) { "판매 중인 오퍼만 장바구니에 담을 수 있습니다." }
         val current = load(accountId, lock = true) ?: CartStateDto(accountId, emptyList())
-        require(current.items.isEmpty() || current.items.all { it.sku.channelCode == sku.channelCode }) {
-            "장바구니에는 한 판매 채널의 상품만 담을 수 있습니다. 현재 상품을 주문하거나 비워 주세요."
-        }
         val matching = current.items.firstOrNull { it.sku.salesOfferId == sku.salesOfferId }
         val updated = if (matching == null) {
             current.copy(items = current.items + CartItemStateDto(null, sku, command.quantity))
         } else {
             current.copy(items = current.items.map { if (it === matching) it.copy(quantity = Math.addExact(it.quantity, command.quantity)) else it })
         }
-        return save(updated).toView()
+        return save(updated).toView(organizations.buyerTypeForAccountPublicId(accountId))
     }
 
     @Transactional
     fun update(accountId: UUID, itemId: UUID, command: UpdateCartItemCommandDto): CartViewDto {
         val cart = load(accountId, lock = true) ?: throw ItemNotFoundException("장바구니를 찾을 수 없습니다.")
-        val allowedChannel = organizations.allowedSalesChannelForAccountPublicId(accountId)
-        require(cart.items.all { it.sku.channelCode == allowedChannel }) { "구매 Organization 유형이 변경되어 장바구니를 먼저 정리해야 합니다." }
+        organizations.buyerTypeForAccountPublicId(accountId)
         requireItem(cart, itemId)
-        return save(cart.copy(items = cart.items.map { if (it.id == itemId) it.copy(quantity = command.quantity) else it })).toView()
+        return save(cart.copy(items = cart.items.map { if (it.id == itemId) it.copy(quantity = command.quantity) else it }))
+            .toView(organizations.buyerTypeForAccountPublicId(accountId))
     }
 
     @Transactional
@@ -78,21 +80,29 @@ class CartService(
     private fun requireItem(cart: CartStateDto, itemId: UUID) =
         cart.items.firstOrNull { it.id == itemId } ?: throw ItemNotFoundException("장바구니 항목을 찾을 수 없습니다.")
 
-    private fun CartStateDto.toView() = CartViewDto(
-        items.map {
+    private fun CartStateDto.toView(buyerType: String) = CartViewDto(
+        items.map { item ->
+            val productQuantity = items.asSequence()
+                .filter { it.sku.productId == item.sku.productId }
+                .sumOf { it.quantity.toLong() }
+            val wholesaleApplied = buyerType == WHOLESALE_BUSINESS && productQuantity >= item.sku.wholesaleMinimumQuantity
             CartItemViewDto(
-                requireNotNull(it.id),
-                it.sku.id,
-                it.sku.code,
-                it.sku.productName,
-                it.sku.name,
-                it.quantity,
-                it.sku.price,
-                it.sku.salesStatus,
-                it.sku.salesOfferId,
-                it.sku.channelCode,
-                it.sku.unitsPerSale,
-                it.sku.sellerOrganizationId,
+                requireNotNull(item.id),
+                item.sku.id,
+                item.sku.code,
+                item.sku.productName,
+                item.sku.name,
+                item.quantity,
+                if (wholesaleApplied) item.sku.wholesaleSalePrice else item.sku.retailSalePrice,
+                item.sku.retailSalePrice,
+                item.sku.wholesaleSalePrice,
+                item.sku.wholesaleMinimumQuantity,
+                if (wholesaleApplied) WHOLESALE else RETAIL,
+                item.sku.salesStatus,
+                item.sku.salesOfferId,
+                item.sku.channelCode,
+                item.sku.unitsPerSale,
+                item.sku.sellerOrganizationId,
             )
         },
     )
@@ -132,12 +142,16 @@ class CartService(
 
     private fun com.buyeong.umji.api.persistence.jpa.catalog.entity.SalesOfferEntity.toSellable() = SellableSkuDto(
         requireNotNull(productSku.publicId),
+        requireNotNull(productSku.product.publicId),
         requireNotNull(publicId),
-        salesChannel.code,
+        WHOLESALE,
         productSku.skuCode,
         productSku.product.name,
         productSku.name,
-        salePrice,
+        retailSalePrice,
+        retailSalePrice,
+        wholesaleSalePrice,
+        productSku.product.wholesaleMinimumQuantity,
         salesStatus,
         unitsPerSale,
         organization?.publicId,
@@ -145,5 +159,8 @@ class CartService(
 
     private companion object {
         const val ON_SALE = "ON_SALE"
+        const val WHOLESALE = "WHOLESALE"
+        const val RETAIL = "RETAIL"
+        const val WHOLESALE_BUSINESS = "WHOLESALE_BUSINESS"
     }
 }
