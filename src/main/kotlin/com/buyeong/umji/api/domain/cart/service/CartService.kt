@@ -9,6 +9,7 @@ import com.buyeong.umji.api.domain.cart.dto.SellableSkuDto
 import com.buyeong.umji.api.domain.cart.dto.UpdateCartItemCommandDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.service.OrganizationJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.cart.entity.CartEntity
 import com.buyeong.umji.api.persistence.jpa.cart.entity.CartItemEntity
 import com.buyeong.umji.api.persistence.jpa.cart.service.CartJpaEntityService
@@ -23,6 +24,7 @@ class CartService(
     private val accounts: AccountJpaEntityService,
     private val carts: CartJpaEntityService,
     private val catalog: CatalogJpaEntityService,
+    private val organizations: OrganizationJpaEntityService,
 ) {
     @Transactional(readOnly = true)
     fun cart(accountId: UUID): CartViewDto = load(accountId, lock = false)?.toView() ?: CartViewDto(emptyList())
@@ -30,11 +32,13 @@ class CartService(
     @Transactional
     fun add(accountId: UUID, command: AddCartItemCommandDto): CartViewDto {
         require((command.skuId != null) xor (command.salesOfferId != null)) { "SKU ID 또는 판매 오퍼 ID 중 하나만 지정해야 합니다." }
+        val allowedChannel = organizations.allowedSalesChannelForAccountPublicId(accountId)
+        require(command.channelCode == null || command.channelCode.uppercase() == allowedChannel) { "구매 Organization에 허용된 판매 채널이 아닙니다." }
         val offer = command.salesOfferId?.let(catalog::salesOffer)
-            ?: command.skuId?.let { catalog.salesOffer(command.channelCode.uppercase(), it) }
+            ?: command.skuId?.let { catalog.salesOffer(allowedChannel, it) }
             ?: throw ItemNotFoundException("판매 오퍼를 찾을 수 없습니다.")
         val sku = offer.toSellable()
-        require(sku.channelCode == command.channelCode.uppercase()) { "선택한 오퍼가 요청한 판매 채널과 일치하지 않습니다." }
+        require(sku.channelCode == allowedChannel) { "구매 Organization에 허용된 판매 채널의 오퍼가 아닙니다." }
         require(sku.salesStatus == ON_SALE) { "판매 중인 오퍼만 장바구니에 담을 수 있습니다." }
         val current = load(accountId, lock = true) ?: CartStateDto(accountId, emptyList())
         require(current.items.isEmpty() || current.items.all { it.sku.channelCode == sku.channelCode }) {
@@ -52,6 +56,8 @@ class CartService(
     @Transactional
     fun update(accountId: UUID, itemId: UUID, command: UpdateCartItemCommandDto): CartViewDto {
         val cart = load(accountId, lock = true) ?: throw ItemNotFoundException("장바구니를 찾을 수 없습니다.")
+        val allowedChannel = organizations.allowedSalesChannelForAccountPublicId(accountId)
+        require(cart.items.all { it.sku.channelCode == allowedChannel }) { "구매 Organization 유형이 변경되어 장바구니를 먼저 정리해야 합니다." }
         requireItem(cart, itemId)
         return save(cart.copy(items = cart.items.map { if (it.id == itemId) it.copy(quantity = command.quantity) else it })).toView()
     }
