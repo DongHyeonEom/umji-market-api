@@ -79,10 +79,12 @@ class OrderServiceTest : DescribeSpec({
             val creator = AccountEntity().apply { status = "ACTIVE" }
             val channel = mockk<SalesChannelEntity> { every { code } returns "WHOLESALE" }
             val product = mockk<ProductEntity> {
+                every { id } returns 1L
                 every { name } returns "전화 주문 상품"
                 every { salesStatus } returns "ON_SALE"
                 every { displayStatus } returns "DISPLAYED"
                 every { deletedAt } returns null
+                every { wholesaleMinimumQuantity } returns 2
             }
             val sku = mockk<ProductSkuEntity>()
             every { sku.publicId } returns skuId
@@ -96,20 +98,23 @@ class OrderServiceTest : DescribeSpec({
                 every { salesChannel } returns channel
                 every { productSku } returns sku
                 every { salePrice } returns 1250L
+                every { retailSalePrice } returns 1500L
+                every { wholesaleSalePrice } returns 1200L
                 every { unitsPerSale } returns 6
                 every { organization } returns null
             }
             every { accounts.findByPublicId(buyerId) } returns buyerAccount
             every { accounts.findByPublicId(creatorId) } returns creator
             every { taxInvoiceBuyers.forAccount(buyerId) } returns buyerProfile
+            every { organizations.buyerTypeForAccountPublicId(buyerId) } returns "GENERAL_BUSINESS"
             every { catalog.salesOffer(offerId) } returns offer
             every { bankAccounts.standard() } returns com.buyeong.umji.api.domain.order.dto.BankAccountInstructionsDto("은행", "123", "예금주")
             every { orders.save(any()) } answers {
                 val draft = firstArg<com.buyeong.umji.api.domain.order.dto.OrderDraftDto>()
                 draft.orderSource shouldBe "ADMIN_PHONE"
                 draft.createdByAccountId shouldBe creatorId
-                draft.items.single().unitPrice shouldBe 1250L
-                draft.items.single().lineAmount shouldBe 2500L
+                draft.items.single().unitPrice shouldBe 1500L
+                draft.items.single().lineAmount shouldBe 3000L
                 OrderViewDto(
                     UUID.randomUUID(),
                     "UMJ-20261009-000001",
@@ -134,7 +139,7 @@ class OrderServiceTest : DescribeSpec({
                 false,
             )
 
-            result.single().totalAmount shouldBe 2500L
+            result.single().totalAmount shouldBe 3000L
             verify(exactly = 1) { inventory.reserve(skuId, 12, any(), null, null) }
             verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, result.single().id) }
         }
@@ -165,7 +170,16 @@ class OrderServiceTest : DescribeSpec({
             every { shippingAddresses.findForAccount(accountId, addressId) } returns
                 ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null)
             every { carts.cart(accountId) } returns
-                CartViewDto(listOf(CartItemViewDto(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", 3, 12000, "ON_SALE", offerId, "WHOLESALE", 12)))
+                CartViewDto(
+                    listOf(
+                        CartItemViewDto(
+                            UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", 3, 9000,
+                            retailUnitPrice = 12000, wholesaleUnitPrice = 9000, wholesaleMinimumQuantity = 3,
+                            pricingTier = "WHOLESALE", salesStatus = "ON_SALE", salesOfferId = offerId,
+                            channelCode = "WHOLESALE", unitsPerSale = 12,
+                        ),
+                    ),
+                )
             every { orders.save(any()) } answers {
                 val draft = firstArg<com.buyeong.umji.api.domain.order.dto.OrderDraftDto>()
                 draft.channelCode shouldBe "WHOLESALE"
@@ -192,12 +206,13 @@ class OrderServiceTest : DescribeSpec({
             val order = result.single()
 
             order.status shouldBe "PENDING_PAYMENT"
-            order.subtotalAmount shouldBe 36000L
-            order.items.single().unitPrice shouldBe 12000L
+            order.subtotalAmount shouldBe 27000L
+            order.items.single().unitPrice shouldBe 9000L
             order.items.single().quantity shouldBe 3
             order.items.single().unitsPerSale shouldBe 12
+            order.items.single().lineAmount shouldBe 27000L
             verify(exactly = 1) { notifications.record(NotificationEventType.ORDER_CREATED, order.id, null) }
-            verify(exactly = 1) { salesCommissions.snapshotOrder(order.id, accountId, any(), 36_000L) }
+            verify(exactly = 1) { salesCommissions.snapshotOrder(order.id, accountId, any(), 27_000L) }
             verify(exactly = 1) { inventory.reserve(skuId, 36, any(), null) }
             verify(exactly = 1) { carts.clearForCheckout(accountId) }
         }
@@ -208,7 +223,12 @@ class OrderServiceTest : DescribeSpec({
             every { carts.cart(accountId) } returns
                 CartViewDto(
                     listOf(
-                        CartItemViewDto(UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", Int.MAX_VALUE, 1, "ON_SALE", offerId, "WHOLESALE", 2),
+                        CartItemViewDto(
+                            UUID.randomUUID(), skuId, "SKU-001", "테스트 상품", "규격 A", Int.MAX_VALUE, 1,
+                            retailUnitPrice = 1, wholesaleUnitPrice = 1, wholesaleMinimumQuantity = 5,
+                            pricingTier = "RETAIL", salesStatus = "ON_SALE", salesOfferId = offerId,
+                            channelCode = "WHOLESALE", unitsPerSale = 2,
+                        ),
                     ),
                 )
 
@@ -233,8 +253,18 @@ class OrderServiceTest : DescribeSpec({
                 ShippingAddressSnapshotDto("수령인", "01012345678", "12345", "서울 주소", null)
             every { carts.cart(accountId) } returns CartViewDto(
                 listOf(
-                    CartItemViewDto(UUID.randomUUID(), sellerASku, "A-001", "상품 A", "규격 A", 2, 1000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 4, sellerA),
-                    CartItemViewDto(UUID.randomUUID(), sellerBSku, "B-001", "상품 B", "규격 B", 3, 2000, "ON_SALE", UUID.randomUUID(), "WHOLESALE", 6, sellerB),
+                    CartItemViewDto(
+                        UUID.randomUUID(), sellerASku, "A-001", "상품 A", "규격 A", 2, 1000,
+                        retailUnitPrice = 1000, wholesaleUnitPrice = 800, wholesaleMinimumQuantity = 3,
+                        pricingTier = "WHOLESALE", salesStatus = "ON_SALE", salesOfferId = UUID.randomUUID(),
+                        channelCode = "WHOLESALE", unitsPerSale = 4, sellerOrganizationId = sellerA,
+                    ),
+                    CartItemViewDto(
+                        UUID.randomUUID(), sellerBSku, "B-001", "상품 B", "규격 B", 3, 2000,
+                        retailUnitPrice = 2000, wholesaleUnitPrice = 1600, wholesaleMinimumQuantity = 5,
+                        pricingTier = "RETAIL", salesStatus = "ON_SALE", salesOfferId = UUID.randomUUID(),
+                        channelCode = "WHOLESALE", unitsPerSale = 6, sellerOrganizationId = sellerB,
+                    ),
                 ),
             )
             every { taxInvoiceBuyers.forAccount(accountId) } returns buyer
@@ -281,7 +311,9 @@ class OrderServiceTest : DescribeSpec({
                 listOf(
                     CartItemViewDto(
                         UUID.randomUUID(), skuId, "SKU-001", "판매자 상품", "규격 A", 1, 1000,
-                        "ON_SALE", offerId, "WHOLESALE", 1, sellerOrganizationId,
+                        retailUnitPrice = 1000, wholesaleUnitPrice = 800, wholesaleMinimumQuantity = 1,
+                        pricingTier = "WHOLESALE", salesStatus = "ON_SALE", salesOfferId = offerId,
+                        channelCode = "WHOLESALE", unitsPerSale = 1, sellerOrganizationId = sellerOrganizationId,
                     ),
                 ),
             )
