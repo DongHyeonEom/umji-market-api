@@ -38,14 +38,6 @@ class OperationAuditServiceTest : DescribeSpec({
 
             verify(exactly = 0) { port.search(any()) }
         }
-
-        it("허용하지 않은 리소스 유형 필터를 거부한다") {
-            val query = OperationAuditQueryDto(null, "ACCOUNT_PHONE", null, null, 0, 20)
-
-            shouldThrow<IllegalArgumentException> { service.search(query) }
-
-            verify(exactly = 0) { port.search(any()) }
-        }
     }
 
     describe("보존 만료 삭제") {

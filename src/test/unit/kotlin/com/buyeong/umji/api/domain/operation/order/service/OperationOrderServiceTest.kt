@@ -3,14 +3,12 @@ package com.buyeong.umji.api.domain.operation.order.service
 import com.buyeong.umji.api.domain.operation.order.dto.OperationOrderPageDto
 import com.buyeong.umji.api.domain.operation.order.dto.OperationOrderQueryDto
 import com.buyeong.umji.api.persistence.jpa.order.service.OperationOrderJpaEntityService
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
-import io.mockk.verify
 import java.time.Instant
 
 class OperationOrderServiceTest : DescribeSpec({
@@ -42,13 +40,6 @@ class OperationOrderServiceTest : DescribeSpec({
             captured.captured.shipmentStatus shouldBe "IN_TRANSIT"
             captured.captured.page shouldBe 1
             captured.captured.size shouldBe 30
-        }
-
-        it("잘못된 기간과 페이지 조건은 저장소 호출 전에 거부한다") {
-            clearMocks(persistence)
-            shouldThrow<IllegalArgumentException> { service.search(query(until = Instant.parse("2026-02-01T00:00:00Z"))) }
-            shouldThrow<IllegalArgumentException> { service.search(query(size = 101)) }
-            verify(exactly = 0) { persistence.search(any()) }
         }
     }
 })

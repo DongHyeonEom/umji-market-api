@@ -4,7 +4,6 @@ import com.buyeong.umji.api.domain.catalog.service.CatalogService
 import com.buyeong.umji.api.domain.operation.catalog.dto.SalesOfferCommandDto
 import com.buyeong.umji.api.domain.operation.catalog.service.OperationCatalogService
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -30,7 +29,38 @@ class CatalogChannelMySqlIntegrationTest {
     private lateinit var operationCatalog: OperationCatalogService
 
     @Test
-    fun `categories listings and offer prices are isolated by channel while sku is shared`() {
+    fun `active buyers read one catalog with retail and wholesale sku prices`() {
+        val buyerAccountId = UUID.randomUUID()
+        jdbc.update(
+            "INSERT INTO account (public_id, login_id, password_hash, name, status) VALUES (?, ?, 'test-hash', 'Catalog Buyer', 'ACTIVE')",
+            buyerAccountId.bytes(),
+            "catalog-$buyerAccountId",
+        )
+        val accountInternalId = jdbc.queryForObject(
+            "SELECT id FROM account WHERE public_id = ?",
+            Long::class.java,
+            buyerAccountId.bytes(),
+        )!!
+        val organizationId = UUID.randomUUID()
+        jdbc.update(
+            "INSERT INTO organization (public_id, organization_type, display_name, status, representative_account_id) VALUES (?, 'BUSINESS', 'Catalog Buyer', 'ACTIVE', ?)",
+            organizationId.bytes(),
+            accountInternalId,
+        )
+        val organizationInternalId = jdbc.queryForObject(
+            "SELECT id FROM organization WHERE public_id = ?",
+            Long::class.java,
+            organizationId.bytes(),
+        )!!
+        jdbc.update(
+            "INSERT INTO organization_member (organization_id, account_id, status) VALUES (?, ?, 'ACTIVE')",
+            organizationInternalId,
+            accountInternalId,
+        )
+        jdbc.update(
+            "INSERT INTO organization_capability (organization_id, capability_code) VALUES (?, 'BUYER')",
+            organizationInternalId,
+        )
         val wholesaleCategory = createCategory("WHOLESALE", "Wholesale test")
         val retailCategory = createCategory("RETAIL", "Retail test")
         val productId = UUID.randomUUID()
@@ -67,7 +97,7 @@ class CatalogChannelMySqlIntegrationTest {
                 categoryId,
             )
             jdbc.update(
-                "INSERT INTO sales_offer (public_id, sales_channel_id, product_sku_id, sale_price, sales_status) VALUES (?, ?, ?, ?, 'ON_SALE')",
+                "INSERT INTO sales_offer (public_id, sales_channel_id, product_sku_id, sale_price, retail_sale_price, wholesale_sale_price, sales_status) VALUES (?, ?, ?, ?, 1500, 1000, 'ON_SALE')",
                 UUID.randomUUID().bytes(),
                 channelId,
                 skuInternalId,
@@ -76,25 +106,16 @@ class CatalogChannelMySqlIntegrationTest {
         }
         operationCatalog.updateSalesOffer(SalesOfferCommandDto("WHOLESALE", skuId, 1000, null, "ON_SALE", 12))
         operationCatalog.updateSalesOffer(SalesOfferCommandDto("WHOLESALE", skuId, 1000, null, "ON_SALE"))
-        assertThatThrownBy {
-            operationCatalog.updateSalesOffer(SalesOfferCommandDto("RETAIL", skuId, 1500, null, "ON_SALE", 2))
-        }.isInstanceOf(IllegalArgumentException::class.java)
-
-        assertThat(catalog.categories("WHOLESALE").map { it.name })
+        assertThat(catalog.categories(buyerAccountId, "RETAIL").map { it.name })
             .contains("Wholesale test")
             .doesNotContain("Retail test")
-        assertThat(catalog.categories("RETAIL").map { it.name })
-            .contains("Retail test")
-            .doesNotContain("Wholesale test")
-        val wholesale = catalog.product(productId, "WHOLESALE")
-        val retail = catalog.product(productId, "RETAIL")
-        assertThat(wholesale.skus.single().salePrice).isEqualTo(1000L)
-        assertThat(retail.skus.single().salePrice).isEqualTo(1500L)
-        assertThat(wholesale.skus.single().id).isEqualTo(retail.skus.single().id)
-        assertThat(wholesale.skus.single().salesOfferId).isNotEqualTo(retail.skus.single().salesOfferId)
+        val wholesale = catalog.product(productId, buyerAccountId, "RETAIL")
+        assertThat(wholesale.skus.single().salePrice).isEqualTo(1500L)
+        assertThat(wholesale.skus.single().retailSalePrice).isEqualTo(1500L)
+        assertThat(wholesale.skus.single().wholesaleSalePrice).isEqualTo(1000L)
+        assertThat(wholesale.skus.single().salesOfferId).isNotNull()
         assertThat(wholesale.skus.single().unitsPerSale).isEqualTo(12)
-        assertThat(retail.skus.single().unitsPerSale).isEqualTo(1)
-        assertThat(catalog.products(0, 100, "WHOLESALE").items.first { it.id == productId }.startingUnitsPerSale).isEqualTo(12)
+        assertThat(catalog.products(0, 100, buyerAccountId, "WHOLESALE").items.first { it.id == productId }.startingUnitsPerSale).isEqualTo(12)
     }
 
     private fun createCategory(channelCode: String, name: String): Long {

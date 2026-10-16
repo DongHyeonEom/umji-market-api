@@ -232,6 +232,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
 
         TestTransaction.start()
         jdbc.update("DELETE FROM inventory_stock WHERE sku_id = ?", skuId)
+        jdbc.update("DELETE FROM inventory_cost_lot WHERE sku_id = ?", skuId)
         jdbc.update("DELETE FROM sales_offer WHERE product_sku_id = ?", skuId)
         jdbc.update("DELETE FROM product_sku WHERE id = ?", skuId)
         jdbc.update("DELETE FROM product WHERE id = ?", productId)
@@ -266,6 +267,10 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             skuInternalId,
         )
         jdbc.update("UPDATE inventory_stock SET on_hand_quantity = 100 WHERE sku_id = ?", skuInternalId)
+        jdbc.update(
+            "UPDATE inventory_cost_lot SET received_quantity = 100, remaining_quantity = 100, total_purchase_cost = 100000, remaining_cost_amount = 100000 WHERE sku_id = ?",
+            skuInternalId,
+        )
 
         val order = orders.create(accountId, addressId, false, false).single()
         assertThat(order.items.single().quantity).isEqualTo(2)
@@ -942,7 +947,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
         val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
         jdbc.update(
-            "INSERT INTO sales_offer (public_id, sales_channel_id, product_sku_id, sale_price, sales_status) VALUES (?, ?, ?, 2500, 'ON_SALE')",
+            "INSERT INTO sales_offer (public_id, sales_channel_id, product_sku_id, sale_price, retail_sale_price, wholesale_sale_price, sales_status) VALUES (?, ?, ?, 2500, 2500, 2500, 'ON_SALE')",
             UUID.randomUUID().toBytes(),
             channelId,
             skuInternalId,
@@ -1009,7 +1014,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         val skuId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuPublicId.toBytes())!!
         val channelId = jdbc.queryForObject("SELECT id FROM sales_channel WHERE code = 'WHOLESALE'", Long::class.java)!!
         jdbc.update(
-            "INSERT INTO sales_offer (public_id, sales_channel_id, organization_id, product_sku_id, sale_price, sales_status) VALUES (?, ?, ?, ?, 2500, 'ON_SALE')",
+            "INSERT INTO sales_offer (public_id, sales_channel_id, organization_id, product_sku_id, sale_price, retail_sale_price, wholesale_sale_price, sales_status) VALUES (?, ?, ?, ?, 2500, 2500, 2500, 'ON_SALE')",
             UUID.randomUUID().toBytes(),
             channelId,
             sellerId,
@@ -1021,6 +1026,18 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             skuId,
             stockQuantity,
         )
+        if (stockQuantity > 0) {
+            jdbc.update(
+                "INSERT INTO inventory_cost_lot (organization_id, sku_id, container_reference, received_quantity, remaining_quantity, total_purchase_cost, remaining_cost_amount) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                sellerId,
+                skuId,
+                "ROLLBACK-${UUID.randomUUID()}",
+                stockQuantity,
+                stockQuantity,
+                stockQuantity * 1000L,
+                stockQuantity * 1000L,
+            )
+        }
         return skuPublicId
     }
 
@@ -1084,6 +1101,7 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
             jdbc.update("DELETE FROM inventory_movement WHERE organization_id = ?", sellerId)
             jdbc.update("DELETE FROM stock_reservation WHERE organization_id = ?", sellerId)
             jdbc.update("DELETE FROM inventory_stock WHERE organization_id = ?", sellerId)
+            jdbc.update("DELETE FROM inventory_cost_lot WHERE organization_id = ?", sellerId)
             jdbc.update("DELETE FROM sales_offer WHERE organization_id = ?", sellerId)
             jdbc.update("DELETE FROM product_sku WHERE product_id IN (SELECT id FROM product WHERE organization_id = ?)", sellerId)
             jdbc.update("DELETE FROM product WHERE organization_id = ?", sellerId)
@@ -1100,6 +1118,11 @@ class OrderCheckoutOptionsMySqlIntegrationTest {
         jdbc.update(
             "INSERT INTO inventory_stock (sku_id, on_hand_quantity, reserved_quantity, safety_stock_quantity) VALUES (?, 10, 0, 0)",
             skuInternalId,
+        )
+        jdbc.update(
+            "INSERT INTO inventory_cost_lot (sku_id, container_reference, received_quantity, remaining_quantity, total_purchase_cost, remaining_cost_amount) VALUES (?, ?, 10, 10, 10000, 10000)",
+            skuInternalId,
+            "CHECKOUT-${UUID.randomUUID()}",
         )
     }
 

@@ -33,14 +33,18 @@ class BrandShippingMigrationMySqlIntegrationTest {
                         created_at DATETIME(3) NOT NULL, updated_at DATETIME(3) NOT NULL
                     )""",
                 )
-                statement.execute("INSERT INTO role (id, code, name, is_system) VALUES (1, 'ADMIN', 'Admin', TRUE), (2, 'SUPER_ADMIN', 'Super Admin', TRUE)")
+                statement.execute(
+                    "INSERT INTO role (id, code, name, is_system) VALUES (1, 'ADMIN', 'Admin', TRUE), (2, 'SUPER_ADMIN', 'Super Admin', TRUE)",
+                )
                 statement.execute("INSERT INTO account (id) VALUES (10), (11)")
                 statement.execute("INSERT INTO brand (id) VALUES (20)")
                 statement.execute("INSERT INTO product (id, brand_id) VALUES (30, 20)")
                 statement.execute("INSERT INTO product_sku (id, product_id) VALUES (40, 30)")
                 statement.execute("INSERT INTO purchase_order (id) VALUES (50)")
                 statement.execute("INSERT INTO order_item (id, order_id, sku_id, quantity) VALUES (60, 50, 40, 3)")
-                statement.execute("INSERT INTO order_shipment (id, order_id, status, carrier_code, tracking_number, processed_by, created_at, updated_at) VALUES (70, 50, 'IN_TRANSIT', 'DAESIN', 'TRACK-OLD', 10, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))")
+                statement.execute(
+                    "INSERT INTO order_shipment (id, order_id, status, carrier_code, tracking_number, processed_by, created_at, updated_at) VALUES (70, 50, 'IN_TRANSIT', 'DAESIN', 'TRACK-OLD', 10, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))"
+                )
             }
         }
 

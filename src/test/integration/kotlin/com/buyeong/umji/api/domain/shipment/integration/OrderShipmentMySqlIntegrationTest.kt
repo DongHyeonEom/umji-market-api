@@ -2,6 +2,7 @@ package com.buyeong.umji.api.domain.shipment.integration
 
 import com.buyeong.umji.api.domain.account.dto.OrganizationRegistrationCommandDto
 import com.buyeong.umji.api.domain.account.service.OrganizationMembershipService
+import com.buyeong.umji.api.domain.operation.profit.service.OperationItemProfitService
 import com.buyeong.umji.api.domain.order.service.CustomerOrderListingService
 import com.buyeong.umji.api.domain.order.service.OrderCancellationService
 import com.buyeong.umji.api.domain.order.service.OrderService
@@ -9,7 +10,11 @@ import com.buyeong.umji.api.domain.order.service.ShippingHolidayService
 import com.buyeong.umji.api.domain.payment.service.PaymentService
 import com.buyeong.umji.api.domain.shipment.integration.tracking.OfficialCarrierTrackingGateway
 import com.buyeong.umji.api.domain.shipment.model.CarrierTrackingStatus
+import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageItemRequest
+import com.buyeong.umji.api.domain.shipment.model.ShipmentPackageRequest
+import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
 import com.buyeong.umji.api.domain.shipment.service.ShipmentService
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -22,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 @SpringBootTest(properties = ["spring.flyway.enabled=true", "spring.jpa.hibernate.ddl-auto=none"])
@@ -51,10 +58,19 @@ class OrderShipmentMySqlIntegrationTest {
     private lateinit var payments: PaymentService
 
     @Autowired
+    private lateinit var itemProfits: OperationItemProfitService
+
+    @Autowired
+    private lateinit var entityManager: EntityManager
+
+    @Autowired
     private lateinit var groupMembership: OrganizationMembershipService
 
     @MockitoBean
     private lateinit var trackingSource: OfficialCarrierTrackingGateway
+
+    @MockitoBean
+    private lateinit var brandShipping: BrandShippingService
 
     @Test
     fun `flyway v14 creates shipment schema`() {
@@ -152,7 +168,27 @@ class OrderShipmentMySqlIntegrationTest {
         val orderId = createOrder(customerId, skuId, reservationKey)
         createShipment(orderId)
         shipments.prepareOrder(orderId)
-        shipments.registerTracking(orderId, "DAESIN", "1501602023302", operatorId)
+        val brandId = UUID.fromString(
+            jdbc.queryForObject(
+                "SELECT BIN_TO_UUID(brand.public_id) FROM brand JOIN product ON product.brand_id = brand.id JOIN product_sku sku ON sku.product_id = product.id WHERE sku.public_id = ?",
+                String::class.java,
+                skuId.toBytes(),
+            ),
+        )
+        val orderItemId = UUID.fromString(
+            jdbc.queryForObject(
+                "SELECT BIN_TO_UUID(public_id) FROM order_item WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+                String::class.java,
+                orderId.toBytes(),
+            ),
+        )
+        org.mockito.Mockito.`when`(brandShipping.canManageBrandOrAdmin(brandId, operatorId)).thenReturn(true)
+        shipments.registerPackage(
+            orderId,
+            brandId,
+            ShipmentPackageRequest("DAESIN", "1501602023302", 0L, listOf(ShipmentPackageItemRequest(orderItemId, 1))),
+            operatorId,
+        )
         org.mockito.Mockito.`when`(trackingSource.lookup("DAESIN", "1501602023302"))
             .thenReturn(CarrierTrackingStatus.DELIVERED)
 
@@ -161,6 +197,56 @@ class OrderShipmentMySqlIntegrationTest {
 
         assertThat(page.items).hasSize(1)
         assertThat(page.items.single().shippingStatus).isEqualTo("DELIVERED")
+    }
+
+    @Test
+    fun `profit sums discounted line amount and shipment snapshots while excluding cancelled orders`() {
+        val operatorId = createAccount("profit-operator")
+        val customerId = createAccount("profit-customer")
+        val skuId = createSku(createProduct(createCategory()))
+        val reservationKey = UUID.randomUUID()
+        createStockAndReservation(skuId, reservationKey)
+        val orderId = createOrder(customerId, skuId, reservationKey)
+        createShipment(orderId)
+        shipments.prepareOrder(orderId)
+
+        val brandId = UUID.fromString(
+            jdbc.queryForObject(
+                "SELECT BIN_TO_UUID(brand.public_id) FROM brand JOIN product ON product.brand_id = brand.id JOIN product_sku sku ON sku.product_id = product.id WHERE sku.public_id = ?",
+                String::class.java,
+                skuId.toBytes(),
+            ),
+        )
+        val orderItemId = UUID.fromString(
+            jdbc.queryForObject(
+                "SELECT BIN_TO_UUID(public_id) FROM order_item WHERE order_id = (SELECT id FROM purchase_order WHERE public_id = ?)",
+                String::class.java,
+                orderId.toBytes(),
+            ),
+        )
+        jdbc.update(
+            "UPDATE order_item SET line_amount = 800 WHERE public_id = ?",
+            orderItemId.toBytes(),
+        )
+        entityManager.clear()
+        org.mockito.Mockito.`when`(brandShipping.canManageBrandOrAdmin(brandId, operatorId)).thenReturn(true)
+        shipments.registerPackage(
+            orderId,
+            brandId,
+            ShipmentPackageRequest("DAESIN", "PROFIT-TRACK", 200L, listOf(ShipmentPackageItemRequest(orderItemId, 1))),
+            operatorId,
+        )
+
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        val result = itemProfits.query(today, today, skuId, brandId)
+        val row = result.items.single()
+        assertThat(row.salesAmount).isEqualTo(800L)
+        assertThat(row.purchaseCost).isEqualTo(1000L)
+        assertThat(row.shippingCost).isEqualTo(200L)
+        assertThat(row.netProfit).isEqualTo(-400L)
+
+        jdbc.update("UPDATE purchase_order SET status = 'CANCELLED' WHERE public_id = ?", orderId.toBytes())
+        assertThat(itemProfits.query(today, today, null, null).items).isEmpty()
     }
 
     @Test
@@ -267,9 +353,17 @@ class OrderShipmentMySqlIntegrationTest {
 
     private fun createProduct(categoryId: Long): Long {
         val publicId = UUID.randomUUID()
+        val brandId = UUID.randomUUID()
         jdbc.update(
-            "INSERT INTO product (public_id, category_id, name, display_status, sales_status) VALUES (?, ?, 'Shipment test', 'VISIBLE', 'ON_SALE')",
+            "INSERT INTO brand (public_id, name, display_status) VALUES (?, ?, 'VISIBLE')",
+            brandId.toBytes(),
+            "Shipment brand ${UUID.randomUUID()}",
+        )
+        val brandInternalId = jdbc.queryForObject("SELECT id FROM brand WHERE public_id = ?", Long::class.java, brandId.toBytes())!!
+        jdbc.update(
+            "INSERT INTO product (public_id, brand_id, category_id, name, display_status, sales_status) VALUES (?, ?, ?, 'Shipment test', 'VISIBLE', 'ON_SALE')",
             publicId.toBytes(),
+            brandInternalId,
             categoryId,
         )
         return jdbc.queryForObject("SELECT id FROM product WHERE public_id = ?", Long::class.java, publicId.toBytes())!!
@@ -298,9 +392,29 @@ class OrderShipmentMySqlIntegrationTest {
         val skuInternalId = jdbc.queryForObject("SELECT id FROM product_sku WHERE public_id = ?", Long::class.java, skuId.toBytes())!!
         jdbc.update("INSERT INTO inventory_stock (sku_id, on_hand_quantity, reserved_quantity, safety_stock_quantity) VALUES (?, 10, 1, 0)", skuInternalId)
         jdbc.update(
+            "INSERT INTO inventory_cost_lot (sku_id, container_reference, received_quantity, remaining_quantity, reserved_quantity, total_purchase_cost, remaining_cost_amount) VALUES (?, ?, 10, 10, 1, 10000, 10000)",
+            skuInternalId,
+            "SHIPMENT-${UUID.randomUUID()}",
+        )
+        jdbc.update(
             "INSERT INTO stock_reservation (reservation_key, sku_id, quantity, status) VALUES (?, ?, 1, 'RESERVED')",
             reservationKey.toBytes(),
             skuInternalId,
+        )
+        val reservationInternalId = jdbc.queryForObject(
+            "SELECT id FROM stock_reservation WHERE reservation_key = ?",
+            Long::class.java,
+            reservationKey.toBytes(),
+        )!!
+        val lotInternalId = jdbc.queryForObject(
+            "SELECT id FROM inventory_cost_lot WHERE sku_id = ? AND container_reference LIKE 'SHIPMENT-%' ORDER BY id DESC LIMIT 1",
+            Long::class.java,
+            skuInternalId,
+        )!!
+        jdbc.update(
+            "INSERT INTO stock_reservation_lot_allocation (reservation_id, lot_id, quantity, cost_amount, status) VALUES (?, ?, 1, NULL, 'RESERVED')",
+            reservationInternalId,
+            lotInternalId,
         )
     }
 
