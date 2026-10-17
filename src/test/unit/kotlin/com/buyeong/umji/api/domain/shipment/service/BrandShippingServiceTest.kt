@@ -66,4 +66,18 @@ class BrandShippingServiceTest : DescribeSpec({
 
         verify(exactly = 0) { persistence.setRate(any(), any(), any(), any(), any()) }
     }
+
+    it("SHIPMENT_CONFIGURE는 배정 브랜드에서만 요율을 변경할 수 있다") {
+        authenticate("SHIPMENT_CONFIGURE")
+        every { persistence.isManagerAssigned(brandId, operatorId) } returns true
+        every { persistence.setRate(brandId, skuId, "DAESIN", 1200, operatorId) } returns rate
+        service.setRate(brandId, skuId, "DAESIN", 1200, operatorId) shouldBe rate
+
+        every { persistence.isManagerAssigned(otherBrandId, operatorId) } returns false
+        shouldThrow<AccessDeniedException> {
+            service.setRate(otherBrandId, skuId, "DAESIN", 1200, operatorId)
+        }
+        verify(exactly = 1) { persistence.setRate(brandId, skuId, "DAESIN", 1200, operatorId) }
+        verify(exactly = 0) { persistence.setRate(otherBrandId, any(), any(), any(), any()) }
+    }
 })

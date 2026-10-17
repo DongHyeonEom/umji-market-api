@@ -1,6 +1,7 @@
 package com.buyeong.umji.api.domain.operation.account.integration
 
 import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
+import com.buyeong.umji.api.persistence.jpa.account.repository.BrandShippingAssignmentRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,10 +22,14 @@ class SalesManagerRoleMySqlIntegrationTest {
     @Autowired
     private lateinit var operationAccounts: OperationAccountJpaEntityService
 
+    @Autowired
+    private lateinit var shippingAssignments: BrandShippingAssignmentRepository
+
     @Test
     fun `sales manager receives only sales permissions and is available for role management`() {
         assertThat(operationAccounts.managedRoles().map { it.code })
-            .contains("SALES_MANAGER", "SHIPPING_MANAGER")
+            .contains("SALES_MANAGER")
+            .doesNotContain("SHIPPING_MANAGER", "SHIPPING_OPERATOR")
 
         val salesPermissions = jdbc.queryForList(
             """SELECT permission.code FROM role_permission
@@ -34,6 +39,28 @@ class SalesManagerRoleMySqlIntegrationTest {
             String::class.java,
         )
         assertThat(salesPermissions).containsExactly("SALES_COMMISSION_READ", "SALES_GROUP_CREATE", "SALES_GROUP_READ")
+
+        val shippingRolePermissions = jdbc.query(
+            """SELECT role.code AS role_code, permission.code AS permission_code FROM role_permission
+                JOIN role ON role.id = role_permission.role_id
+                JOIN permission ON permission.id = role_permission.permission_id
+                WHERE role.code IN ('SHIPPING_MANAGER', 'SHIPPING_OPERATOR') ORDER BY role.code, permission.code""",
+        ) { result, _ -> result.getString("role_code") to result.getString("permission_code") }.toSet()
+        assertThat(shippingRolePermissions).containsExactlyInAnyOrder(
+            "SHIPPING_MANAGER" to "SHIPMENT_CONFIGURE",
+            "SHIPPING_MANAGER" to "SHIPMENT_READ",
+            "SHIPPING_MANAGER" to "SHIPMENT_WRITE",
+            "SHIPPING_OPERATOR" to "SHIPMENT_READ",
+            "SHIPPING_OPERATOR" to "SHIPMENT_WRITE",
+        )
+        val assignmentTypeColumnCount = jdbc.queryForObject(
+            """SELECT COUNT(*) FROM information_schema.columns
+                WHERE table_schema = DATABASE() AND table_name = 'brand_shipping_assignment'
+                  AND column_name = 'assignment_type'""",
+            Int::class.java,
+        )
+        assertThat(assignmentTypeColumnCount).isEqualTo(1)
+        assertThat(shippingAssignments.findAllByBrand_PublicIdAndAssignmentType(java.util.UUID.randomUUID(), "MANAGER")).isEmpty()
 
         val salesWriteAccess = jdbc.queryForObject(
             """SELECT COUNT(*) FROM role_permission rp
