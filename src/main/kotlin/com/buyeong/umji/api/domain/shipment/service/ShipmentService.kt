@@ -94,8 +94,7 @@ class ShipmentService(
             if (lineAmount == null) completeRateSet = false else estimatedCost = Math.addExact(estimatedCost, lineAmount)
             Triple(item, quantity, rate?.amountPerBox to lineAmount)
         }
-        val canOverrideCost = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication?.authorities
-            ?.any { it.authority == "SHIPMENT_ASSIGN" } == true
+        val canOverrideCost = brandShipping.canConfigureBrandOrAdmin(brandId, operatorId)
         require(request.actualShippingCost == null || canOverrideCost) { "기본 운송비 기준으로만 송장을 저장할 수 있습니다." }
         require(completeRateSet || canOverrideCost) { "설정된 기본 운송비가 없는 품목은 배송 관리자가 등록해야 합니다." }
         val actualCost = request.actualShippingCost ?: estimatedCost.takeIf { completeRateSet }
@@ -163,13 +162,10 @@ class ShipmentService(
     }
 
     fun updateActualCost(packageId: UUID, amount: Long, operatorId: UUID, reason: String): ShipmentPackageDto {
-        val canOverrideCost = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication?.authorities
-            ?.any { it.authority == "SHIPMENT_ASSIGN" } == true
-        if (!canOverrideCost) throw org.springframework.security.access.AccessDeniedException("배송 관리자만 실제 운송비를 변경할 수 있습니다.")
         val parcel = shipments.findPackageForUpdate(packageId) ?: throw ItemNotFoundException("송장 정보를 찾을 수 없습니다.")
         val brandId = parcel.brand?.publicId ?: throw ItemNotFoundException("브랜드가 지정된 송장을 찾을 수 없습니다.")
-        if (!brandShipping.canManageBrandOrAdmin(brandId, operatorId)) {
-            throw org.springframework.security.access.AccessDeniedException("담당 브랜드 송장만 수정할 수 있습니다.")
+        if (!brandShipping.canConfigureBrandOrAdmin(brandId, operatorId)) {
+            throw org.springframework.security.access.AccessDeniedException("담당 브랜드 배송 관리자만 실제 운송비를 수정할 수 있습니다.")
         }
         val previousCost = parcel.actualShippingCost
         val freightByItemId = splitAmount(amount, parcel.items.map { requireNotNull(it.orderItem.id) })

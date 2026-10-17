@@ -1,6 +1,6 @@
 # 데이터베이스 ERD
 
-이 문서는 현재 Flyway V2–V55가 관리하는 테이블과 컬럼을 설명함.<br>
+이 문서는 현재 Flyway V2–V57가 관리하는 테이블과 컬럼을 설명함.<br>
 실제 DDL·제약조건은 `src/main/resources/db/migration`이 기준이며, DB 공통 규칙은 [database.md](database.md)를 참고.<br>
 미구현 테이블은 포함하지 않음.<br>
 
@@ -627,10 +627,11 @@ erDiagram
         DATETIME created_at "생성 시각"
         DATETIME updated_at "수정 시각"
     }
-    BRAND_SHIPPING_MANAGER_ASSIGNMENT["BRAND_SHIPPING_MANAGER_ASSIGNMENT · 브랜드 배송 담당 배정"] {
+    BRAND_SHIPPING_ASSIGNMENT["BRAND_SHIPPING_ASSIGNMENT · 브랜드 배송 관리자·작업자 배정"] {
         BIGINT id PK "배정 내부 ID"
         BIGINT brand_id FK "브랜드 ID"
         BIGINT account_id FK "담당 계정 ID"
+        VARCHAR assignment_type "MANAGER 또는 OPERATOR"
         BIGINT assigned_by_account_id FK "배정 운영자 ID"
         DATETIME created_at "배정 시각"
     }
@@ -775,9 +776,9 @@ erDiagram
     BRAND ||--o{ ORDER_SHIPMENT_PACKAGE : scopes
     BRAND ||--o{ BRAND_SHIPPING_RATE : configures
     PRODUCT_SKU ||--o{ BRAND_SHIPPING_RATE : prices
-    BRAND ||--o{ BRAND_SHIPPING_MANAGER_ASSIGNMENT : assigns
-    ACCOUNT ||--o{ BRAND_SHIPPING_MANAGER_ASSIGNMENT : manages
-    ACCOUNT ||--o{ BRAND_SHIPPING_MANAGER_ASSIGNMENT : assigns_by
+    BRAND ||--o{ BRAND_SHIPPING_ASSIGNMENT : assigns
+    ACCOUNT ||--o{ BRAND_SHIPPING_ASSIGNMENT : works_in
+    ACCOUNT ||--o{ BRAND_SHIPPING_ASSIGNMENT : assigns_by
     ACCOUNT ||--o{ BRAND_SHIPPING_RATE : updates
     PURCHASE_ORDER ||--o{ NOTIFICATION_OUTBOX : generates
     ACCOUNT ||--o{ NOTIFICATION_DEVICE_TOKEN : owns
@@ -875,6 +876,8 @@ erDiagram
 | V53 | FIFO 재고 원가 lot·예약별 lot 배정 및 주문 품목 원가 snapshot 추가, 기존 재고를 원가 미확정 opening lot으로 이관 |
 | V54 | Organization 구매 유형과 전액 입금 전 배송 준비 제한 설정 추가 및 기존 Organization 유형 backfill |
 | V55 | 상품 도매 기준 수량과 SKU 소매·도매 단가 추가, 소매 단가를 통합 판매 단위로 환산하고 장바구니 오퍼 참조 backfill |
+| V56 | 배송 manager/operator role·permission 분리, 브랜드 배송 assignment 유형 추가 및 테이블 명칭 변경 |
+| V57 | 브랜드 assignment가 없는 배송 role 회수 및 해당 계정 token version 갱신 |
 
 새 스키마 변경은 다음 Flyway 버전으로 추가함.<br>
 적용된 version migration은 수정하지 않음.<br>

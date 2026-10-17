@@ -7,7 +7,7 @@
 
 ### 서비스 개발
 
-- [x] 기본 운송비 설정 및 송장 실제 운송비 수기 수정에 `SHIPMENT_ASSIGN` 적용
+- [x] 당시 정책 기준으로 기본 운송비 설정 및 송장 실제 운송비 수기 수정에 `SHIPMENT_ASSIGN` 적용
 - [x] `SHIPMENT_WRITE` 송장 등록에서 미설정 조합 및 실제 비용 덮어쓰기 거부
 - [x] 서비스 문서 흐름도·권한 계약 갱신
 
@@ -15,6 +15,8 @@
 
 - [x] `SHIPMENT_WRITE`의 설정 조합 송장 등록 성공 및 요율 누락·비용 덮어쓰기 거부 검증
 - [x] `SHIPMENT_ASSIGN` 요율 설정·실제 운송비 수정과 `SHIPMENT_WRITE` 권한·브랜드 scope 차단 unit·integration test 개발 및 실행
+
+후속 정책 변경은 [Task 26](todo.md)을 기준으로 하며, 현재 요율·실제 운송비 설정 권한은 `SHIPMENT_CONFIGURE`임.<br>
 
 ## Task 23 — HTTP 요청 입력 검증 경계 정리
 

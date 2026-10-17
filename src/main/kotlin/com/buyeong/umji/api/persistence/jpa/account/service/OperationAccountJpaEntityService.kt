@@ -96,7 +96,7 @@ class OperationAccountJpaEntityService(
 
     @Transactional(readOnly = true)
     fun managedRoles(): List<ManagedRoleDto> = jdbc.query(
-        "SELECT code, name FROM role WHERE code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SHIPPING_MANAGER', 'SALES_MANAGER') ORDER BY code",
+        "SELECT code, name FROM role WHERE code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SALES_MANAGER') ORDER BY code",
     ) { result, _ -> ManagedRoleDto(result.getString("code"), result.getString("name")) }
 
     @Transactional(readOnly = true)
@@ -110,7 +110,7 @@ class OperationAccountJpaEntityService(
         val grantorId = internalAccountId(grantedBy) ?: throw IllegalStateException("권한 부여자를 찾을 수 없습니다.")
         val changed = jdbc.update(
             """INSERT IGNORE INTO account_role (account_id, role_id, granted_by)
-                SELECT ?, r.id, ? FROM role r WHERE r.code = ? AND r.code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SHIPPING_MANAGER', 'SALES_MANAGER')
+                SELECT ?, r.id, ? FROM role r WHERE r.code = ? AND r.code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SALES_MANAGER', 'SHIPPING_MANAGER', 'SHIPPING_OPERATOR')
             """.trimIndent(),
             targetId,
             grantorId,
@@ -124,7 +124,7 @@ class OperationAccountJpaEntityService(
         val targetId = internalAccountId(id) ?: return null
         val changed = jdbc.update(
             """DELETE ar FROM account_role ar JOIN role r ON r.id = ar.role_id
-                WHERE ar.account_id = ? AND r.code = ? AND r.code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SHIPPING_MANAGER', 'SALES_MANAGER')
+                WHERE ar.account_id = ? AND r.code = ? AND r.code IN ('PRODUCT_MANAGER', 'ORDER_MANAGER', 'INVENTORY_MANAGER', 'SALES_MANAGER', 'SHIPPING_MANAGER', 'SHIPPING_OPERATOR')
             """.trimIndent(),
             targetId,
             roleCode,

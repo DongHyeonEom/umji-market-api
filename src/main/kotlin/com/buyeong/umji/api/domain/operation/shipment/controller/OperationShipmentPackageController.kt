@@ -27,7 +27,7 @@ class OperationShipmentPackageController(
         shipments.operationPackages(currentAccounts.activeAccountPublicId()).map { it.toResponse() }
 
     @PutMapping("/{packageId}/cost")
-    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_WRITE')")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_CONFIGURE') or @operationAuthorization.hasPermission(authentication, 'SHIPMENT_ASSIGN')")
     fun updateCost(
         @PathVariable packageId: UUID,
         @Valid @RequestBody request: UpdateShipmentPackageCostRequest,

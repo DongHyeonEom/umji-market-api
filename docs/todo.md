@@ -124,3 +124,21 @@
 - [x] 기간·조직·주문자·결제·배송 상태 조합 검색 및 페이지네이션·권한 자동화 테스트 개발·실행
 - [x] 브랜드별 월·기간 운송비 집계, 상세 근거, 실제 비용 변경 반영 및 타 브랜드 차단 자동화 테스트 개발·실행
 - [x] 변경 전후 값·사유·처리자 감사 이력의 성공·실패 및 필드 제한 자동화 테스트 개발·실행
+
+## Task 26 — 배송 관리자·작업자 role 및 브랜드 scope 분리
+
+배송 role을 `SHIPPING_MANAGER`와 `SHIPPING_OPERATOR`로 나누고, role assignment와 브랜드 업무 scope를 함께 관리. 요율·송장 실제 운송비 설정 권한을 `SHIPMENT_CONFIGURE`로 분리하고 `SHIPMENT_ASSIGN`은 브랜드 staff assignment 관리에 한정.<br>
+
+### 서비스 개발
+
+- [x] 배송 manager/operator permission mapping과 role 관리 범위 분리
+- [x] 브랜드 배송 assignment에 manager/operator 유형 저장 및 assignment 기반 role 부여·회수
+- [x] 배송 설정·실제 운송비 보정을 `SHIPMENT_CONFIGURE` 및 브랜드 manager scope로 제한
+- [x] 배송 조회·송장 등록·배송완료에 브랜드 assignment scope 적용
+- [x] V56/V57 migration 및 database·서비스·API 문서 갱신
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [x] 역할별 permission·브랜드 scope, assignment 추가·변경·회수 자동화 테스트 개발 및 실행
+- [ ] V56/V57 migration의 기존 assignment 보존·role permission mapping 및 미배정 role 회수 검증
+- [x] manager 요율/비용 설정과 operator 설정 요율 송장 등록 및 수기 입력 차단 API 권한 검증

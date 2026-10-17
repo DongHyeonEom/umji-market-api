@@ -85,30 +85,32 @@ MFA 대상 상위 관리자 role은 token의 `mfaRequired`·`mfaVerified` claim�
 | `PRODUCT_MANAGER` | `PRODUCT_READ`, `PRODUCT_WRITE` |
 | `ORDER_MANAGER` | `ORDER_READ`, `ORDER_WRITE` |
 | `INVENTORY_MANAGER` | `INVENTORY_READ`, `INVENTORY_WRITE` |
-| `SHIPPING_MANAGER` | `SHIPMENT_WRITE` |
+| `SHIPPING_MANAGER` | `SHIPMENT_READ`, `SHIPMENT_WRITE`, `SHIPMENT_CONFIGURE` |
+| `SHIPPING_OPERATOR` | `SHIPMENT_READ`, `SHIPMENT_WRITE` |
 | `SALES_MANAGER` | `SALES_GROUP_CREATE`, `SALES_GROUP_READ`, `SALES_COMMISSION_READ` |
 
 ## 운영자·구매자 화면 접근 권한
 
 화면 metadata, role별 permission mapping, `GET /api/access-context` 응답을 구현. 화면 표시는 편의 정보이며 모든 업무 API에서 실제 권한을 다시 검사.<br>
-현재 role은 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SALES_MANAGER`. 영업 배정 조회·변경과 인센티브 조회·월 정산·지급 API는 구현됨.<br>
+현재 운영 role은 `ADMIN`, `SUPER_ADMIN`, `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SHIPPING_OPERATOR`, `SALES_MANAGER`. 영업 배정 조회·변경과 인센티브 조회·월 정산·지급 API는 구현됨.<br>
 
 | 운영 role | 책임 화면·업무 | 필요 permission |
 | --- | --- | --- |
 | `ADMIN` | 전체 운영 화면과 업무 관리. 감사 로그 조회는 제외 | 기존 전체 운영 permission |
 | `SUPER_ADMIN` | 전체 운영 화면, role bootstrap 및 감사 로그 조회 | 전체 permission |
-| `SHIPPING_MANAGER` | 송장 등록, 배송 상태 보정 | `SHIPMENT_WRITE` |
+| `SHIPPING_MANAGER` | 배정 브랜드 요율 관리, 송장 등록·비용 보정·배송 상태 변경 | `SHIPMENT_READ`, `SHIPMENT_WRITE`, `SHIPMENT_CONFIGURE` |
+| `SHIPPING_OPERATOR` | 배정 브랜드 송장 등록·배송 상태 변경 | `SHIPMENT_READ`, `SHIPMENT_WRITE` |
 | `SALES_MANAGER` | 그룹 등록, 본인 담당 그룹 조회, 본인 인센티브 조회 | `SALES_GROUP_CREATE`, `SALES_GROUP_READ`, `SALES_COMMISSION_READ` |
 
 | screen code 예시 | audience | 화면 조회 permission | 화면 action permission |
 | --- | --- | --- | --- |
-| `ADMIN_SHIPMENT_LIST`, `ADMIN_SHIPMENT_DETAIL` | `ADMIN` | `SHIPMENT_READ` | 송장·배송 상태 변경에 `SHIPMENT_WRITE` |
+| `ADMIN_SHIPMENT_LIST`, `ADMIN_SHIPMENT_DETAIL` | `ADMIN` | `SHIPMENT_READ` | 송장·배송 상태 변경에 `SHIPMENT_WRITE`, 요율·실제 운송비 변경에 `SHIPMENT_CONFIGURE` |
 | `ADMIN_SALES_GROUP_LIST` | `ADMIN` | `SALES_GROUP_READ` | 담당 재배정·요율 변경에 `SALES_GROUP_ASSIGN` |
 | `ADMIN_SALES_COMMISSION_LIST` | `ADMIN` | `SALES_COMMISSION_READ_ALL` | 월 정산·지급 확정에 `SALES_COMMISSION_SETTLE` |
 | `ADMIN_ACCOUNT_ROLE_SETTINGS` | `ADMIN` | `ADMIN_ACCOUNT_MANAGE` | role 부여·회수에 `ADMIN_ACCOUNT_MANAGE` |
 
 상품·주문·재고 전용 기존 role은 호환을 위해 유지. `SALES_MANAGER`는 그룹 생성, 본인 담당 그룹 조회, 본인 인센티브 조회 범위로 제한하며 담당자 재배정·요율 변경·지급 확정 권한은 포함하지 않음.<br>
-`SHIPPING_MANAGER`와 `SALES_MANAGER`는 배송·영업 업무 role로 MFA 대상 관리자 role에서 제외. 배송 정보 변경 endpoint는 `SHIPMENT_WRITE`만 요구하고 결제·취소·휴무일 endpoint는 계속 `ORDER_WRITE`를 요구해 배송 담당자에게 결제·취소 권한이 열리지 않도록 구성.<br>
+`SHIPPING_MANAGER`, `SHIPPING_OPERATOR`, `SALES_MANAGER`는 업무 role로 MFA 대상 상위 관리자 role에서 제외. 배송 송장 변경 endpoint는 `SHIPMENT_WRITE`, 요율·실제 운송비 보정은 `SHIPMENT_CONFIGURE`를 요구. 결제·취소·휴무일 endpoint는 `ORDER_WRITE`를 유지.<br>
 영업 인센티브 확정·지급 처리는 별도 permission으로 제한하고, 담당 영업자 본인은 자신에게 귀속된 내역만 조회.<br>
 
 화면별 조회 권한은 `ui_screen`과 permission 연결로 관리. 화면 구성·route 구현은 React에 두고, DB는 안정적인 `screen_code`와 필요한 permission 연결을 관리.<br>
@@ -269,7 +271,7 @@ flowchart TD
 
 기본 role-permission 매핑은 Flyway V10, 감사 로그 조회 permission은 V11, 배송 전용 role·permission은 V23, 영업 role·permission은 V37·V47·V48에서 적용함.<br>
 `ADMIN_ACCOUNT_MANAGE` 권한으로 role 관리 endpoint를 이용할 수 있음.<br>
-운영 API에서 관리 가능한 role은 `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SHIPPING_MANAGER`, `SALES_MANAGER`로 제한하며 `ADMIN`, `SUPER_ADMIN`, `CUSTOMER`는 API로 부여·회수할 수 없음.<br>
+일반 계정 role API는 `PRODUCT_MANAGER`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, `SALES_MANAGER`만 직접 부여·회수. 배송 업무 role은 브랜드 배송 담당자·작업자 배정 API에서 브랜드 scope와 함께 부여·회수.<br>
 중복 부여와 이미 회수된 role의 회수는 멱등 처리.<br>
 role이 실제 변경되면 대상 계정의 token version을 증가시켜 기존 Access Token을 즉시 거부하며, 새 토큰에 변경된 권한을 반영함.<br>
 Access Token에 발급 당시 permission을 담음.<br>
@@ -491,35 +493,37 @@ flowchart TD
 
 ## 브랜드별 배송 권한·비용 관리
 
-V51에서 `SHIPMENT_ASSIGN` 권한과 브랜드 담당자 배정, 브랜드별 운송비, 송장별 배송 권한 범위를 추가.<br>
-관리자는 담당자를 지정·해제하고 전체 브랜드 송장 및 운송비를 조회·수정. 배송 담당자는 배정된 브랜드의 운송비 및 송장만 조회·변경.<br>
+`SHIPMENT_ASSIGN`은 브랜드별 배송 관리자·작업자 배정과 전체 브랜드 운영 scope에 사용. `SHIPMENT_CONFIGURE`는 배정 브랜드의 요율 및 송장 실제 운송비 관리에 사용.<br>
+`SHIPPING_MANAGER`와 `SHIPPING_OPERATOR` role은 각각 브랜드에 배정되어야 업무 scope가 활성화되며, 배정 시 해당 role 부여 및 제거 시 마지막 브랜드 배정 role 회수.<br>
 
-| 역할 | 목표 범위 | 주요 동작 |
-| --- | --- | --- |
-| 브랜드 배송 담당자 | 배정된 브랜드 | 담당 브랜드 송장 등록·배송완료 |
-| `ADMIN`·`SUPER_ADMIN` | 전체 브랜드 | 담당자 배정·해제, 전체 배송 상태·기본 운송비·송장 실제 운송비 조회 및 비용 수정 |
+| 역할 | 권한 | 브랜드 scope | 주요 동작 |
+| --- | --- | --- | --- |
+| `SHIPPING_MANAGER` | `SHIPMENT_READ`, `SHIPMENT_WRITE`, `SHIPMENT_CONFIGURE` | 관리자에게 배정된 브랜드 | 요율 조회·설정, 송장 등록·배송완료, 실제 운송비 보정 |
+| `SHIPPING_OPERATOR` | `SHIPMENT_READ`, `SHIPMENT_WRITE` | 관리자에게 배정된 브랜드 | 설정된 브랜드·품목·택배사 요율을 선택해 송장 등록·배송완료 |
+| `ADMIN`·`SUPER_ADMIN` | 전체 운영 권한 및 `SHIPMENT_ASSIGN` | 전체 브랜드 | 담당자 배정·해제, 전체 배송 조회·변경 |
 
 ```mermaid
 flowchart TD
-    ADMIN[관리자] --> MAP[계정에 브랜드 배송 담당 범위 배정]
-    MANAGER[배송 담당자 요청] --> AUTH[Access Token·계정 상태 확인]
-    AUTH --> PERM{배송 관리 권한}
+    ADMIN[ADMIN / SUPER_ADMIN] --> ASSIGN{브랜드별 관리자 또는 작업자 배정}
+    ASSIGN --> ROLE[SHIPPING_MANAGER 또는 SHIPPING_OPERATOR role 부여]
+    ASSIGN --> SCOPE[(브랜드별 배송 assignment)]
+    USER[배송 요청] --> AUTH[Access Token·계정 상태 확인]
+    AUTH --> PERM{업무 permission 확인}
     PERM -->|없음| DENY[403]
-    PERM -->|있음| SCOPE[담당 브랜드 범위 조회]
-    SCOPE --> RESOURCE{요청 품목·주문 브랜드가 담당 범위에 포함}
-    RESOURCE -->|아니오| DENY
-    RESOURCE -->|예| CHANGE[배정 브랜드 송장 등록·배송완료]
-    CHANGE --> SAVE[브랜드 범위 검증 후 저장]
-    ADMIN --> GLOBAL[전체 브랜드 배송 상태·비용 조회]
-    GLOBAL --> READPERM[전체 배송 조회 권한 검사]
-    READPERM --> ALL[전체 브랜드 결과 반환]
-    ADMIN --> CONFIG[브랜드·품목·택배사 기본 운송비 설정]
-    CONFIG --> RATE[(기본 운송비표)]
-    ADMIN --> COST[송장 실제 운송비 수기 수정]
+    PERM -->|있음| SCOPECHECK{요청 브랜드 assignment 확인}
+    SCOPECHECK -->|없음| DENY
+    SCOPECHECK -->|있음| ACTION{요청 작업}
+    ACTION -->|송장 등록·배송완료| WRITE[SHIPMENT_WRITE]
+    WRITE --> RATE[설정 요율만 선택·기본 비용 snapshot 저장]
+    ACTION -->|요율·실제 비용 보정| CONFIG{SHIPMENT_CONFIGURE와 관리자 assignment}
+    CONFIG -->|아니오| DENY
+    CONFIG -->|예| UPDATE[브랜드 요율·실제 비용 저장]
+    ASSIGN --> ASSIGNPERM[SHIPMENT_ASSIGN 검증]
 ```
 
-관리자 경로와 브랜드별 기본 운송비·실제 운송비 수기 변경은 `SHIPMENT_ASSIGN`, 배송 조회는 `SHIPMENT_READ`, 송장 등록·배송완료는 `SHIPMENT_WRITE`와 브랜드 scope를 서버에서 검사.<br>
-`SHIPMENT_WRITE` 작업자는 설정된 브랜드·품목·택배사 조합을 선택해 기본 운송비 snapshot으로 송장을 등록. 조합에 요율이 없거나 등록 시 비용을 덮어쓰려는 요청은 거부.<br>
+배송 role은 일반 계정 role 관리 API에서 직접 부여하지 않고 브랜드별 배정 API로 부여. 같은 계정의 한 브랜드 assignment는 `MANAGER` 또는 `OPERATOR` 중 하나이며, assignment 변경 시 해당 role scope를 함께 갱신.<br>
+`SHIPMENT_WRITE`의 송장 등록은 기본 요율이 있는 브랜드·품목·택배사 조합만 허용하며 실제 비용 수기 덮어쓰기와 요율 누락 조합은 거부. manager role은 배정 브랜드에서 요율 설정 및 송장 비용 보정 가능.<br>
+`ADMIN`·`SUPER_ADMIN`은 `SHIPMENT_ASSIGN`으로 전체 브랜드를 운영하고 manager/operator 배정 및 요율·비용 설정 가능.<br>
 배송 API 계약과 실제 주문 송장 흐름은 [order.md](order.md)의 배송 섹션을 기준으로 함.<br>
 
 ## 구조
