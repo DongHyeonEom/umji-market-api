@@ -338,8 +338,8 @@ flowchart TD
 
 배송 담당자 배정, 브랜드별 기본 운송비, 주문 내 복수 송장 등록·비용 수정·전체 배송 조회 흐름을 제공. 품목 사입가와 순이익 집계는 미구현.<br>
 한 주문에는 복수 송장을 등록할 수 있으며, 송장 하나에는 한 브랜드의 여러 주문 품목·박스 수량을 연결. 품목 수량이 여러 송장에 중복 배정되지 않도록 주문 배송 행을 잠그고 검증.<br>
-담당자는 배정 브랜드 범위에서 품목·택배사별 박스 기본 운송비를 설정하고 배송 정보를 변경. 관리자는 전체 브랜드 배송 조회 및 실제 비용 수정 가능.<br>
-송장 등록 시 브랜드·품목·택배사별 박스 비용과 수량을 합산하고, 누락된 기본 비용이 있으면 실제 운송비 직접 입력을 요구. 등록 당시의 박스별 기준 운송비 snapshot과 송장 실제 비용을 분리 저장.<br>
+`SHIPMENT_ASSIGN` 운영자는 브랜드·품목·택배사별 박스 기본 운송비와 송장 실제 운송비를 수기 설정·수정. `SHIPMENT_WRITE` 작업자는 배정 브랜드에서 설정된 조합을 선택해 배송 정보를 변경.<br>
+송장 등록 시 브랜드·품목·택배사별 박스 기본 운송비와 수량을 합산해 실제 비용 및 박스별 기준 운송비 snapshot을 저장. 설정 누락 조합 또는 `SHIPMENT_WRITE`의 비용 덮어쓰기 요청은 거부하며, 관리자가 요율을 설정하거나 송장 비용을 보정.<br>
 모든 주문 품목 수량이 송장에 배정되고 모든 송장이 배송 완료인 경우 주문 배송 상태를 `DELIVERED`로 전환. 송장별 운송비 변경은 비용 snapshot을 소급 변경하지 않음.<br>
 운영 API는 `SHIPMENT_ASSIGN`, `SHIPMENT_READ`, `SHIPMENT_WRITE` 권한과 담당 브랜드 범위를 서버에서 확인.<br>
 `POST /api/operation/orders/{orderId}/shipment/brands/{brandId}/packages`는 송장을 추가하고, `POST /api/operation/orders/{orderId}/shipment/packages/{packageId}/delivered`는 개별 송장을 배송 완료 처리. `GET /api/operation/shipping/packages`는 관리자 전체 또는 담당자의 배정 브랜드 송장 목록을 반환하고, `PUT /api/operation/shipping/packages/{packageId}/cost`는 실제 비용 수정.<br>
@@ -367,10 +367,9 @@ flowchart TD
     MATRIX --> LOOKUP
     LOOKUP --> FOUND{기본 운송비 존재}
     FOUND -->|예| PREFILL[송장 품목·박스 수량에 따른 기본값 채움]
-    FOUND -->|아니오| INPUT[담당자가 송장 운송비 입력]
+    FOUND -->|아니오| REJECT[SHIPMENT_WRITE 송장 등록 거부]
     PREFILL --> REVIEW[담당자가 송장별 실제 운송비 확인·수정]
-    INPUT --> REVIEW
-    REVIEW --> TRACK[송장별 택배사·송장번호·실제 운송비 저장]
+    REVIEW --> TRACK[송장별 택배사·송장번호·기본 운송비 합계 저장]
     TRACK --> STATUS[송장별 배송 상태 IN_TRANSIT]
     TRACK --> SNAP[(송장별 실제 비용 snapshot)]
     ADMIN --> ALL[전체 브랜드 배송 상태·비용 조회]
@@ -379,6 +378,8 @@ flowchart TD
     COST --> PROFIT[품목·기간별 순이익 집계]
     ITEMS --> PROFIT
     SNAP --> PROFIT
+    ADMIN --> OVERRIDE[SHIPMENT_ASSIGN 관리자의 실제 운송비 수기 보정]
+    OVERRIDE --> TRACK
 ```
 
 V51부터 주문당 하나의 `order_shipment` 아래 복수 `order_shipment_package` 송장을 저장하고, `order_shipment_package_item`으로 주문 품목·박스 수량을 연결. 한 송장 내 브랜드 혼합은 허용하지 않음.<br>

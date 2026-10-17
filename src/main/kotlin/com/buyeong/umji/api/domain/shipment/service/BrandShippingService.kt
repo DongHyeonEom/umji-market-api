@@ -20,7 +20,8 @@ class BrandShippingService(private val persistence: BrandShippingJpaEntityServic
     fun managers(brandId: UUID): List<BrandShippingManagerDto> = persistence.managers(brandId)
 
     fun setRate(brandId: UUID, skuId: UUID, carrierCode: String, amountPerBox: Long, operatorId: UUID): BrandShippingRateDto {
-        requireAssigned(brandId, operatorId)
+        if (!isAdmin()) throw AccessDeniedException("SHIPMENT_ASSIGN 권한이 필요합니다.")
+        if (!canManageBrandOrAdmin(brandId, operatorId)) throw AccessDeniedException("담당 브랜드의 기본 운송비만 설정할 수 있습니다.")
         return persistence.setRate(brandId, skuId, carrierCode, amountPerBox, operatorId)
     }
 

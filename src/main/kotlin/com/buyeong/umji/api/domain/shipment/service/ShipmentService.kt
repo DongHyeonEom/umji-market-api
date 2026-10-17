@@ -94,6 +94,10 @@ class ShipmentService(
             if (lineAmount == null) completeRateSet = false else estimatedCost = Math.addExact(estimatedCost, lineAmount)
             Triple(item, quantity, rate?.amountPerBox to lineAmount)
         }
+        val canOverrideCost = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication?.authorities
+            ?.any { it.authority == "SHIPMENT_ASSIGN" } == true
+        require(request.actualShippingCost == null || canOverrideCost) { "기본 운송비 기준으로만 송장을 저장할 수 있습니다." }
+        require(completeRateSet || canOverrideCost) { "설정된 기본 운송비가 없는 품목은 배송 관리자가 등록해야 합니다." }
         val actualCost = request.actualShippingCost ?: estimatedCost.takeIf { completeRateSet }
             ?: throw IllegalArgumentException("기본 운송비가 없는 품목이 있어 실제 운송비 입력이 필요합니다.")
         val allocatedFreight = splitAmount(actualCost, orderItems.map { requireNotNull(it.first.id) })
@@ -159,6 +163,9 @@ class ShipmentService(
     }
 
     fun updateActualCost(packageId: UUID, amount: Long, operatorId: UUID, reason: String): ShipmentPackageDto {
+        val canOverrideCost = org.springframework.security.core.context.SecurityContextHolder.getContext().authentication?.authorities
+            ?.any { it.authority == "SHIPMENT_ASSIGN" } == true
+        if (!canOverrideCost) throw org.springframework.security.access.AccessDeniedException("배송 관리자만 실제 운송비를 변경할 수 있습니다.")
         val parcel = shipments.findPackageForUpdate(packageId) ?: throw ItemNotFoundException("송장 정보를 찾을 수 없습니다.")
         val brandId = parcel.brand?.publicId ?: throw ItemNotFoundException("브랜드가 지정된 송장을 찾을 수 없습니다.")
         if (!brandShipping.canManageBrandOrAdmin(brandId, operatorId)) {
