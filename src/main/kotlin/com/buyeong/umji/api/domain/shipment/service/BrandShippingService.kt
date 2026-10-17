@@ -1,6 +1,6 @@
 package com.buyeong.umji.api.domain.shipment.service
 
-import com.buyeong.umji.api.domain.shipment.dto.BrandShippingManagerDto
+import com.buyeong.umji.api.domain.shipment.dto.BrandShippingAssignmentDto
 import com.buyeong.umji.api.domain.shipment.dto.BrandShippingRateDto
 import com.buyeong.umji.api.persistence.jpa.shipment.service.BrandShippingJpaEntityService
 import org.springframework.security.access.AccessDeniedException
@@ -12,16 +12,22 @@ import java.util.UUID
 @Service
 @Transactional
 class BrandShippingService(private val persistence: BrandShippingJpaEntityService) {
-    fun assignManager(brandId: UUID, accountId: UUID, assignedBy: UUID): BrandShippingManagerDto =
+    fun assignManager(brandId: UUID, accountId: UUID, assignedBy: UUID): BrandShippingAssignmentDto =
         persistence.assignManager(brandId, accountId, assignedBy)
+
+    fun assignOperator(brandId: UUID, accountId: UUID, assignedBy: UUID): BrandShippingAssignmentDto =
+        persistence.assignOperator(brandId, accountId, assignedBy)
 
     fun removeManager(brandId: UUID, accountId: UUID) = persistence.removeManager(brandId, accountId)
 
-    fun managers(brandId: UUID): List<BrandShippingManagerDto> = persistence.managers(brandId)
+    fun removeOperator(brandId: UUID, accountId: UUID) = persistence.removeOperator(brandId, accountId)
+
+    fun managers(brandId: UUID): List<BrandShippingAssignmentDto> = persistence.staff(brandId, MANAGER)
+
+    fun operators(brandId: UUID): List<BrandShippingAssignmentDto> = persistence.staff(brandId, OPERATOR)
 
     fun setRate(brandId: UUID, skuId: UUID, carrierCode: String, amountPerBox: Long, operatorId: UUID): BrandShippingRateDto {
-        if (!isAdmin()) throw AccessDeniedException("SHIPMENT_ASSIGN 권한이 필요합니다.")
-        if (!canManageBrandOrAdmin(brandId, operatorId)) throw AccessDeniedException("담당 브랜드의 기본 운송비만 설정할 수 있습니다.")
+        if (!canConfigureBrandOrAdmin(brandId, operatorId)) throw AccessDeniedException("담당 브랜드의 배송 관리자만 기본 운송비를 설정할 수 있습니다.")
         return persistence.setRate(brandId, skuId, carrierCode, amountPerBox, operatorId)
     }
 
@@ -35,14 +41,13 @@ class BrandShippingService(private val persistence: BrandShippingJpaEntityServic
 
     fun assignedBrandIds(accountId: UUID): Set<UUID> = persistence.assignedBrandIds(accountId)
 
-    fun canManageBrand(brandId: UUID, accountId: UUID): Boolean = persistence.isAssigned(brandId, accountId)
-
     fun canManageBrandOrAdmin(brandId: UUID, accountId: UUID): Boolean =
         isAdmin() || persistence.isAssigned(brandId, accountId)
 
-    private fun requireAssigned(brandId: UUID, accountId: UUID) {
-        if (!persistence.isAssigned(brandId, accountId)) throw AccessDeniedException("담당 브랜드의 배송 작업만 처리할 수 있습니다.")
-    }
+    fun canConfigureBrandOrAdmin(brandId: UUID, accountId: UUID): Boolean = isAdmin() || (
+        SecurityContextHolder.getContext().authentication?.authorities?.any { it.authority == CONFIGURE_PERMISSION } == true &&
+            persistence.isManagerAssigned(brandId, accountId)
+        )
 
     private fun requireReadable(brandId: UUID, accountId: UUID) {
         if (!isAdmin() && !persistence.isAssigned(brandId, accountId)) {
@@ -52,4 +57,10 @@ class BrandShippingService(private val persistence: BrandShippingJpaEntityServic
 
     private fun isAdmin(): Boolean = SecurityContextHolder.getContext().authentication?.authorities
         ?.any { it.authority == "SHIPMENT_ASSIGN" } == true
+
+    private companion object {
+        const val MANAGER = "MANAGER"
+        const val OPERATOR = "OPERATOR"
+        const val CONFIGURE_PERMISSION = "SHIPMENT_CONFIGURE"
+    }
 }

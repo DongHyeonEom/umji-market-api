@@ -13,8 +13,8 @@ import jakarta.persistence.Table
 import java.time.Instant
 
 @Entity
-@Table(name = "brand_shipping_manager_assignment")
-class BrandShippingManagerAssignmentEntity {
+@Table(name = "brand_shipping_assignment")
+class BrandShippingAssignmentEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null
@@ -30,6 +30,9 @@ class BrandShippingManagerAssignmentEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "assigned_by_account_id", nullable = false)
     lateinit var assignedBy: AccountEntity
+
+    @Column(name = "assignment_type", nullable = false)
+    lateinit var assignmentType: String
 
     @Column(name = "created_at", nullable = false, updatable = false)
     var createdAt: Instant = Instant.now()

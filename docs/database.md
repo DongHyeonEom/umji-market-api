@@ -2,7 +2,7 @@
 
 ## 기준과 출처
 
-현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V54으로 관리함.<br>
+현재 스키마와 시스템 role·permission seed는 MySQL 8.0 이상과 Flyway V2–V57으로 관리함.<br>
 실제 DDL과 제약의 단일 기준은 `src/main/resources/db/migration`임.<br>
 이 문서는 공통 규칙과 현재 테이블 구성을 요약하며, 상세 관계는 [database-erd.md](database-erd.md)를 참고.<br>
 
@@ -79,6 +79,8 @@
 | V53 | FIFO 재고 원가 lot·예약별 lot 배정·주문 품목 원가 snapshot 추가, 기존 재고 미확정 opening lot 이관 |
 | V54 | Organization 구매 유형과 전액 입금 전 배송 준비 제한 설정 추가. 기존 BUSINESS는 `GENERAL_BUSINESS`, INDIVIDUAL은 `INDIVIDUAL`로 초기화 |
 | V55 | 상품별 도매 기준 수량·SKU 소매/도매 단가 추가, 기존 소매 단가를 판매 단위로 환산하고 장바구니 참조를 통합 오퍼로 backfill |
+| V56 | `SHIPPING_MANAGER`·`SHIPPING_OPERATOR` 권한 분리, 배송 관리자 설정 permission 추가, 브랜드별 배송 assignment 유형 저장 |
+| V57 | 브랜드 scope가 없는 기존 배송 role assignment 제거 및 해당 계정 token version 갱신 |
 
 시스템 role·permission seed는 `R__seed_system_roles_and_permissions.sql`에 있음.<br>
 
@@ -86,6 +88,7 @@
 
 - `operation_audit_log`는 처리자·대상·시각과 업무 변경의 allowlist before/after JSON 및 사유를 저장함. 개인정보·전화번호·주소·인증정보는 변경값에 포함하지 않으며 기존 730일 보존 규칙 적용.<br>
 - 브랜드 월 운송비 집계는 `order_shipment_package.created_at`(송장 등록 시각) 기준이며, 주문 기간 검색은 `purchase_order.ordered_at` 기준. V52 인덱스가 두 조회를 지원.<br>
+- `brand_shipping_assignment`는 계정별 브랜드 배송 role scope를 `MANAGER` 또는 `OPERATOR`로 저장. 배송 role은 일반 role API가 아닌 이 브랜드 배정 경로에서 부여·회수하며, 마지막 같은 유형 assignment 제거 시 role도 회수.<br>
 
 - `brand`와 `product`는 소유 Organization을 가질 수 있으며, 신규 판매자 상품은 둘 다 같은 Organization에 속함. `product_sku`·이미지·옵션은 소속 상품을 통해 소유권을 상속.<br>
   V43 이전 브랜드·상품은 판매자 소유자를 추정하지 않고 `organization_id IS NULL`인 레거시 범위로 보존. 레거시 상품은 관리자 카탈로그 API에서 관리.<br>

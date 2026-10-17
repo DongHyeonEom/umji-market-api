@@ -57,6 +57,7 @@ class ShipmentPackageServiceTest : DescribeSpec({
 
     beforeTest {
         io.mockk.clearMocks(shipments, brandShipping)
+        every { brandShipping.canConfigureBrandOrAdmin(any(), operatorId) } returns true
         SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
             operatorId,
             "",
@@ -86,6 +87,7 @@ class ShipmentPackageServiceTest : DescribeSpec({
         every { shipments.allocatedBoxQuantity(orderItemId) } returnsMany listOf(0, 3)
         every { shipments.allocatedBoxQuantity(noRateItemId) } returns 0
         every { brandShipping.canManageBrandOrAdmin(brandId, operatorId) } returns true
+        every { brandShipping.canConfigureBrandOrAdmin(brandId, operatorId) } returns true
         every { brandShipping.rate(brandId, skuId, "DAESIN") } returnsMany listOf(
             BrandShippingRateDto(brandId, skuId, "SKU", "DAESIN", 700),
             BrandShippingRateDto(brandId, skuId, "SKU", "DAESIN", 900),
@@ -271,6 +273,7 @@ class ShipmentPackageServiceTest : DescribeSpec({
             mockk<NotificationEventService>(relaxed = true),
             brandShipping,
         )
+        every { brandShipping.canConfigureBrandOrAdmin(brandId, operatorId) } returns false
         SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
             operatorId,
             "",
@@ -285,6 +288,7 @@ class ShipmentPackageServiceTest : DescribeSpec({
             "",
             listOf(SimpleGrantedAuthority("SHIPMENT_ASSIGN")),
         )
+        every { brandShipping.canConfigureBrandOrAdmin(brandId, operatorId) } returns true
         val result = service.updateActualCost(requireNotNull(parcel.publicId), 101L, operatorId, "택배사 실청구")
 
         result.actualShippingCost shouldBe 101L
@@ -357,6 +361,7 @@ class ShipmentPackageServiceTest : DescribeSpec({
             mockk<NotificationEventService>(relaxed = true),
             brandShipping,
         )
+        every { brandShipping.canConfigureBrandOrAdmin(brandId, operatorId) } returns false
         SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
             operatorId,
             "",

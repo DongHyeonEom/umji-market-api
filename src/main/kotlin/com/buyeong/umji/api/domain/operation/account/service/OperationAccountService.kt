@@ -66,6 +66,6 @@ class OperationAccountService(private val accounts: OperationAccountJpaEntitySer
         const val PENDING_REVIEW = "PENDING_REVIEW"
         const val PERSONAL_INFORMATION = "PERSONAL_INFORMATION"
         const val ACTIVE = "ACTIVE"
-        val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER", "SHIPPING_MANAGER", "SALES_MANAGER")
+        val MANAGED_ROLE_CODES = setOf("PRODUCT_MANAGER", "ORDER_MANAGER", "INVENTORY_MANAGER", "SALES_MANAGER")
     }
 }

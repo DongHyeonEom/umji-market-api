@@ -1,12 +1,12 @@
 package com.buyeong.umji.api.persistence.jpa.shipment.service
 
-import com.buyeong.umji.api.domain.shipment.dto.BrandShippingManagerDto
+import com.buyeong.umji.api.domain.shipment.dto.BrandShippingAssignmentDto
 import com.buyeong.umji.api.domain.shipment.dto.BrandShippingRateDto
 import com.buyeong.umji.api.exception.ItemNotFoundException
-import com.buyeong.umji.api.persistence.jpa.account.entity.BrandShippingManagerAssignmentEntity
+import com.buyeong.umji.api.persistence.jpa.account.entity.BrandShippingAssignmentEntity
 import com.buyeong.umji.api.persistence.jpa.account.service.AccountJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.account.service.OperationAccountJpaEntityService
-import com.buyeong.umji.api.persistence.jpa.account.repository.BrandShippingManagerAssignmentRepository
+import com.buyeong.umji.api.persistence.jpa.account.repository.BrandShippingAssignmentRepository
 import com.buyeong.umji.api.persistence.jpa.catalog.entity.BrandShippingRateEntity
 import com.buyeong.umji.api.persistence.jpa.catalog.service.CatalogJpaEntityService
 import com.buyeong.umji.api.persistence.jpa.catalog.repository.BrandShippingRateRepository
@@ -20,39 +20,68 @@ import java.util.UUID
 class BrandShippingJpaEntityService(
     private val catalog: CatalogJpaEntityService,
     private val accounts: AccountJpaEntityService,
-    private val assignments: BrandShippingManagerAssignmentRepository,
+    private val assignments: BrandShippingAssignmentRepository,
     private val rates: BrandShippingRateRepository,
     private val operationAccounts: OperationAccountJpaEntityService,
 ) {
     @Transactional
-    fun assignManager(brandId: UUID, accountId: UUID, assignedBy: UUID): BrandShippingManagerDto {
+    fun assignManager(brandId: UUID, accountId: UUID, assignedBy: UUID): BrandShippingAssignmentDto =
+        assignStaff(brandId, accountId, assignedBy, MANAGER, SHIPPING_MANAGER)
+
+    @Transactional
+    fun assignOperator(brandId: UUID, accountId: UUID, assignedBy: UUID): BrandShippingAssignmentDto =
+        assignStaff(brandId, accountId, assignedBy, OPERATOR, SHIPPING_OPERATOR)
+
+    private fun assignStaff(brandId: UUID, accountId: UUID, assignedBy: UUID, type: String, roleCode: String): BrandShippingAssignmentDto {
         val brand = catalog.brand(brandId) ?: throw ItemNotFoundException("브랜드를 찾을 수 없습니다.")
         require(brand.organization != null) { "판매 Organization에 속한 브랜드만 배송 담당자를 지정할 수 있습니다." }
         val account = accounts.findByPublicId(accountId) ?: throw ItemNotFoundException("계정을 찾을 수 없습니다.")
         require(account.status == ACTIVE) { "활성 계정만 배송 담당자로 지정할 수 있습니다." }
         val assigner = accounts.findByPublicId(assignedBy) ?: throw ItemNotFoundException("처리자 계정을 찾을 수 없습니다.")
-        if (assignments.findByBrand_PublicIdAndAccount_PublicId(brandId, accountId) == null) {
-            assignments.saveAndFlush(BrandShippingManagerAssignmentEntity().apply {
+        val existing = assignments.findByBrand_PublicIdAndAccount_PublicId(brandId, accountId)
+        val assignment = existing
+            ?: BrandShippingAssignmentEntity().apply {
                 this.brand = brand
                 this.account = account
                 this.assignedBy = assigner
-            })
-        }
-        operationAccounts.grantRole(accountId, SHIPPING_MANAGER, assignedBy)
-        return BrandShippingManagerDto(brandId, accountId, account.name)
+            }
+        val previousType = existing?.assignmentType
+        assignment.assignmentType = type
+        assignments.saveAndFlush(assignment)
+        if (previousType != null && previousType != type) revokeRoleIfUnassigned(accountId, previousType)
+        operationAccounts.grantRole(accountId, roleCode, assignedBy)
+        return BrandShippingAssignmentDto(brandId, accountId, account.name)
     }
 
     @Transactional
-    fun removeManager(brandId: UUID, accountId: UUID) {
-        assignments.findByBrand_PublicIdAndAccount_PublicId(brandId, accountId)?.let(assignments::delete)
+    fun removeManager(brandId: UUID, accountId: UUID) = removeStaff(brandId, accountId, MANAGER)
+
+    @Transactional
+    fun removeOperator(brandId: UUID, accountId: UUID) = removeStaff(brandId, accountId, OPERATOR)
+
+    private fun removeStaff(brandId: UUID, accountId: UUID, type: String) {
+        val existing = assignments.findByBrand_PublicIdAndAccount_PublicIdAndAssignmentType(brandId, accountId, type)
+        if (existing != null) {
+            assignments.delete(existing)
+            assignments.flush()
+            revokeRoleIfUnassigned(accountId, type)
+        }
     }
 
-    fun managers(brandId: UUID): List<BrandShippingManagerDto> = assignments.findAllByBrand_PublicId(brandId).map {
-        BrandShippingManagerDto(brandId, requireNotNull(it.account.publicId), it.account.name)
+    private fun revokeRoleIfUnassigned(accountId: UUID, type: String) {
+        if (assignments.existsByAccount_PublicIdAndAssignmentType(accountId, type)) return
+        operationAccounts.revokeRole(accountId, if (type == MANAGER) SHIPPING_MANAGER else SHIPPING_OPERATOR)
+    }
+
+    fun staff(brandId: UUID, type: String): List<BrandShippingAssignmentDto> = assignments.findAllByBrand_PublicIdAndAssignmentType(brandId, type).map {
+        BrandShippingAssignmentDto(brandId, requireNotNull(it.account.publicId), it.account.name)
     }
 
     fun isAssigned(brandId: UUID, accountId: UUID): Boolean =
         assignments.findByBrand_PublicIdAndAccount_PublicId(brandId, accountId) != null
+
+    fun isManagerAssigned(brandId: UUID, accountId: UUID): Boolean =
+        assignments.existsByBrand_PublicIdAndAccount_PublicIdAndAssignmentType(brandId, accountId, MANAGER)
 
     fun assignedBrandIds(accountId: UUID): Set<UUID> = assignments.findAllByAccount_PublicId(accountId)
         .mapNotNull { it.brand.publicId }
@@ -96,6 +125,9 @@ class BrandShippingJpaEntityService(
     private companion object {
         const val ACTIVE = "ACTIVE"
         const val SHIPPING_MANAGER = "SHIPPING_MANAGER"
+        const val SHIPPING_OPERATOR = "SHIPPING_OPERATOR"
+        const val MANAGER = "MANAGER"
+        const val OPERATOR = "OPERATOR"
         const val MAX_CARRIER_LENGTH = 80
     }
 }

@@ -634,7 +634,7 @@ class OperationEndpointAuthorizationTest(
     }
 
     @Test
-    fun `brand shipping rate changes require shipment assign permission`() {
+    fun `brand shipping rate changes require shipment configure permission`() {
         val brandId = UUID.randomUUID()
         val skuId = UUID.randomUUID()
         val operatorId = UUID.randomUUID()
@@ -652,12 +652,39 @@ class OperationEndpointAuthorizationTest(
 
         mockMvc.perform(
             put("/api/operation/shipping/brands/$brandId/rates")
-                .with(authorities("SHIPMENT_ASSIGN"))
+                .with(authorities("SHIPMENT_CONFIGURE"))
                 .contentType("application/json")
                 .content("""{"skuId":"$skuId","carrierCode":"DAESIN","amountPerBox":1200}"""),
         ).andExpect(status().isOk)
 
         Mockito.verify(brandShipping).setRate(brandId, skuId, "DAESIN", 1200, operatorId)
+    }
+
+    @Test
+    fun `brand shipment role assignment requires shipment assign permission`() {
+        val brandId = UUID.randomUUID()
+        val accountId = UUID.randomUUID()
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(brandShipping.assignOperator(brandId, accountId, operatorId)).thenReturn(
+            com.buyeong.umji.api.domain.shipment.dto.BrandShippingAssignmentDto(brandId, accountId, "배송 작업자"),
+        )
+
+        mockMvc.perform(
+            put("/api/operation/shipping/brands/$brandId/operators")
+                .with(authorities("SHIPMENT_WRITE"))
+                .contentType("application/json")
+                .content("""{"accountId":"$accountId"}"""),
+        ).andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            put("/api/operation/shipping/brands/$brandId/operators")
+                .with(authorities("SHIPMENT_ASSIGN"))
+                .contentType("application/json")
+                .content("""{"accountId":"$accountId"}"""),
+        ).andExpect(status().isOk)
+
+        Mockito.verify(brandShipping).assignOperator(brandId, accountId, operatorId)
     }
 
     @Test
