@@ -47,7 +47,7 @@ class OperationBrandShippingController(
         shipping.rates(brandId, currentAccounts.activeAccountPublicId()).map { it.toResponse() }
 
     @PutMapping("/rates")
-    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_WRITE')")
+    @PreAuthorize("@operationAuthorization.hasPermission(authentication, 'SHIPMENT_ASSIGN')")
     fun setRate(
         @PathVariable brandId: UUID,
         @Valid @RequestBody request: SetBrandShippingRateRequest,

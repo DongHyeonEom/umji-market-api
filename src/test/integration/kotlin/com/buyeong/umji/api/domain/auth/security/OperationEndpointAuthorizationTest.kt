@@ -39,6 +39,7 @@ import com.buyeong.umji.api.domain.operation.order.service.OperationTaxInvoiceSe
 import com.buyeong.umji.api.domain.operation.payment.controller.OperationPaymentController
 import com.buyeong.umji.api.domain.operation.shipment.controller.OperationShipmentController
 import com.buyeong.umji.api.domain.operation.shipment.controller.OperationShipmentSettlementController
+import com.buyeong.umji.api.domain.operation.shipment.controller.OperationBrandShippingController
 import com.buyeong.umji.api.domain.order.controller.OperationShippingHolidayController
 import com.buyeong.umji.api.domain.order.controller.OrderCancellationController
 import com.buyeong.umji.api.domain.order.dto.AdminPhoneOrderBuyerDto
@@ -55,7 +56,9 @@ import com.buyeong.umji.api.domain.sales.dto.SalesCommissionViewDto
 import com.buyeong.umji.api.domain.sales.service.SalesAssignmentService
 import com.buyeong.umji.api.domain.sales.service.SalesCommissionService
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentChangeDto
+import com.buyeong.umji.api.domain.shipment.dto.BrandShippingRateDto
 import com.buyeong.umji.api.domain.shipment.dto.ShipmentSettlementDto
+import com.buyeong.umji.api.domain.shipment.service.BrandShippingService
 import com.buyeong.umji.api.domain.shipment.service.ShipmentService
 import com.buyeong.umji.api.domain.shipment.service.ShipmentSettlementService
 import com.buyeong.umji.api.exception.DefaultErrorMessageService
@@ -97,6 +100,7 @@ import java.util.UUID
         OrderCancellationController::class, OperationShippingHolidayController::class, OperationPhoneOrderController::class,
         OperationTaxInvoiceController::class, OperationOrderController::class,
         OperationShipmentSettlementController::class, NotificationDeviceTokenController::class,
+        OperationBrandShippingController::class,
     ],
     properties = ["umji.security.authentication.mode=REQUIRED"],
 )
@@ -140,6 +144,9 @@ class OperationEndpointAuthorizationTest(
 
     @MockitoBean
     private lateinit var shipmentSettlements: ShipmentSettlementService
+
+    @MockitoBean
+    private lateinit var brandShipping: BrandShippingService
 
     @MockitoBean
     private lateinit var shipments: ShipmentService
@@ -624,6 +631,33 @@ class OperationEndpointAuthorizationTest(
                 .contentType("application/json")
                 .content("""{"carrierCode":"CJ","trackingNumber":"1234567890"}"""),
         ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `brand shipping rate changes require shipment assign permission`() {
+        val brandId = UUID.randomUUID()
+        val skuId = UUID.randomUUID()
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(currentAccounts.activeAccountPublicId()).thenReturn(operatorId)
+        Mockito.`when`(brandShipping.setRate(brandId, skuId, "DAESIN", 1200, operatorId)).thenReturn(
+            BrandShippingRateDto(brandId, skuId, "SKU", "DAESIN", 1200),
+        )
+
+        mockMvc.perform(
+            put("/api/operation/shipping/brands/$brandId/rates")
+                .with(authorities("SHIPMENT_WRITE"))
+                .contentType("application/json")
+                .content("""{"skuId":"$skuId","carrierCode":"DAESIN","amountPerBox":1200}"""),
+        ).andExpect(status().isForbidden)
+
+        mockMvc.perform(
+            put("/api/operation/shipping/brands/$brandId/rates")
+                .with(authorities("SHIPMENT_ASSIGN"))
+                .contentType("application/json")
+                .content("""{"skuId":"$skuId","carrierCode":"DAESIN","amountPerBox":1200}"""),
+        ).andExpect(status().isOk)
+
+        Mockito.verify(brandShipping).setRate(brandId, skuId, "DAESIN", 1200, operatorId)
     }
 
     @Test

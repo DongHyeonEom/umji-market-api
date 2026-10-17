@@ -57,6 +57,15 @@ class ShipmentPackageServiceTest : DescribeSpec({
 
     beforeTest {
         io.mockk.clearMocks(shipments, brandShipping)
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
+            operatorId,
+            "",
+            listOf(SimpleGrantedAuthority("SHIPMENT_ASSIGN")),
+        )
+    }
+
+    afterTest {
+        SecurityContextHolder.clearContext()
     }
 
     it("박스 수량에 기본 운송비를 곱해 송장 비용과 품목별 snapshot을 저장한다") {
@@ -262,6 +271,20 @@ class ShipmentPackageServiceTest : DescribeSpec({
             mockk<NotificationEventService>(relaxed = true),
             brandShipping,
         )
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
+            operatorId,
+            "",
+            listOf(SimpleGrantedAuthority("SHIPMENT_WRITE")),
+        )
+        shouldThrow<AccessDeniedException> {
+            service.updateActualCost(requireNotNull(parcel.publicId), 101L, operatorId, "작업자 수기 변경")
+        }
+        verify(exactly = 0) { shipments.updateActualCost(parcel, any(), operatorId) }
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
+            operatorId,
+            "",
+            listOf(SimpleGrantedAuthority("SHIPMENT_ASSIGN")),
+        )
         val result = service.updateActualCost(requireNotNull(parcel.publicId), 101L, operatorId, "택배사 실청구")
 
         result.actualShippingCost shouldBe 101L
@@ -270,6 +293,11 @@ class ShipmentPackageServiceTest : DescribeSpec({
     }
 
     it("배정되지 않은 브랜드 담당자는 송장을 등록하지 못한다") {
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
+            operatorId,
+            "",
+            listOf(SimpleGrantedAuthority("SHIPMENT_WRITE")),
+        )
         val item = orderItem()
         val orderEntity = mockk<PurchaseOrderEntity>(relaxed = true) {
             every { publicId } returns orderId
@@ -300,6 +328,67 @@ class ShipmentPackageServiceTest : DescribeSpec({
         }
         verify(exactly = 0) { brandShipping.rate(any(), any(), any()) }
         verify(exactly = 0) { shipments.registerPackage(any(), any(), any()) }
+    }
+
+    it("SHIPMENT_WRITE는 설정된 요율만 사용하며 수기 비용과 요율 누락을 거부한다") {
+        val item = orderItem()
+        val orderEntity = mockk<PurchaseOrderEntity>(relaxed = true) {
+            every { publicId } returns orderId
+            every { items } returns mutableListOf(item)
+        }
+        val shipment = mockk<OrderShipmentEntity>(relaxed = true) {
+            every { status } returns "PREPARING"
+            every { order } returns orderEntity
+        }
+        every { shipments.findForUpdate(orderId) } returns shipment
+        every { shipments.allocatedBoxQuantity(orderItemId) } returns 0
+        every { brandShipping.canManageBrandOrAdmin(brandId, operatorId) } returns true
+        every { brandShipping.rate(brandId, skuId, "DAESIN") } returns BrandShippingRateDto(brandId, skuId, "SKU", "DAESIN", 700)
+        every { shipments.registerPackage(shipment, any(), operatorId) } answers {
+            secondArg<OrderShipmentPackageEntity>().apply {
+                this.shipment = shipment
+                publicId = UUID.randomUUID()
+            }
+        }
+        val service = ShipmentService(
+            shipments,
+            mockk<InventoryService>(relaxed = true),
+            mockk<OfficialCarrierTrackingGateway>(relaxed = true),
+            mockk<NotificationEventService>(relaxed = true),
+            brandShipping,
+        )
+        SecurityContextHolder.getContext().authentication = UsernamePasswordAuthenticationToken.authenticated(
+            operatorId,
+            "",
+            listOf(SimpleGrantedAuthority("SHIPMENT_WRITE")),
+        )
+
+        val saved = service.registerPackage(
+            orderId,
+            brandId,
+            ShipmentPackageRequest("DAESIN", "TRACK-WRITE", items = listOf(ShipmentPackageItemRequest(orderItemId, 2))),
+            operatorId,
+        )
+        saved.actualShippingCost shouldBe 1400L
+        shouldThrow<IllegalArgumentException> {
+            service.registerPackage(
+                orderId,
+                brandId,
+                ShipmentPackageRequest("DAESIN", "TRACK-MANUAL", actualShippingCost = 1200, items = listOf(ShipmentPackageItemRequest(orderItemId, 1))),
+                operatorId,
+            )
+        }
+
+        every { brandShipping.rate(brandId, skuId, "DAESIN") } returns null
+        shouldThrow<IllegalArgumentException> {
+            service.registerPackage(
+                orderId,
+                brandId,
+                ShipmentPackageRequest("DAESIN", "TRACK-NO-RATE", items = listOf(ShipmentPackageItemRequest(orderItemId, 1))),
+                operatorId,
+            )
+        }
+        verify(exactly = 1) { shipments.registerPackage(shipment, any(), operatorId) }
     }
 
     it("관리자는 전체 송장을 조회하고 배송 담당자는 배정 브랜드로 조회 범위가 제한된다") {

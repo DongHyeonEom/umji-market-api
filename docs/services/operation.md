@@ -496,7 +496,7 @@ V51에서 `SHIPMENT_ASSIGN` 권한과 브랜드 담당자 배정, 브랜드별 �
 
 | 역할 | 목표 범위 | 주요 동작 |
 | --- | --- | --- |
-| 브랜드 배송 담당자 | 배정된 브랜드 | 해당 브랜드 품목·택배사별 기본 운송비 관리, 담당 브랜드 송장 등록·배송완료·실제 운송비 수정 |
+| 브랜드 배송 담당자 | 배정된 브랜드 | 담당 브랜드 송장 등록·배송완료 |
 | `ADMIN`·`SUPER_ADMIN` | 전체 브랜드 | 담당자 배정·해제, 전체 배송 상태·기본 운송비·송장 실제 운송비 조회 및 비용 수정 |
 
 ```mermaid
@@ -508,14 +508,18 @@ flowchart TD
     PERM -->|있음| SCOPE[담당 브랜드 범위 조회]
     SCOPE --> RESOURCE{요청 품목·주문 브랜드가 담당 범위에 포함}
     RESOURCE -->|아니오| DENY
-    RESOURCE -->|예| CHANGE[기본 운송비·송장·주문 실제 배송비 변경]
+    RESOURCE -->|예| CHANGE[배정 브랜드 송장 등록·배송완료]
     CHANGE --> SAVE[브랜드 범위 검증 후 저장]
     ADMIN --> GLOBAL[전체 브랜드 배송 상태·비용 조회]
     GLOBAL --> READPERM[전체 배송 조회 권한 검사]
     READPERM --> ALL[전체 브랜드 결과 반환]
+    ADMIN --> CONFIG[브랜드·품목·택배사 기본 운송비 설정]
+    CONFIG --> RATE[(기본 운송비표)]
+    ADMIN --> COST[송장 실제 운송비 수기 수정]
 ```
 
-관리자 경로는 `SHIPMENT_ASSIGN`, 배송 조회는 `SHIPMENT_READ`, 배송 변경은 `SHIPMENT_WRITE`와 브랜드 scope를 서버에서 검사.<br>
+관리자 경로와 브랜드별 기본 운송비·실제 운송비 수기 변경은 `SHIPMENT_ASSIGN`, 배송 조회는 `SHIPMENT_READ`, 송장 등록·배송완료는 `SHIPMENT_WRITE`와 브랜드 scope를 서버에서 검사.<br>
+`SHIPMENT_WRITE` 작업자는 설정된 브랜드·품목·택배사 조합을 선택해 기본 운송비 snapshot으로 송장을 등록. 조합에 요율이 없거나 등록 시 비용을 덮어쓰려는 요청은 거부.<br>
 배송 API 계약과 실제 주문 송장 흐름은 [order.md](order.md)의 배송 섹션을 기준으로 함.<br>
 
 ## 구조

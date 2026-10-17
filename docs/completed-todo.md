@@ -3,6 +3,19 @@
 모든 수용 기준이 완료된 Task의 체크리스트 보관소.<br>
 진행 중 Task는 [todo.md](todo.md)에 유지하고, 모든 수용 기준이 완료된 시점에 이 문서로 이동.<br>
 
+## Task 24 — 배송 요율 설정자와 송장 작업자 권한 분리
+
+### 서비스 개발
+
+- [x] 기본 운송비 설정 및 송장 실제 운송비 수기 수정에 `SHIPMENT_ASSIGN` 적용
+- [x] `SHIPMENT_WRITE` 송장 등록에서 미설정 조합 및 실제 비용 덮어쓰기 거부
+- [x] 서비스 문서 흐름도·권한 계약 갱신
+
+### 서비스 자동화 테스트 개발 및 테스트
+
+- [x] `SHIPMENT_WRITE`의 설정 조합 송장 등록 성공 및 요율 누락·비용 덮어쓰기 거부 검증
+- [x] `SHIPMENT_ASSIGN` 요율 설정·실제 운송비 수정과 `SHIPMENT_WRITE` 권한·브랜드 scope 차단 unit·integration test 개발 및 실행
+
 ## Task 23 — HTTP 요청 입력 검증 경계 정리
 
 외부 요청의 단순 필수값·길이·형식·숫자 범위 검증을 Bean Validation으로 일관화하고 Service에는 업무 맥락 검증을 유지.<br>
